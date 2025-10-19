@@ -19,12 +19,12 @@ class Connection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildTopRow(),
+          Flexible(child: _buildTopRow()),
           const SizedBox(height: 10),
-          _buildMenuRow(),
+          Flexible(child: _buildMenuRow()),
           const SizedBox(height: 15),
-          _buildHandLabel(),
-          _buildHandButtons(),
+          Flexible(child: _buildHandLabel()),
+          Flexible(child: _buildHandButtons()),
         ],
       ),
     );
@@ -37,42 +37,52 @@ class Connection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: const [
         // Action (icon + label)
-        Row(
-          children: [
-            Image(
-              image: AssetImage('assets/connection/action.png'),
-              width: 18,
-              height: 37,
-            ),
-            SizedBox(width: 5),
-            Text("Action", style: TextStyle(color: Colors.black)),
-          ],
+        Spacer(),
+        Flexible(
+          flex: 4,
+          child: Row(
+            children: [
+              Image(
+                image: AssetImage('assets/connection/action.png'),
+                width: 18,
+                height: 37,
+              ),
+              SizedBox(width: 5),
+              Text("Action", style: TextStyle(color: Colors.black)),
+            ],
+          ),
         ),
 
         // Gesture (okhand icon + label)
-        Row(
-          children: [
-            Image(
-              image: AssetImage('assets/connection/okhand.png'),
-              width: 18,
-              height: 37,
-            ),
-            SizedBox(width: 5),
-            Text("Gesture", style: TextStyle(color: Colors.black)),
-          ],
+        Flexible(
+          flex: 4,
+          child: Row(
+            children: [
+              Image(
+                image: AssetImage('assets/connection/okhand.png'),
+                width: 18,
+                height: 37,
+              ),
+              SizedBox(width: 5),
+              Text("Gesture", style: TextStyle(color: Colors.black)),
+            ],
+          ),
         ),
 
         // Play Music (sound icon + label)
-        Row(
-          children: [
-            Image(
-              image: AssetImage('assets/connection/sound.png'),
-              width: 18,
-              height: 37,
-            ),
-            SizedBox(width: 5),
-            Text("Play Music", style: TextStyle(color: Colors.black)),
-          ],
+        Flexible(
+          flex: 4,
+          child: Row(
+            children: [
+              Image(
+                image: AssetImage('assets/connection/sound.png'),
+                width: 18,
+                height: 37,
+              ),
+              SizedBox(width: 5),
+              Text("Play Music", style: TextStyle(color: Colors.black)),
+            ],
+          ),
         ),
       ],
     );
@@ -82,28 +92,37 @@ class Connection extends StatelessWidget {
   Widget _buildMenuRow() {
     return Row(
       children: [
-        const SizedBox(width: 15),
-        DropDownMenu(
-          selectedValue: "Play Music",
-          options: const ["Play Music", "Open Ac", "Turn on tv"],
-          leadingIcon: const Image(
-            image: AssetImage('assets/connection/menu/music.png'),
+        Spacer(),
+        Flexible(
+          flex: 4,
+          child: DropDownMenu(
+            selectedValue: "Play Music",
+            options: const ["Play Music", "Open Ac", "Turn on tv"],
+            leadingIcon: const Image(
+              image: AssetImage('assets/connection/menu/music.png'),
+            ),
           ),
         ),
-        const SizedBox(width: 20),
-        DropDownMenu(
-          selectedValue: "Thumb+Index",
-          options: const ["Thumb+Index", "Thumb+Middle", "Thumb+Ring"],
-          leadingIcon: const Image(
-            image: AssetImage('assets/connection/menu/hand.png'),
+        Spacer(),
+        Flexible(
+          flex: 4,
+          child: DropDownMenu(
+            selectedValue: "Thumb+Index",
+            options: const ["Thumb+Index", "Thumb+Middle", "Thumb+Ring"],
+            leadingIcon: const Image(
+              image: AssetImage('assets/connection/menu/hand.png'),
+            ),
           ),
         ),
-        const SizedBox(width: 20),
-        DropDownMenu(
-          selectedValue: "Sound1",
-          options: const ["Sound1", "Sound2", "Sound3"],
-          leadingIcon: const Image(
-            image: AssetImage('assets/connection/menu/sound1.png'),
+        Spacer(),
+        Flexible(
+          flex: 4,
+          child: DropDownMenu(
+            selectedValue: "Sound1",
+            options: const ["Sound1", "Sound2", "Sound3"],
+            leadingIcon: const Image(
+              image: AssetImage('assets/connection/menu/sound1.png'),
+            ),
           ),
         ),
       ],
