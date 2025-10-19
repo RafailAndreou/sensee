@@ -8,7 +8,7 @@ class Connection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 376,
-      height: 156,
+      height: 180,
       decoration: BoxDecoration(
         color: const Color(0xFFE9E9E9),
         borderRadius: BorderRadius.circular(5),
@@ -92,7 +92,37 @@ class Connection extends StatelessWidget {
               ), // DropDownMenu
             ],
           ), // Row
-          Text("Test"),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              SizedBox(
+                height: 90,
+                width: 129,
+                child: Column(
+                  children: [
+                    const Text("hand", style: TextStyle(color: Colors.black)),
+                    const SizedBox(height: 5),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            backgroundColor: const Color(0xFFACA9A9),
+                          ),
+                          onPressed: () {},
+                          child: const Text("Left"),
+                        ),
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text("Right"),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ), // Text
         ],
       ), // Column
     ); //  container
