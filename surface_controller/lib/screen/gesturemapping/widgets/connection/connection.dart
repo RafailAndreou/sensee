@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dropdownmenu.dart';
 import 'handbutton.dart';
 import 'configurebutton.dart';
+import 'toprow.dart';
 
 class Connection extends StatelessWidget {
   const Connection({super.key});
@@ -20,50 +21,7 @@ class Connection extends StatelessWidget {
       // child must be outside the decoration
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              // Action (icon + label)
-              Row(
-                children: [
-                  Image(
-                    image: AssetImage('assets/connection/action.png'),
-                    width: 18,
-                    height: 37,
-                  ),
-                  SizedBox(width: 5),
-                  Text("Action", style: TextStyle(color: Colors.black)),
-                ],
-              ),
-
-              // Gesture (okhand icon + label)
-              Row(
-                children: [
-                  Image(
-                    image: AssetImage('assets/connection/okhand.png'),
-                    width: 18,
-                    height: 37,
-                  ),
-                  SizedBox(width: 5),
-                  Text("Gesture", style: TextStyle(color: Colors.black)),
-                ],
-              ),
-
-              // Play Music (sound icon + label)
-              Row(
-                children: [
-                  Image(
-                    image: AssetImage('assets/connection/sound.png'),
-                    width: 18,
-                    height: 37,
-                  ),
-                  SizedBox(width: 5),
-                  Text("Play Music", style: TextStyle(color: Colors.black)),
-                ],
-              ),
-            ],
-          ),
+          TopRow(),
           Row(
             children: [
               const SizedBox(width: 15),
