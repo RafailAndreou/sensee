@@ -114,13 +114,13 @@ class Connection extends StatelessWidget {
                       children: [
                         HandButton(
                           label: 'Left',
-                          onPressed: null, // or provide a callback
+                          onPressed: () {}, // or provide a callback
                           backgroundColor: const Color(0xFFACA9A9),
                         ),
                         const SizedBox(width: 15),
                         HandButton(
                           label: 'Right',
-                          onPressed: null, // or provide a callback
+                          onPressed: () {}, // or provide a callback
                           backgroundColor: const Color(0xFF71B8FF),
                         ),
                         const SizedBox(width: 70),
