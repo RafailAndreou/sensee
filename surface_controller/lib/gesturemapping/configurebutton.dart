@@ -19,9 +19,13 @@ class ConfigureButton extends StatelessWidget {
         // Set fixed size (width x height)
         fixedSize: const Size(100, 40),
 
-        // Set border radius
+        // Set border radius and stroke
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(9), // Change this value
+          borderRadius: BorderRadius.circular(9),
+          side: const BorderSide(
+            color: Color(0xFFB0BEC5), // Border color
+            width: 2, // Border thickness
+          ),
         ),
       ),
       onPressed: onPressed,

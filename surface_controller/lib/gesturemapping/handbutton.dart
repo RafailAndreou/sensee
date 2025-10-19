@@ -18,10 +18,13 @@ class HandButton extends StatelessWidget {
       style: TextButton.styleFrom(
         backgroundColor: backgroundColor,
         // Set fixed size (width x height)
-        fixedSize: const Size(80, 40),
+        fixedSize: const Size(80, 30),
 
-        // OR use minimum size (button can grow larger if content needs it)
-        // minimumSize: const Size(80, 40),
+        // Remove default padding to allow smaller heights
+        padding: EdgeInsets.zero,
+
+        // Remove minimum size constraint
+        minimumSize: Size.zero,
 
         // Set border radius
         shape: RoundedRectangleBorder(

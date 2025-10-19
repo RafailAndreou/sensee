@@ -28,8 +28,6 @@ class CustomButton extends StatelessWidget {
         ],
       ),
       child: SizedBox(
-        width: 125,
-        height: 37,
         child: TextButton(
           style: TextButton.styleFrom(
             backgroundColor: Colors.white,
