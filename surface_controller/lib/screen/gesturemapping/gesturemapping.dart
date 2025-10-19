@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'buttons.dart';
-import '../connection/connection.dart';
+import 'widgets/connection/connection.dart';
 import 'addactionbutton.dart';
 import 'menu.dart';
 
@@ -19,7 +19,7 @@ class Gesturemapping extends StatelessWidget {
         Flexible(
           flex: 1,
           child: CustomButton(
-            title: "Test",
+            title: "Tsdasdest",
             icon: Image.asset("assets/deviceaction.png"),
           ),
         ),

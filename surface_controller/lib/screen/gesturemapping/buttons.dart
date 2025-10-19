@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../irblaster.dart';
+import '../../irblaster.dart';
 
 class CustomButton extends StatelessWidget {
   final String title;

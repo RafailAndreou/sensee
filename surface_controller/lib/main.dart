@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'gesturemapping/gesturemapping.dart';
+import 'screen/gesturemapping/gesturemapping.dart';
 import 'server/server.dart';
 import 'irblaster.dart';
 
