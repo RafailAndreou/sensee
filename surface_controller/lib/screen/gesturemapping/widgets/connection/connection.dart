@@ -133,9 +133,11 @@ class Connection extends StatelessWidget {
   Widget _buildHandLabel() {
     return Row(
       children: const [
-        SizedBox(width: 60),
-        Text("hand", style: TextStyle(color: Colors.black)),
-        SizedBox(width: 5),
+        Spacer(flex: 1),
+        Flexible(
+          flex: 5,
+          child: Text("hand", style: TextStyle(color: Colors.black)),
+        ),
       ],
     );
   }
@@ -145,11 +147,8 @@ class Connection extends StatelessWidget {
     return Row(
       children: [
         SizedBox(
-          height: 80,
-          width: 350,
           child: Column(
             children: [
-              const SizedBox(height: 5),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
