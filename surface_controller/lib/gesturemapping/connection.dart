@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dropdownmenu.dart';
+import 'handbutton.dart';
+import 'configurebutton.dart';
 
 class Connection extends StatelessWidget {
   const Connection({super.key});
@@ -8,7 +10,7 @@ class Connection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 376,
-      height: 180,
+      height: 200,
       decoration: BoxDecoration(
         color: const Color(0xFFE9E9E9),
         borderRadius: BorderRadius.circular(5),
@@ -92,30 +94,38 @@ class Connection extends StatelessWidget {
               ), // DropDownMenu
             ],
           ), // Row
-          const SizedBox(height: 10),
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              const SizedBox(width: 60),
+              const Text("hand", style: TextStyle(color: Colors.black)),
+              const SizedBox(width: 5),
+            ],
+          ),
           Row(
             children: [
               SizedBox(
-                height: 90,
-                width: 129,
+                height: 80,
+                width: 350,
                 child: Column(
                   children: [
-                    const Text("hand", style: TextStyle(color: Colors.black)),
                     const SizedBox(height: 5),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            backgroundColor: const Color(0xFFACA9A9),
-                          ),
+                        HandButton(
+                          label: "Left",
                           onPressed: () {},
-                          child: const Text("Left"),
+                          backgroundColor: Color(0xFFACA9A9),
                         ),
-                        TextButton(
+                        const SizedBox(width: 15),
+                        HandButton(
+                          label: "Right",
                           onPressed: () {},
-                          child: const Text("Right"),
+                          backgroundColor: Color(0xFF71B8FF),
                         ),
+                        SizedBox(width: 70),
+                        ConfigureButton(label: "Configure", onPressed: () {}),
                       ],
                     ),
                   ],
