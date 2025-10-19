@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'buttons.dart';
-import 'connection.dart';
+import '../connection/connection.dart';
 import 'addactionbutton.dart';
 import 'menu.dart';
 

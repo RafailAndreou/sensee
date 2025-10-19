@@ -9,8 +9,6 @@ class Connection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 376,
-      height: 193,
       decoration: BoxDecoration(
         color: const Color(0xFFE9E9E9),
         borderRadius: BorderRadius.circular(5),
