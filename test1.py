@@ -1,119 +1,113 @@
-import cv2
+# hand_mouse_with_tasks.py
+import cv2, time, pyautogui, mouse
 import mediapipe as mp
-import mouse
-import pyautogui
-import math
+import actions  # your module
 
-# ---------- Tunable parameters ----------
-GAIN = 3.0          # >1 amplifies small hand motions; try 2.0–4.0
-SMOOTHING = 0.3     # 0=no smoothing, 0.1–0.5 recommended (EMA factor)
-NEUTRAL_X = 0.5     # neutral hand x position (0..1). 0.5 = image center
-NEUTRAL_Y = 0.5     # neutral hand y position (0..1)
-TAP_PIX_THRESH = 20 # index-thumb proximity (pixels) to register a tap
-# ---------------------------------------
+mp_image = mp.Image
+BaseOptions = mp.tasks.BaseOptions
+GestureRecognizer = mp.tasks.vision.GestureRecognizer
+GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
+VisionRunningMode = mp.tasks.vision.RunningMode
 
-screen_w, screen_h = pyautogui.size()
+MODEL_PATH = "assets/gesture_recognizer.task"
+MIRROR_PREVIEW = True
+YT_URL = "https://music.youtube.com/"
 
-mp_hands = mp.solutions.hands
-mp_drawing = mp.solutions.drawing_utils
+# ---- overlay text shared between callback and main loop ----
+overlay_text = ""
+overlay_expire_ms = 0
+
+def _show(label: str, ms: int = 800):
+    """Store text for the renderer to draw for a short time."""
+    global overlay_text, overlay_expire_ms
+    overlay_text = label
+    overlay_expire_ms = int(time.time() * 1000) + ms
+
+# Simple mapping from top gesture label -> function
+def do_action(label: str):
+    try:
+        if label == "Thumb_Up":
+            # mouse.click('left')
+            _show("Thumbs up")
+        elif label == "Pointing_Up":
+            # actions.open_url(YT_URL)
+            _show("Pointing up")
+        elif label == "Thumb_Down":
+            # actions.window_left()
+            _show("Thumbs down")
+        elif label == "Victory":
+            _show("Victory")
+            # actions.window_right()                         # snap right
+        elif label == "ILoveYou":
+            _show("I Love You")
+            # actions.close_app()    
+        elif label == "Open_Palm":
+            _show("Open palm")# close app
+        elif label == "Closed_Fist":
+            _show("Closed fist")  # pause/resume
+        # "Closed_Fist" / "Open_Palm" can be used for pause/resume modes, etc.
+    except Exception:
+        pass
+
+# Callback for streaming mode
+def on_result(result: mp.tasks.vision.GestureRecognizerResult,
+              output_image: mp.Image, timestamp_ms: int):
+    # result.gestures is a list (one per hand). Each is a list of categories.
+    if result.gestures:
+        top = result.gestures[0][0]   # top category for first detected hand
+        label = top.category_name     # e.g., "Open_Palm"
+        score = top.score
+        # Throttle/threshold if needed
+        if score > 0.6:
+            do_action(label)
 
 cap = cv2.VideoCapture(0)
-# Improve camera exposure/latency if your webcam supports it:
-# cap.set(cv2.CAP_PROP_FPS, 60)
+if not cap.isOpened():
+    raise SystemExit("Camera not available.")
 
-# For smoothing (exponential moving average)
-ema_x = None
-ema_y = None
+options = GestureRecognizerOptions(
+    base_options=BaseOptions(model_asset_path=MODEL_PATH),
+    running_mode=VisionRunningMode.LIVE_STREAM,
+    num_hands=1,
+    result_callback=on_result
+)
 
-with mp_hands.Hands(
-    static_image_mode=False,
-    max_num_hands=2,
-    min_detection_confidence=0.6,
-    min_tracking_confidence=0.3
-) as hands:
+FONT = cv2.FONT_HERSHEY_SIMPLEX
 
+with GestureRecognizer.create_from_options(options) as recognizer:
     while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+        ok, frame = cap.read()
+        if not ok:
+            continue
+        if MIRROR_PREVIEW:
+            frame = cv2.flip(frame, 1)
 
-        # BGR -> RGB for MediaPipe
+        # --- draw overlay text, if any (EX: "Thumbs up") ---
+        now_ms = int(time.time() * 1000)
+        if overlay_text and now_ms < overlay_expire_ms:
+            cv2.putText(
+                frame,
+                overlay_text,
+                (50, 60),           # position
+                FONT,
+                1.0,                # scale
+                (0, 255, 0),        # color (B,G,R)
+                2,                  # thickness
+                cv2.LINE_AA
+            )
+
+        # preview
+        cv2.imshow("MediaPipe Tasks - Gesture Recognizer", frame)
+
+        # Send frame to recognizer
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = hands.process(rgb)
+        mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+        ts_ms = int(time.time() * 1000)
+        recognizer.recognize_async(mp_frame, ts_ms)
 
-        # Draw landmarks and control mouse if a hand is present
-        if results.multi_hand_landmarks:
-            # Use the first detected hand for pointing
-            hand_landmarks = results.multi_hand_landmarks[0]
-            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
-            h, w, _ = frame.shape
-
-            # Mediapipe landmarks are already normalized [0..1]
-            norm_ix = hand_landmarks.landmark[8].x   # index tip
-            norm_iy = hand_landmarks.landmark[8].y
-            norm_tx = hand_landmarks.landmark[4].x   # thumb tip
-            norm_ty = hand_landmarks.landmark[4].y
-            
-
-            # Visualize index fingertip
-            ix = int(norm_ix * w)
-            iy = int(norm_iy * h)
-            cv2.circle(frame, (ix, iy), 10, (0, 255, 0), -1)
-            cv2.putText(frame, "Index fingertip", (ix + 10, iy - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-            # ----- TAP detection (pixel space distance between index & thumb) -----
-            tx = int(norm_tx * w)
-            ty = int(norm_ty * h)
-            if abs(ix - tx) < TAP_PIX_THRESH and abs(iy - ty) < TAP_PIX_THRESH:
-                cv2.putText(frame, "TAP!", (50, 50),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
-                cv2.circle(frame, (tx, ty), 10, (0, 0, 255), -1)
-                mouse.click('left')
-
-            # ----- Cursor mapping with mirror + gain around a neutral point -----
-            # Mirror X so your hand right => cursor right (camera preview is mirrored)
-            mir_x = 1.0 - norm_ix
-            mir_y = norm_iy
-
-            # Offset from neutral (center by default)
-            off_x = (mir_x - NEUTRAL_X) * GAIN
-            off_y = (mir_y - NEUTRAL_Y) * GAIN
-
-            # Re-center after amplification
-            amp_x = NEUTRAL_X + off_x
-            amp_y = NEUTRAL_Y + off_y
-
-            # Clamp to screen bounds [0..1]
-            amp_x = max(0.0, min(1.0, amp_x))
-            amp_y = max(0.0, min(1.0, amp_y))
-
-            # Map to screen pixels
-            target_x = int(amp_x * screen_w)
-            target_y = int(amp_y * screen_h)
-
-            # Optional smoothing (EMA) to reduce jitter
-            if ema_x is None:
-                ema_x, ema_y = target_x, target_y
-            else:
-                ema_x = int((1 - SMOOTHING) * target_x + SMOOTHING * ema_x)
-                ema_y = int((1 - SMOOTHING) * target_y + SMOOTHING * ema_y)
-
-            mouse.move(ema_x, ema_y, absolute=True, duration=0)  # duration=0 for responsiveness
-
-            # On-screen debug HUD
-            hud = f"GAIN={GAIN:.2f}  SMOOTH={SMOOTHING:.2f}  Neutral=({NEUTRAL_X:.2f},{NEUTRAL_Y:.2f})"
-            cv2.putText(frame, hud, (10, h - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-
-        # Show video
-        cv2.imshow("MediaPipe Hands - Mouse Control", frame)
-
-        # Single waitKey per loop; press q to quit
         key = cv2.waitKey(1) & 0xFF
-        if key in (ord('q'), ord('Q')):
+        if key in (27, ord('q'), ord('Q')):
             break
 
 cap.release()
 cv2.destroyAllWindows()
-
