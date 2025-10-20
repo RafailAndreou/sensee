@@ -12,11 +12,6 @@ class DropDownMenu extends StatelessWidget {
     required this.options,
     required this.leadingIcon,
   });
-  void main() {
-    for (var option in options) {
-      print(option);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

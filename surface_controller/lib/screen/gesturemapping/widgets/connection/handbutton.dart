@@ -21,10 +21,8 @@ class HandButton extends StatelessWidget {
         fixedSize: const Size(80, 30),
 
         // Remove default padding to allow smaller heights
-        padding: EdgeInsets.zero,
 
         // Remove minimum size constraint
-        minimumSize: Size.zero,
 
         // Set border radius
         shape: RoundedRectangleBorder(
