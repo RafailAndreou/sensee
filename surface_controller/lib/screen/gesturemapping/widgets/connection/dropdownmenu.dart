@@ -38,17 +38,21 @@ class DropDownMenu extends StatelessWidget {
       inputDecorationTheme: const InputDecorationTheme(
         constraints: BoxConstraints(maxHeight: 37, maxWidth: 103),
         isDense: true,
-        contentPadding: EdgeInsets.only(top: 5, bottom: 5),
 
         suffixIconColor: Color.fromARGB(255, 52, 52, 196),
-        suffixIconConstraints: BoxConstraints(maxWidth: 27),
-        prefixIconConstraints: BoxConstraints(maxWidth: 15),
+        suffixIconConstraints: BoxConstraints(maxWidth: 35),
+        prefixIconConstraints: BoxConstraints(
+          maxWidth: 30,
+          maxHeight: 30,
+          minHeight: 30,
+          minWidth: 20,
+        ),
 
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(5)),
           borderSide: BorderSide(
-            color: Color.fromARGB(255, 255, 255, 255),
-            width: 1.0,
+            color: Color.fromARGB(255, 28, 219, 226),
+            width: 2.0,
           ),
         ),
         filled: true,

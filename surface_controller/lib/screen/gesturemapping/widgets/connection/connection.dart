@@ -112,7 +112,7 @@ class _ConnectionState extends State<Connection> {
       children: [
         Spacer(),
         Flexible(
-          flex: 4,
+          flex: 6,
           child: DropDownMenu(
             selectedValue: "Play Music",
             options: const [
@@ -132,7 +132,7 @@ class _ConnectionState extends State<Connection> {
         ),
         Spacer(),
         Flexible(
-          flex: 4,
+          flex: 6,
           child: DropDownMenu(
             selectedValue: "Test",
             options: const ["Thumb+Index", "Thumb+Middle", "Thumb+Ring"],
@@ -143,7 +143,7 @@ class _ConnectionState extends State<Connection> {
         ),
         Spacer(),
         Flexible(
-          flex: 4,
+          flex: 6,
           child: DropDownMenu(
             selectedValue: "Sound1",
             options: const ["Sound1", "Sound2", "Sound3"],
@@ -152,6 +152,7 @@ class _ConnectionState extends State<Connection> {
             ),
           ),
         ),
+        Spacer(),
       ],
     );
   }
