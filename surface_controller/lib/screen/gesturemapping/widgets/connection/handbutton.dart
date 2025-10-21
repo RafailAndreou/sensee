@@ -32,7 +32,10 @@ class HandButton extends StatelessWidget {
         ),
       ),
       onPressed: onPressed,
-      child: Text(label),
+      child: Text(
+        label,
+        style: const TextStyle(color: Colors.black, fontSize: 12),
+      ),
     );
   }
 }
