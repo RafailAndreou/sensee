@@ -53,7 +53,6 @@ class DropDownMenu extends StatelessWidget {
           .toList(),
       onSelected: (String? value) {
         // Handle selection change
-        action.value = value ?? '';
         print('Selected: $value');
         if (value == "Sound1" || value == "Sound2" || value == "Sound3") {
           sound.value = value ?? '';
