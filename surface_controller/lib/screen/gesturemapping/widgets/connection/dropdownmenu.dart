@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
+import '../../../brands/configurationscreen.dart';
 
 class DropDownMenu extends StatelessWidget {
   final String selectedValue;
@@ -52,6 +53,14 @@ class DropDownMenu extends StatelessWidget {
       onSelected: (String? value) {
         // Handle selection change
         print('Selected: $value');
+        if (value == "Turn on tv") {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const ConfigurationScreen(),
+            ),
+          );
+          // You can add additional logic here if needed
+        }
       },
     );
   }

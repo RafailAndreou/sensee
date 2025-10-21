@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dropdownmenu.dart';
 import 'handbutton.dart';
 import 'configurebutton.dart';
+import '../../../brands/configurationscreen.dart';
 
 class Connection extends StatefulWidget {
   const Connection({super.key});
