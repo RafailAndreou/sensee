@@ -21,7 +21,7 @@ class Gesturemapping extends StatelessWidget {
           child: Row(
             children: [
               Spacer(),
-              Flexible(flex: 4, child: AddActionButton(title: "Add item")),
+              Flexible(flex: 4, child: AddActionButton(title: "Add Action")),
             ],
           ),
         ),
