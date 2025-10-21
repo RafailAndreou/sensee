@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:surface_controller/global.dart';
 
 class Search extends StatefulWidget {
   final ValueChanged<String> onChanged;
@@ -51,7 +52,11 @@ class _SearchState extends State<Search> {
             itemBuilder: (context, index) {
               return ListTile(
                 title: Text(filteredTvBrands[index]),
-                onTap: () => widget.onChanged(filteredTvBrands[index]),
+                onTap: () {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  print(filteredTvBrands[index]);
+                  brand.value = filteredTvBrands[index];
+                },
               );
             },
           ),

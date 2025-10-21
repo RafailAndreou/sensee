@@ -114,7 +114,16 @@ class _ConnectionState extends State<Connection> {
           flex: 4,
           child: DropDownMenu(
             selectedValue: "Play Music",
-            options: const ["Play Music", "Open Ac", "Turn on tv"],
+            options: const [
+              "Play Music",
+              "Open AC",
+              "AC:cold",
+              "Ac:Hot ",
+              "TV:Turn On",
+              "TV:Turn Off",
+              "TV:Increase Volume",
+              "TV:Decrease Volume",
+            ],
             leadingIcon: const Image(
               image: AssetImage('assets/connection/menu/music.png'),
             ),

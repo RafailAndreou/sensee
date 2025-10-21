@@ -53,7 +53,10 @@ class DropDownMenu extends StatelessWidget {
       onSelected: (String? value) {
         // Handle selection change
         print('Selected: $value');
-        if (value == "Turn on tv") {
+        if (value == "TV:Turn On" ||
+            value == "TV:Turn Off" ||
+            value == "TV:Increase Volume" ||
+            value == "TV:Decrease Volume") {
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => const ConfigurationScreen(),
