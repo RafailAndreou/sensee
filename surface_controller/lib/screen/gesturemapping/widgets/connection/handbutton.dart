@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class HandButton extends StatefulWidget {
+class HandButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
   final Color backgroundColor;
@@ -13,15 +13,10 @@ class HandButton extends StatefulWidget {
   });
 
   @override
-  State<HandButton> createState() => _HandButtonState();
-}
-
-class _HandButtonState extends State<HandButton> {
-  @override
   Widget build(BuildContext context) {
     return TextButton(
       style: TextButton.styleFrom(
-        backgroundColor: widget.backgroundColor,
+        backgroundColor: backgroundColor,
         // Set fixed size (width x height)
         fixedSize: const Size(60, 20),
         padding: EdgeInsets.zero,
@@ -36,9 +31,9 @@ class _HandButtonState extends State<HandButton> {
           borderRadius: BorderRadius.circular(9), // Change this value
         ),
       ),
-      onPressed: widget.onPressed,
+      onPressed: onPressed,
       child: Text(
-        widget.label,
+        label,
         style: const TextStyle(color: Colors.black, fontSize: 12),
       ),
     );
