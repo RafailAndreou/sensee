@@ -25,7 +25,6 @@ class Gesturemapping extends StatelessWidget {
             ],
           ),
         ),
-        Text(brand.value),
       ],
     );
   }

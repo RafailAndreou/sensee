@@ -3,6 +3,7 @@ import 'dropdownmenu.dart';
 import 'handbutton.dart';
 import 'configurebutton.dart';
 import '../../../brands/configurationscreen.dart';
+import 'package:surface_controller/global.dart';
 
 class Connection extends StatefulWidget {
   const Connection({super.key});
@@ -215,6 +216,11 @@ class _ConnectionState extends State<Connection> {
                   const SizedBox(width: 90),
                   ConfigureButton(label: "Configure", onPressed: () {}),
                 ],
+              ),
+
+              ValueListenableBuilder<String>(
+                valueListenable: brand,
+                builder: (context, value, child) => Text(value),
               ),
             ],
           ),
