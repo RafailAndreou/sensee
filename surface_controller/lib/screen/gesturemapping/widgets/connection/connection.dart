@@ -19,12 +19,12 @@ class Connection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Flexible(child: _buildTopRow()),
+          _buildTopRow(),
           const SizedBox(height: 10),
-          Flexible(child: _buildMenuRow()),
-          const SizedBox(height: 30),
-          Flexible(child: _buildHandLabel()),
-          Flexible(child: _buildHandButtons()),
+          _buildMenuRow(),
+          const SizedBox(height: 50),
+          _buildHandLabel(),
+          _buildHandButtons(),
         ],
       ),
     );
@@ -157,7 +157,7 @@ class Connection extends StatelessWidget {
                     onPressed: () {},
                     backgroundColor: const Color(0xFFACA9A9),
                   ),
-                  const SizedBox(width: 15),
+                  const SizedBox(width: 30),
                   HandButton(
                     label: "Right",
                     onPressed: () {},
