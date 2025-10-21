@@ -9,7 +9,7 @@ class HandButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onPressed,
-    this.backgroundColor = Colors.grey,
+    this.backgroundColor = const Color.fromARGB(255, 255, 255, 255),
   });
 
   @override
@@ -21,6 +21,10 @@ class HandButton extends StatelessWidget {
         fixedSize: const Size(60, 20),
         padding: EdgeInsets.zero,
         minimumSize: Size.zero,
+        side: const BorderSide(
+          color: Color.fromARGB(112, 127, 74, 74),
+          width: 3,
+        ),
 
         // Remove default padding to allow smaller heights
 
@@ -28,7 +32,7 @@ class HandButton extends StatelessWidget {
 
         // Set border radius
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(9), // Change this value
+          borderRadius: BorderRadius.circular(10), // Change this value
         ),
       ),
       onPressed: onPressed,

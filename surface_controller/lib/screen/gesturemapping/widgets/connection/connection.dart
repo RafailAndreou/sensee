@@ -189,8 +189,8 @@ class _ConnectionState extends State<Connection> {
                     backgroundColor:
                         (_selected == HandSelection.left ||
                             _selected == HandSelection.both)
-                        ? Colors.blue
-                        : Colors.grey,
+                        ? const Color.fromARGB(255, 152, 209, 255)
+                        : const Color.fromARGB(255, 255, 255, 255),
                   ),
                   const SizedBox(width: 5),
                   HandButton(
@@ -202,8 +202,8 @@ class _ConnectionState extends State<Connection> {
                     backgroundColor:
                         (_selected == HandSelection.right ||
                             _selected == HandSelection.both)
-                        ? Colors.blue
-                        : Colors.grey,
+                        ? const Color.fromARGB(255, 152, 209, 255)
+                        : Colors.white,
                   ),
                   const SizedBox(width: 5),
                   HandButton(
@@ -213,8 +213,8 @@ class _ConnectionState extends State<Connection> {
                       hand.value = "both";
                     },
                     backgroundColor: _selected == HandSelection.both
-                        ? Colors.blue
-                        : Colors.grey,
+                        ? const Color.fromARGB(255, 152, 209, 255)
+                        : Colors.white,
                   ),
                   const SizedBox(width: 60),
                   ConfigureButton(
