@@ -119,7 +119,7 @@ class _ConnectionState extends State<Connection> {
               "Play Music",
               "Open AC",
               "AC:cold",
-              "Ac:Hot ",
+              "AC:Hot",
               "TV:Turn On",
               "TV:Turn Off",
               "TV:Increase Volume",
@@ -134,7 +134,7 @@ class _ConnectionState extends State<Connection> {
         Flexible(
           flex: 4,
           child: DropDownMenu(
-            selectedValue: "Thumb+Index",
+            selectedValue: "Test",
             options: const ["Thumb+Index", "Thumb+Middle", "Thumb+Ring"],
             leadingIcon: const Image(
               image: AssetImage('assets/connection/menu/hand.png'),

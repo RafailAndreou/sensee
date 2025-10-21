@@ -7,6 +7,15 @@ class DropDownMenu extends StatelessWidget {
   final String selectedValue;
   final List<String> options;
   final Widget leadingIcon;
+  final List<String> actions = const [
+    "Play Music",
+    "Open AC",
+    "AC:cold",
+    "AC:Hot",
+    "TV:Turn on",
+    "TV:Turn Off",
+    "TV:Turn Off",
+  ];
 
   const DropDownMenu({
     super.key,
@@ -45,7 +54,7 @@ class DropDownMenu extends StatelessWidget {
         filled: true,
         fillColor: Color.fromARGB(255, 255, 255, 255),
       ),
-      initialSelection: selectedValue,
+      hintText: "Add",
       dropdownMenuEntries: options
           .map(
             (option) => DropdownMenuEntry<String>(value: option, label: option),
@@ -73,6 +82,10 @@ class DropDownMenu extends StatelessWidget {
             ),
           );
           // You can add additional logic here if needed
+        }
+
+        if (actions.contains(value)) {
+          action.value = value ?? '';
         }
       },
     );
