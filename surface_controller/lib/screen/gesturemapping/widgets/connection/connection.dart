@@ -3,8 +3,16 @@ import 'dropdownmenu.dart';
 import 'handbutton.dart';
 import 'configurebutton.dart';
 
-class Connection extends StatelessWidget {
+class Connection extends StatefulWidget {
   const Connection({super.key});
+
+  @override
+  State<Connection> createState() => _ConnectionState();
+}
+
+class _ConnectionState extends State<Connection> {
+  // Selected state for hand buttons: none, left, right, or both.
+  HandSelection _selected = HandSelection.none;
 
   @override
   Widget build(BuildContext context) {
@@ -143,8 +151,8 @@ class Connection extends StatelessWidget {
       children: const [
         Spacer(flex: 1),
         Flexible(
-          flex: 6,
-          child: Text("hand", style: TextStyle(color: Colors.black)),
+          flex: 7,
+          child: Text("Gesture Hand ", style: TextStyle(color: Colors.black)),
         ),
       ],
     );
@@ -160,10 +168,40 @@ class Connection extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  HandButton(label: "Left", onPressed: () {}),
-                  const SizedBox(width: 30),
-                  HandButton(label: "Right", onPressed: () {}),
-                  const SizedBox(width: 150),
+                  HandButton(
+                    label: "Left",
+                    onPressed: () {
+                      setState(() => _selected = HandSelection.left);
+                    },
+                    backgroundColor:
+                        (_selected == HandSelection.left ||
+                            _selected == HandSelection.both)
+                        ? Colors.blue
+                        : Colors.grey,
+                  ),
+                  const SizedBox(width: 5),
+                  HandButton(
+                    label: "Right",
+                    onPressed: () {
+                      setState(() => _selected = HandSelection.right);
+                    },
+                    backgroundColor:
+                        (_selected == HandSelection.right ||
+                            _selected == HandSelection.both)
+                        ? Colors.blue
+                        : Colors.grey,
+                  ),
+                  const SizedBox(width: 5),
+                  HandButton(
+                    label: "Both",
+                    onPressed: () {
+                      setState(() => _selected = HandSelection.both);
+                    },
+                    backgroundColor: _selected == HandSelection.both
+                        ? Colors.blue
+                        : Colors.grey,
+                  ),
+                  const SizedBox(width: 90),
                   ConfigureButton(label: "Configure", onPressed: () {}),
                 ],
               ),
@@ -174,3 +212,5 @@ class Connection extends StatelessWidget {
     );
   }
 }
+
+enum HandSelection { none, left, right, both }
