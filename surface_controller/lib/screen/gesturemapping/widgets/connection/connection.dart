@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'dropdownmenu.dart';
 import 'handbutton.dart';
 import 'configurebutton.dart';
-import '../../../brands/configurationscreen.dart';
 import 'package:surface_controller/global.dart';
+import 'package:surface_controller/configue.dart';
 
 class Connection extends StatefulWidget {
   const Connection({super.key});
@@ -184,6 +184,7 @@ class _ConnectionState extends State<Connection> {
                     label: "Left",
                     onPressed: () {
                       setState(() => _selected = HandSelection.left);
+                      hand.value = "Left";
                     },
                     backgroundColor:
                         (_selected == HandSelection.left ||
@@ -196,6 +197,7 @@ class _ConnectionState extends State<Connection> {
                     label: "Right",
                     onPressed: () {
                       setState(() => _selected = HandSelection.right);
+                      hand.value = "Right";
                     },
                     backgroundColor:
                         (_selected == HandSelection.right ||
@@ -208,13 +210,19 @@ class _ConnectionState extends State<Connection> {
                     label: "Both",
                     onPressed: () {
                       setState(() => _selected = HandSelection.both);
+                      hand.value = "both";
                     },
                     backgroundColor: _selected == HandSelection.both
                         ? Colors.blue
                         : Colors.grey,
                   ),
                   const SizedBox(width: 90),
-                  ConfigureButton(label: "Configure", onPressed: () {}),
+                  ConfigureButton(
+                    label: "Configure",
+                    onPressed: () {
+                      print_config();
+                    },
+                  ),
                 ],
               ),
 

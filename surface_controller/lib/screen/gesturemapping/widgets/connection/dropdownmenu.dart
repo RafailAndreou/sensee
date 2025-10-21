@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import '../../../brands/configurationscreen.dart';
+import 'package:surface_controller/global.dart';
 
 class DropDownMenu extends StatelessWidget {
   final String selectedValue;
@@ -52,11 +53,21 @@ class DropDownMenu extends StatelessWidget {
           .toList(),
       onSelected: (String? value) {
         // Handle selection change
+        action.value = value ?? '';
         print('Selected: $value');
+        if (value == "Sound1" || value == "Sound2" || value == "Sound3") {
+          sound.value = value ?? '';
+        }
+        if (value == "Thumb+Index" ||
+            value == "Thumb+Middle" ||
+            value == "Thumb+Ring") {
+          gesture.value = value ?? '';
+        }
         if (value == "TV:Turn On" ||
             value == "TV:Turn Off" ||
             value == "TV:Increase Volume" ||
             value == "TV:Decrease Volume") {
+          action.value = value ?? '';
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => const ConfigurationScreen(),
