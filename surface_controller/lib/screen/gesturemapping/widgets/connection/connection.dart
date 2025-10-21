@@ -135,7 +135,7 @@ class Connection extends StatelessWidget {
       children: const [
         Spacer(flex: 1),
         Flexible(
-          flex: 5,
+          flex: 4,
           child: Text("hand", style: TextStyle(color: Colors.black)),
         ),
       ],
