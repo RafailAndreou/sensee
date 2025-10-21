@@ -11,6 +11,14 @@ class Connection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFE9E9E9),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromARGB(255, 141, 133, 232),
+            spreadRadius: 2,
+            blurRadius: 5,
+            offset: const Offset(0, 3), // changes position of shadow
+          ),
+        ],
         borderRadius: BorderRadius.circular(5),
         border: Border.all(
           color: const Color.fromARGB(75, 86, 81, 81),
@@ -152,18 +160,10 @@ class Connection extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  HandButton(
-                    label: "Left",
-                    onPressed: () {},
-                    backgroundColor: const Color(0xFFACA9A9),
-                  ),
+                  HandButton(label: "Left", onPressed: () {}),
                   const SizedBox(width: 30),
-                  HandButton(
-                    label: "Right",
-                    onPressed: () {},
-                    backgroundColor: const Color(0xFF71B8FF),
-                  ),
-                  const SizedBox(width: 110),
+                  HandButton(label: "Right", onPressed: () {}),
+                  const SizedBox(width: 150),
                   ConfigureButton(label: "Configure", onPressed: () {}),
                 ],
               ),
