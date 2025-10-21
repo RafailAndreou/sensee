@@ -168,6 +168,7 @@ class _ConnectionState extends State<Connection> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                  const SizedBox(width: 10),
                   HandButton(
                     label: "Left",
                     onPressed: () {
