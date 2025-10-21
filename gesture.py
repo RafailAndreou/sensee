@@ -5,6 +5,12 @@ import pyautogui
 import server
 import threading
 import time
+from server import main
+
+ip = main.get_local_ip()
+print(f"\n🌐 Access the configuration portal at: http://{ip}:8000\n")
+uvicorn_process = threading.Thread(target=lambda: main.uvicorn.run("server.main:app", host="0.0.0.0", port=8000))
+uvicorn_process.start()
 
 screen_w, screen_h = pyautogui.size()
 mouse_x, mouse_y = pyautogui.position()
