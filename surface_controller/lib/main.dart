@@ -25,7 +25,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         appBar: AppBar(title: const Text('Sensee Smart Controller')),
-        body: Gesturemapping(),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Gesturemapping(),
+        ),
       ),
     );
   }

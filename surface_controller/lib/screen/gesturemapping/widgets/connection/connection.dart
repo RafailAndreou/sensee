@@ -216,7 +216,7 @@ class _ConnectionState extends State<Connection> {
                         ? Colors.blue
                         : Colors.grey,
                   ),
-                  const SizedBox(width: 90),
+                  const SizedBox(width: 60),
                   ConfigureButton(
                     label: "Configure",
                     onPressed: () {

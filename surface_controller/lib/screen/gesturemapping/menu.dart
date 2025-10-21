@@ -10,7 +10,7 @@ class Menu extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Flexible(
-          flex: 6,
+          flex: 9,
           child: CustomButton(
             title: "Gesture mapping",
             icon: Image.asset(
@@ -22,7 +22,7 @@ class Menu extends StatelessWidget {
         ),
         Spacer(flex: 1),
         Flexible(
-          flex: 6,
+          flex: 9,
           child: CustomButton(
             title: "Surface Zones",
             icon: Image.asset('assets/surfacezone.png', width: 20, height: 20),
@@ -30,7 +30,7 @@ class Menu extends StatelessWidget {
         ),
         Spacer(),
         Flexible(
-          flex: 6,
+          flex: 9,
           child: CustomButton(
             title: "Device Actions",
             icon: Image.asset('assets/deviceaction.png', width: 20, height: 20),
