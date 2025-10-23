@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'widgets/connection/connection.dart';
 import 'addactionbutton.dart';
 import 'menu.dart';
-import 'package:surface_controller/server/camera.dart';
 
 class Gesturemapping extends StatelessWidget {
   const Gesturemapping({super.key});
