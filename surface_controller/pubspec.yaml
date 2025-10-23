@@ -11,6 +11,7 @@ dependencies:
     sdk: flutter
   http: ^1.5.0
   ir_sensor_plugin: ^0.3.1
+  webview_flutter: ^4.13.0
 
 dev_dependencies:
   flutter_test:

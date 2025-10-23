@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'widgets/connection/connection.dart';
 import 'addactionbutton.dart';
 import 'menu.dart';
+import 'package:surface_controller/server/server2.dart';
 
 class Gesturemapping extends StatelessWidget {
   const Gesturemapping({super.key});
@@ -23,6 +24,14 @@ class Gesturemapping extends StatelessWidget {
               Flexible(flex: 4, child: AddActionButton(title: "Add Action")),
             ],
           ),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (context) => VideoPage()));
+          },
+          child: const Text("Test Button"),
         ),
       ],
     );
