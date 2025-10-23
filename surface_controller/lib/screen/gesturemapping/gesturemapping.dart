@@ -25,14 +25,6 @@ class Gesturemapping extends StatelessWidget {
             ],
           ),
         ),
-        TextButton(
-          onPressed: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (context) => VideoPage()));
-          },
-          child: const Text("Test Button"),
-        ),
       ],
     );
   }

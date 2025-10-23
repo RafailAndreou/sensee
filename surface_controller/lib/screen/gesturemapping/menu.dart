@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'buttons.dart';
+import 'package:surface_controller/server/camera.dart';
 
 class Menu extends StatelessWidget {
   const Menu({super.key});
@@ -24,8 +25,13 @@ class Menu extends StatelessWidget {
         Flexible(
           flex: 9,
           child: CustomButton(
-            title: "Surface Zones",
+            title: "Live Camera",
             icon: Image.asset('assets/surfacezone.png', width: 20, height: 20),
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (context) => VideoPage()));
+            },
           ),
         ),
         Spacer(),
