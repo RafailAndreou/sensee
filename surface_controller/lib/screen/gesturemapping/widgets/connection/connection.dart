@@ -5,6 +5,7 @@ import 'configurebutton.dart';
 import 'package:surface_controller/global.dart';
 import 'package:surface_controller/configue.dart';
 import 'package:surface_controller/server/server.dart';
+import 'package:surface_controller/sizes.dart';
 
 class Connection extends StatefulWidget {
   const Connection({super.key});
@@ -39,9 +40,9 @@ class _ConnectionState extends State<Connection> {
       child: Column(
         children: [
           _buildTopRow(),
-          const SizedBox(height: 10),
+          SizedBox(height: getProportionalHeight(context, 10)),
           _buildMenuRow(),
-          const SizedBox(height: 50),
+          SizedBox(height: getProportionalHeight(context, 20)),
           _buildHandLabel(),
           _buildHandButtons(),
         ],

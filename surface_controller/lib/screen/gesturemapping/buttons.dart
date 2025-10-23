@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../irblaster.dart';
+import 'package:surface_controller/sizes.dart';
 
 class CustomButton extends StatelessWidget {
   final String title;
@@ -50,7 +51,10 @@ class CustomButton extends StatelessWidget {
               icon,
               Text(
                 title,
-                style: const TextStyle(fontSize: 10, color: Colors.black),
+                style: TextStyle(
+                  fontSize: getProportionalWidth(context, 8),
+                  color: Colors.black,
+                ),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../sizes.dart';
 
 class ConfigureButton extends StatelessWidget {
   final String label;
@@ -16,8 +17,11 @@ class ConfigureButton extends StatelessWidget {
     return TextButton(
       style: TextButton.styleFrom(
         backgroundColor: backgroundColor,
-        // Set fixed size (width x height)
-        fixedSize: const Size(100, 40),
+        // Set dynamic size based on screen dimensions
+        fixedSize: Size(
+          getProportionalWidth(context, 100),
+          getProportionalHeight(context, 40),
+        ),
 
         // Set border radius and stroke
         shape: RoundedRectangleBorder(

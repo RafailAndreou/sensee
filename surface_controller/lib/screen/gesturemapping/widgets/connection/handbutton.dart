@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:surface_controller/sizes.dart';
 
 class HandButton extends StatelessWidget {
   final String label;
@@ -18,7 +19,10 @@ class HandButton extends StatelessWidget {
       style: TextButton.styleFrom(
         backgroundColor: backgroundColor,
         // Set fixed size (width x height)
-        fixedSize: const Size(60, 20),
+        fixedSize: Size(
+          getProportionalWidth(context, 50),
+          getProportionalHeight(context, 20),
+        ),
         padding: EdgeInsets.zero,
         minimumSize: Size.zero,
         side: const BorderSide(

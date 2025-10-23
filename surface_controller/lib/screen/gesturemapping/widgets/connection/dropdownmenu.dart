@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../../brands/configurationscreen.dart';
 import 'package:surface_controller/global.dart';
+import 'package:surface_controller/sizes.dart';
 
 class DropDownMenu extends StatelessWidget {
   final String selectedValue;
@@ -35,17 +36,17 @@ class DropDownMenu extends StatelessWidget {
         fontSize: 10,
         overflow: TextOverflow.visible,
       ),
-      inputDecorationTheme: const InputDecorationTheme(
+      inputDecorationTheme: InputDecorationTheme(
         constraints: BoxConstraints(maxHeight: 37, maxWidth: 103),
         isDense: true,
 
         suffixIconColor: Color.fromARGB(255, 52, 52, 196),
         suffixIconConstraints: BoxConstraints(maxWidth: 35),
         prefixIconConstraints: BoxConstraints(
-          maxWidth: 30,
-          maxHeight: 30,
-          minHeight: 30,
-          minWidth: 20,
+          maxWidth: getProportionalWidth(context, 30),
+          maxHeight: getProportionalHeight(context, 30),
+          minHeight: getProportionalHeight(context, 25),
+          minWidth: getProportionalWidth(context, 20),
         ),
 
         enabledBorder: OutlineInputBorder(
