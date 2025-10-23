@@ -137,3 +137,4 @@ if __name__ == "__main__":
     ip = get_local_ip()
     print(f"\n🌐 Server running at http://{ip}:8000\n")
     uvicorn.run("server.main:app", host="0.0.0.0", port=8000)
+

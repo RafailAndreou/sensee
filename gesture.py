@@ -47,7 +47,7 @@ def translate_coords(x, y):
 
 with mp_hands.Hands(
     static_image_mode=False,
-    max_num_hands=1,
+    max_num_hands=2,
     min_detection_confidence=0.6,
     min_tracking_confidence=0.3
 ) as hands:
@@ -79,7 +79,6 @@ with mp_hands.Hands(
             middle = results.multi_hand_landmarks[0].landmark[12]
             if touching(thumb, middle):
                 main.send_msg("up")
-                time.sleep(0.2)  # simple debounce
         except Exception:
             pass
 
@@ -89,7 +88,6 @@ with mp_hands.Hands(
             index = results.multi_hand_landmarks[0].landmark[8]
             if touching(thumb, index):
                 main.send_msg("down")
-                time.sleep(0.2)  # simple debounce
         except Exception:
             pass
 
