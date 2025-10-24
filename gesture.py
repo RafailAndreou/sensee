@@ -3,9 +3,65 @@
 import cv2
 import mediapipe as mp
 import pyautogui
+from server import main  # FastAPI app + helpers (set_frame_from_bgr, send_msg)
+from queue import Queue
 import threading
 import time
-from server import main  # FastAPI app + helpers (set_frame_from_bgr, send_msg)
+
+model_path = "assets/gesture_recognizer.task"
+base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
+GestureRecognizer = mp.tasks.vision.GestureRecognizer
+GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
+GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
+VisionRunningMode = mp.tasks.vision.RunningMode
+
+# Add gesture queue
+gesture_queue = Queue()
+
+# New: track latest frame timestamp (ms) so we can drop stale async results
+latest_frame_ts = 0
+latest_frame_lock = threading.Lock()
+
+# Modified gesture callback that puts results in queue
+def gesture_callback(result: GestureRecognizerResult, output_image: mp.Image, timestamp_ms: int):
+    if result.gestures:
+        for gesture in result.gestures:
+            # put tuple (gesture, timestamp) so we can check staleness later
+            gesture_queue.put((gesture[0], timestamp_ms))
+
+# Add gesture processing thread
+def process_gestures():
+    while True:
+        try:
+            gesture, ts = gesture_queue.get()
+            # check if this result is too old compared to the latest frame we sent
+            with latest_frame_lock:
+                current_ts = latest_frame_ts
+            # drop results older than 300 ms (adjust threshold as needed)
+            if ts < current_ts - 300:
+                # stale result, skip
+                continue
+
+            gesture_name = gesture.category_name
+            confidence = gesture.score
+            print(f"Detected gesture: {gesture_name} (confidence: {confidence:.2f})")
+            main.send_msg(f"Gesture: {gesture_name}")
+            time.sleep(0.5)  # slight delay to avoid spamming
+        except Exception as e:
+            print(f"Error processing gesture: {e}")
+
+# Start gesture processing thread
+gesture_thread = threading.Thread(target=process_gestures, daemon=True)
+gesture_thread.start()
+
+# Configure gesture recognizer
+options = GestureRecognizerOptions(
+    base_options=base_options,
+    running_mode=VisionRunningMode.LIVE_STREAM,
+    result_callback=gesture_callback
+)
+
+recognizer = GestureRecognizer.create_from_options(options)
 
 # ---- start FastAPI in background ----
 def _run_server():
@@ -30,8 +86,7 @@ cap = cv2.VideoCapture(0)
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
-def position_check():
-    pass
+wrist_queue = Queue()
 
 def touching(finger1, finger2):
     threshold = 0.05  # Define a threshold for "touching"
@@ -45,14 +100,31 @@ def translate_coords(x, y):
     new_y = round(y * screen_h)
     return new_x, new_y
 
-def check_hand_movement(wrist):
-    time1 = time.time()
-    pos1 = (wrist.x, wrist.y)
-    pos2 = (wrist.x, wrist.y)
-    if abs(pos2[0] - pos1[0]) > 0.5 or abs(pos2[1] - pos1[1]) > 0.5:
-        main.send_msg("Hand movement detected")
+def check_hand_movement(wrist_queue):
+    prev_pos = None
+    while True:
+        try:
+            wrist = wrist_queue.get()  # Get latest wrist position
+            current_pos = (wrist.x, wrist.y)
+            
+            if prev_pos is not None:
+                # Compare with previous position
+                if current_pos[0] - prev_pos[0] > 0.02:
+                    main.send_msg("Hand moved left") 
+                elif current_pos[0] - prev_pos[0] < -0.02:
+                    main.send_msg("Hand moved right")
+            
+            
+            prev_pos = current_pos  # Update previous position
+        except Exception as e:
+            pass
 
-hand_thread = threading.Thread(target=check_hand_movement, daemon=True)
+hand_thread = threading.Thread(target=check_hand_movement, args=(wrist_queue,), daemon=True)
+hand_thread.start()
+
+def print_gestuere(gesture):
+    print(f"Detected gesture: {gesture}")
+
 with mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=2,
@@ -66,6 +138,12 @@ with mp_hands.Hands(
             continue
 
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # Add gesture recognition
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+        timestamp_ms = int(time.time() * 1000)
+        recognizer.recognize_async(mp_image, timestamp_ms)
+        
         results = hands.process(rgb)
 
         # quit hotkey
@@ -100,7 +178,7 @@ with mp_hands.Hands(
             
         wrist = results.multi_hand_landmarks[0].landmark[0] if results.multi_hand_landmarks else None
         if wrist:
-            hand_thread.start()
+            wrist_queue.put(wrist)
         # draw landmarks (preview only)
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
@@ -115,7 +193,12 @@ with mp_hands.Hands(
 
         # publish the frame to the FastAPI MJPEG stream
         main.set_frame_from_bgr(frame)
+        # New: update latest frame timestamp
+        with latest_frame_lock:
+            latest_frame_ts = timestamp_ms
         cv2.imshow('MediaPipe Hands', frame)
 
+# Add cleanup for recognizer
 cap.release()
+recognizer.close()
 cv2.destroyAllWindows()
