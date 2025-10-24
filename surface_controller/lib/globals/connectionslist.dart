@@ -6,3 +6,7 @@ void addNewConnection() {
   connectionsList.value = List.from(connectionsList.value)
     ..add(connectionsList.value.length);
 }
+
+void removeConnection(int index) {
+  connectionsList.value = List.from(connectionsList.value)..removeAt(index);
+}

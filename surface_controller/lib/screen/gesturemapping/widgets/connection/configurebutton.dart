@@ -19,8 +19,8 @@ class ConfigureButton extends StatelessWidget {
         backgroundColor: backgroundColor,
         // Set dynamic size based on screen dimensions
         fixedSize: Size(
-          getProportionalWidth(context, 100),
-          getProportionalHeight(context, 40),
+          getProportionalWidth(context, 70),
+          getProportionalHeight(context, 20),
         ),
 
         // Set border radius and stroke
@@ -33,7 +33,10 @@ class ConfigureButton extends StatelessWidget {
         ),
       ),
       onPressed: onPressed,
-      child: Text(label),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11, color: Colors.black),
+      ),
     );
   }
 }

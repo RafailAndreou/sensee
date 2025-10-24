@@ -6,6 +6,7 @@ import 'package:surface_controller/globals/global.dart';
 import 'package:surface_controller/configue.dart';
 import 'package:surface_controller/server/server.dart';
 import 'package:surface_controller/globals/sizes.dart';
+import 'removebutton.dart';
 
 class Connection extends StatefulWidget {
   const Connection({super.key});
@@ -219,7 +220,9 @@ class _ConnectionState extends State<Connection> {
                         ? const Color.fromARGB(255, 152, 209, 255)
                         : Colors.white,
                   ),
-                  const SizedBox(width: 60),
+                  const SizedBox(width: 20),
+                  RemoveButton(onPressed: () {}),
+                  const SizedBox(width: 5),
                   ConfigureButton(
                     label: "Configure",
                     onPressed: () {
