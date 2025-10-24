@@ -11,4 +11,9 @@ void addNewConnection() {
 void removeConnection(int id) {
   connectionsList.value = List.from(connectionsList.value)
     ..removeWhere((connectionId) => connectionId == id);
+
+  // Reset counter if list becomes empty (safe to reuse IDs)
+  if (connectionsList.value.isEmpty) {
+    _nextConnectionId = 0;
+  }
 }
