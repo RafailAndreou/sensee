@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 ValueNotifier<List<int>> connectionsList = ValueNotifier<List<int>>([0]);
+int _nextConnectionId = 1;
 
 void addNewConnection() {
   connectionsList.value = List.from(connectionsList.value)
-    ..add(connectionsList.value.length);
+    ..add(_nextConnectionId++);
 }
 
-void removeConnection(int index) {
-  connectionsList.value = List.from(connectionsList.value)..removeAt(index);
+void removeConnection(int id) {
+  connectionsList.value = List.from(connectionsList.value)
+    ..removeWhere((connectionId) => connectionId == id);
 }

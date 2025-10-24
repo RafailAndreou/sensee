@@ -20,14 +20,15 @@ class Gesturemapping extends StatelessWidget {
             valueListenable: connectionsList,
             builder: (context, value, child) {
               final connections = value;
-              return ListView.separated(
-                itemBuilder: (context, index) {
-                  return SizedBox(child: Connection(id: index));
-                },
-                separatorBuilder: (context, index) {
-                  return SizedBox(height: 50);
-                },
-                itemCount: connections.length,
+              return SingleChildScrollView(
+                child: Column(
+                  children: [
+                    for (final connectionId in connections) ...[
+                      Connection(key: ValueKey(connectionId), id: connectionId),
+                      SizedBox(height: 50),
+                    ],
+                  ],
+                ),
               );
             },
           ),
