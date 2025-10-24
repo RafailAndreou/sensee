@@ -1,4 +1,4 @@
-import 'package:surface_controller/global.dart';
+import 'package:surface_controller/globals/global.dart';
 
 void print_config() {
   print(

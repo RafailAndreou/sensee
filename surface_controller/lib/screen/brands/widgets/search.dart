@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:surface_controller/global.dart';
+import 'package:surface_controller/globals/global.dart';
 
 class Search extends StatefulWidget {
   final ValueChanged<String> onChanged;

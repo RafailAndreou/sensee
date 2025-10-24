@@ -1,8 +1,8 @@
 // ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import '../../../brands/configurationscreen.dart';
-import 'package:surface_controller/global.dart';
-import 'package:surface_controller/sizes.dart';
+import 'package:surface_controller/globals/global.dart';
+import 'package:surface_controller/globals/sizes.dart';
 
 class DropDownMenu extends StatelessWidget {
   final String selectedValue;

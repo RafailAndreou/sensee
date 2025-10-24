@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../sizes.dart';
+import '../../../../globals/sizes.dart';
 
 class ConfigureButton extends StatelessWidget {
   final String label;

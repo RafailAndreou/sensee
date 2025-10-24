@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../irblaster.dart';
-import 'package:surface_controller/sizes.dart';
+import 'package:surface_controller/globals/sizes.dart';
 
 class CustomButton extends StatelessWidget {
   final String title;

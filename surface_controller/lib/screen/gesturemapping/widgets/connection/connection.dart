@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'dropdownmenu.dart';
 import 'handbutton.dart';
 import 'configurebutton.dart';
-import 'package:surface_controller/global.dart';
+import 'package:surface_controller/globals/global.dart';
 import 'package:surface_controller/configue.dart';
 import 'package:surface_controller/server/server.dart';
-import 'package:surface_controller/sizes.dart';
+import 'package:surface_controller/globals/sizes.dart';
 
 class Connection extends StatefulWidget {
   const Connection({super.key});

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:surface_controller/globals/connectionslist.dart';
 
 class AddActionButton extends StatelessWidget {
   const AddActionButton({super.key, required this.title});
@@ -9,6 +10,7 @@ class AddActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        addNewConnection();
         // Handle button tap
       },
       child: Container(

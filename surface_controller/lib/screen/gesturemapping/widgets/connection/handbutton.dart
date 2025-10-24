@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:surface_controller/sizes.dart';
+import 'package:surface_controller/globals/sizes.dart';
 
 class HandButton extends StatelessWidget {
   final String label;
