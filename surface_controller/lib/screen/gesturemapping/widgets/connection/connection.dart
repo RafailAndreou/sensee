@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:surface_controller/globals/connectionslist.dart';
 import 'dropdownmenu.dart';
 import 'handbutton.dart';
 import 'configurebutton.dart';
@@ -224,7 +225,11 @@ class _ConnectionState extends State<Connection> {
                         : Colors.white,
                   ),
                   const SizedBox(width: 20),
-                  RemoveButton(onPressed: () {}),
+                  RemoveButton(
+                    onPressed: () {
+                      removeConnection(widget.id);
+                    },
+                  ),
                   const SizedBox(width: 5),
                   ConfigureButton(
                     label: "Configure",
