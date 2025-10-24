@@ -228,6 +228,7 @@ class _ConnectionState extends State<Connection> {
                   RemoveButton(
                     onPressed: () {
                       removeConnection(widget.id);
+                      debugPrint("Removed connection with id: ${widget.id}");
                     },
                   ),
                   const SizedBox(width: 5),
