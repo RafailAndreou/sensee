@@ -8,6 +8,7 @@ class DropDownMenu extends StatelessWidget {
   final String selectedValue;
   final List<String> options;
   final Widget leadingIcon;
+  final ConnectionConfig config;
   final List<String> actions = const [
     "Play Music",
     "Open AC",
@@ -23,6 +24,7 @@ class DropDownMenu extends StatelessWidget {
     required this.selectedValue,
     required this.options,
     required this.leadingIcon,
+    required this.config,
   });
 
   @override
@@ -69,28 +71,28 @@ class DropDownMenu extends StatelessWidget {
         // Handle selection change
         print('Selected: $value');
         if (value == "Sound1" || value == "Sound2" || value == "Sound3") {
-          sound.value = value ?? '';
+          config.sound.value = value ?? '';
         }
         if (value == "Thumb+Index" ||
             value == "Thumb+Middle" ||
             value == "Thumb+Ring") {
-          gesture.value = value ?? '';
+          config.gesture.value = value ?? '';
         }
         if (value == "TV:Turn On" ||
             value == "TV:Turn Off" ||
             value == "TV:Increase Volume" ||
             value == "TV:Decrease Volume") {
-          action.value = value ?? '';
+          config.action.value = value ?? '';
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => const ConfigurationScreen(),
+              builder: (context) => ConfigurationScreen(config: config),
             ),
           );
           // You can add additional logic here if needed
         }
 
         if (actions.contains(value)) {
-          action.value = value ?? '';
+          config.action.value = value ?? '';
         }
       },
     );

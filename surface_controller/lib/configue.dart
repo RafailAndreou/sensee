@@ -1,15 +1,15 @@
 import 'package:surface_controller/globals/global.dart';
 
-void print_config() {
+void print_config(ConnectionConfig config) {
   print(
-    brand.value +
+    config.brand.value +
         " " +
-        action.value +
+        config.action.value +
         " " +
-        gesture.value +
+        config.gesture.value +
         " " +
-        sound.value +
+        config.sound.value +
         " " +
-        hand.value,
+        config.hand.value,
   );
 }

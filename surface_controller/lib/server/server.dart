@@ -4,20 +4,20 @@ import 'package:surface_controller/globals/global.dart';
 
 const String serverUrl = "http://10.219.41.82:8000/configuration";
 
-Future<void> sendConfiguration() async {
-  final config = {
-    "brand": brand.value,
-    "action": action.value,
-    "gesture": gesture.value,
-    "sound": sound.value,
-    "hand": hand.value,
+Future<void> sendConfiguration(ConnectionConfig config) async {
+  final configData = {
+    "brand": config.brand.value,
+    "action": config.action.value,
+    "gesture": config.gesture.value,
+    "sound": config.sound.value,
+    "hand": config.hand.value,
   };
 
   try {
     final response = await http.post(
       Uri.parse(serverUrl),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode(config),
+      body: jsonEncode(configData),
     );
 
     if (response.statusCode == 200) {

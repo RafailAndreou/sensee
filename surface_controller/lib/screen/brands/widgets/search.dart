@@ -3,7 +3,9 @@ import 'package:surface_controller/globals/global.dart';
 
 class Search extends StatefulWidget {
   final ValueChanged<String> onChanged;
-  const Search({super.key, required this.onChanged});
+  final ConnectionConfig config;
+
+  const Search({super.key, required this.onChanged, required this.config});
 
   @override
   State<Search> createState() => _SearchState();
@@ -55,7 +57,7 @@ class _SearchState extends State<Search> {
                 onTap: () {
                   Navigator.of(context).popUntil((route) => route.isFirst);
                   print(filteredTvBrands[index]);
-                  brand.value = filteredTvBrands[index];
+                  widget.config.brand.value = filteredTvBrands[index];
                 },
               );
             },

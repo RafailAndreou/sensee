@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'widgets/search.dart';
+import 'package:surface_controller/globals/global.dart';
 
 class ConfigurationScreen extends StatelessWidget {
-  const ConfigurationScreen({super.key});
+  final ConnectionConfig config;
+
+  const ConfigurationScreen({super.key, required this.config});
 
   @override
   Widget build(BuildContext context) {
@@ -16,6 +19,7 @@ class ConfigurationScreen extends StatelessWidget {
         ),
       ),
       body: Search(
+        config: config,
         onChanged: (value) {
           // Handle search input changes
         },

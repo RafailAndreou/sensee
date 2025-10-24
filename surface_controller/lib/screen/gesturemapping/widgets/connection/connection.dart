@@ -23,6 +23,15 @@ class _ConnectionState extends State<Connection> {
   // Selected state for hand buttons: none, left, right, or both.
   HandSelection _selected = HandSelection.none;
 
+  // Get this connection's configuration
+  late final ConnectionConfig config;
+
+  @override
+  void initState() {
+    super.initState();
+    config = getConnectionConfig(widget.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -135,6 +144,7 @@ class _ConnectionState extends State<Connection> {
             leadingIcon: const Image(
               image: AssetImage('assets/connection/menu/music.png'),
             ),
+            config: config,
           ),
         ),
         Spacer(),
@@ -146,6 +156,7 @@ class _ConnectionState extends State<Connection> {
             leadingIcon: const Image(
               image: AssetImage('assets/connection/menu/hand.png'),
             ),
+            config: config,
           ),
         ),
         Spacer(),
@@ -157,6 +168,7 @@ class _ConnectionState extends State<Connection> {
             leadingIcon: const Image(
               image: AssetImage('assets/connection/menu/sound1.png'),
             ),
+            config: config,
           ),
         ),
         Spacer(),
@@ -192,7 +204,7 @@ class _ConnectionState extends State<Connection> {
                     label: "Left",
                     onPressed: () {
                       setState(() => _selected = HandSelection.left);
-                      hand.value = "Left";
+                      config.hand.value = "Left";
                     },
                     backgroundColor:
                         (_selected == HandSelection.left ||
@@ -205,7 +217,7 @@ class _ConnectionState extends State<Connection> {
                     label: "Right",
                     onPressed: () {
                       setState(() => _selected = HandSelection.right);
-                      hand.value = "Right";
+                      config.hand.value = "Right";
                     },
                     backgroundColor:
                         (_selected == HandSelection.right ||
@@ -218,7 +230,7 @@ class _ConnectionState extends State<Connection> {
                     label: "Both",
                     onPressed: () {
                       setState(() => _selected = HandSelection.both);
-                      hand.value = "both";
+                      config.hand.value = "both";
                     },
                     backgroundColor: _selected == HandSelection.both
                         ? const Color.fromARGB(255, 152, 209, 255)
@@ -235,15 +247,15 @@ class _ConnectionState extends State<Connection> {
                   ConfigureButton(
                     label: "Configure",
                     onPressed: () {
-                      sendConfiguration();
-                      print_config();
+                      sendConfiguration(config);
+                      print_config(config);
                     },
                   ),
                 ],
               ),
 
               ValueListenableBuilder<String>(
-                valueListenable: brand,
+                valueListenable: config.brand,
                 builder: (context, value, child) => Text(value),
               ),
             ],
