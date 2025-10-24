@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:surface_controller/globals/connectionslist.dart';
 import 'package:surface_controller/globals/sizes.dart';
 
 class RemoveButton extends StatelessWidget {
@@ -10,10 +9,6 @@ class RemoveButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextButton(
-      child: const Text(
-        'Remove',
-        style: TextStyle(fontSize: 11, color: Colors.white),
-      ),
       onPressed: onPressed,
       style: TextButton.styleFrom(
         backgroundColor: Colors.red,
@@ -28,6 +23,10 @@ class RemoveButton extends StatelessWidget {
             width: 2, // Border thickness
           ),
         ),
+      ),
+      child: const Text(
+        'Remove',
+        style: TextStyle(fontSize: 11, color: Colors.white),
       ),
     );
   }
