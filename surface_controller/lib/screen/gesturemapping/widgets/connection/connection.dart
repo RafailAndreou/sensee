@@ -37,6 +37,12 @@ class _ConnectionState extends State<Connection> {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFE9E9E9),
+        gradient: LinearGradient(
+          colors: [
+            Color.fromARGB(255, 240, 240, 255),
+            Color.fromARGB(255, 220, 220, 255),
+          ],
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color.fromARGB(255, 141, 133, 232),
