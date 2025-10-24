@@ -9,7 +9,10 @@ import 'package:surface_controller/globals/sizes.dart';
 import 'removebutton.dart';
 
 class Connection extends StatefulWidget {
-  const Connection({super.key});
+  Connection({super.key, required this.id}) {
+    debugPrint("Connection created with id: $id");
+  }
+  final int id;
 
   @override
   State<Connection> createState() => _ConnectionState();

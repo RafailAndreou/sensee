@@ -22,7 +22,7 @@ class Gesturemapping extends StatelessWidget {
               final connections = value;
               return ListView.separated(
                 itemBuilder: (context, index) {
-                  return SizedBox(child: Connection());
+                  return SizedBox(child: Connection(id: index));
                 },
                 separatorBuilder: (context, index) {
                   return SizedBox(height: 50);
