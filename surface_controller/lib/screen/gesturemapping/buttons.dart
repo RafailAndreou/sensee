@@ -18,26 +18,30 @@ class CustomButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15),
+        gradient: LinearGradient(
+          colors: [
+            const Color.fromARGB(255, 219, 219, 219),
+            const Color.fromARGB(255, 250, 250, 250),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color.fromARGB(183, 0, 93, 223),
-            spreadRadius: 0,
-            blurRadius: 3,
-            offset: const Offset(0, 3),
+            color: const Color.fromARGB(100, 0, 0, 0),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(2, 2), // changes position of shadow
           ),
         ],
       ),
       child: SizedBox(
+        height: getProportionalHeight(context, 35),
         child: TextButton(
           style: TextButton.styleFrom(
-            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
-              side: const BorderSide(
-                color: Color.fromARGB(113, 158, 158, 158),
-                width: 3,
-              ),
             ),
           ),
           onPressed:
@@ -46,14 +50,15 @@ class CustomButton extends StatelessWidget {
                 blast(up);
               },
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               icon,
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: getProportionalWidth(context, 8),
-                  color: Colors.black,
+                  fontSize: getProportionalWidth(context, 9),
+                  fontFamily: 'Roboto',
+                  color: const Color.fromARGB(255, 0, 0, 0),
                 ),
               ),
             ],
