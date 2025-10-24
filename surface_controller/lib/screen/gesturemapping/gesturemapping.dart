@@ -5,7 +5,7 @@ import 'menu.dart';
 import '../../globals/connectionslist.dart';
 
 class Gesturemapping extends StatelessWidget {
-  Gesturemapping({super.key});
+  const Gesturemapping({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +19,7 @@ class Gesturemapping extends StatelessWidget {
           child: ValueListenableBuilder(
             valueListenable: connectionsList,
             builder: (context, value, child) {
+              final connections = value;
               return ListView.separated(
                 itemBuilder: (context, index) {
                   return SizedBox(child: Connection());
@@ -26,7 +27,7 @@ class Gesturemapping extends StatelessWidget {
                 separatorBuilder: (context, index) {
                   return SizedBox(height: 50);
                 },
-                itemCount: connectionsList.value.length,
+                itemCount: connections.length,
               );
             },
           ),
