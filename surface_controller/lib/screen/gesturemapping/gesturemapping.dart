@@ -13,13 +13,21 @@ class Gesturemapping extends StatelessWidget {
         Flexible(flex: 4, child: Menu()),
         Spacer(flex: 1),
         // keep the connection widget at its intended height
-        Flexible(flex: 4, child: const SizedBox(child: Connection())),
+        Flexible(
+          flex: 4,
+          child: ListView(
+            children: [
+              SizedBox(child: Connection()),
+              SizedBox(height: 50),
+              SizedBox(child: Connection()),
+            ],
+          ),
+        ),
         Spacer(),
         Flexible(
           flex: 4,
           child: Row(
             children: [
-              Spacer(),
               Flexible(flex: 4, child: AddActionButton(title: "Add Action")),
             ],
           ),
