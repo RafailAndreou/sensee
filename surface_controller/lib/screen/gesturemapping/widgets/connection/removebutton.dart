@@ -14,9 +14,7 @@ class RemoveButton extends StatelessWidget {
         'Remove',
         style: TextStyle(fontSize: 11, color: Colors.white),
       ),
-      onPressed: () {
-        removeConnection(0);
-      },
+      onPressed: onPressed,
       style: TextButton.styleFrom(
         backgroundColor: Colors.red,
         fixedSize: Size(
