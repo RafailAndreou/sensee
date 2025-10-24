@@ -5,7 +5,6 @@ import mediapipe as mp
 import pyautogui
 import threading
 import time
-
 from server import main  # FastAPI app + helpers (set_frame_from_bgr, send_msg)
 
 # ---- start FastAPI in background ----
@@ -17,6 +16,7 @@ ip = main.get_local_ip()
 print(f"\n🌐 Access the configuration portal at: http://{ip}:8000\n")
 server_thread = threading.Thread(target=_run_server, daemon=True)
 server_thread.start()
+
 
 screen_w, screen_h = pyautogui.size()
 mouse_x, mouse_y = pyautogui.position()
@@ -45,6 +45,14 @@ def translate_coords(x, y):
     new_y = round(y * screen_h)
     return new_x, new_y
 
+def check_hand_movement(wrist):
+    time1 = time.time()
+    pos1 = (wrist.x, wrist.y)
+    pos2 = (wrist.x, wrist.y)
+    if abs(pos2[0] - pos1[0]) > 0.5 or abs(pos2[1] - pos1[1]) > 0.5:
+        main.send_msg("Hand movement detected")
+
+hand_thread = threading.Thread(target=check_hand_movement, daemon=True)
 with mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=2,
@@ -73,24 +81,26 @@ with mp_hands.Hands(
         except Exception:
             pass
 
-        # gesture: thumb–middle => "up"
         try:
             thumb = results.multi_hand_landmarks[0].landmark[4]
             middle = results.multi_hand_landmarks[0].landmark[12]
             if touching(thumb, middle):
-                main.send_msg("up")
+                main.send_msg("Thumb + middle finger touch detected")
         except Exception:
             pass
 
-        # gesture: thumb–index => "down"
         try:
             thumb = results.multi_hand_landmarks[0].landmark[4]
             index = results.multi_hand_landmarks[0].landmark[8]
             if touching(thumb, index):
-                main.send_msg("down")
+                main.send_msg("Thumb + index finger touch detected")
         except Exception:
             pass
 
+            
+        wrist = results.multi_hand_landmarks[0].landmark[0] if results.multi_hand_landmarks else None
+        if wrist:
+            hand_thread.start()
         # draw landmarks (preview only)
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
@@ -103,7 +113,7 @@ with mp_hands.Hands(
         if MIRROR_PREVIEW:
             frame = cv2.flip(frame, 1)
 
-        # publish the raw frame to the FastAPI MJPEG stream
+        # publish the frame to the FastAPI MJPEG stream
         main.set_frame_from_bgr(frame)
         cv2.imshow('MediaPipe Hands', frame)
 
