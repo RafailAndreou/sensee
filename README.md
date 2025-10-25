@@ -336,3 +336,8 @@ Manually change the ip address to the ones that's printed when you run the gestu
 - mobile\surface_controller\android\app\src\main\res\xml\network_security_config.xml
 - camera.dart
 - server.dart
+
+and then run
+flutter clean
+flutter pub get
+flutter run
