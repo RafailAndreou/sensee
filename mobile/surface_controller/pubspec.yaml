@@ -1,0 +1,35 @@
+name: surface_controller
+description: "A new Flutter project."
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.5.0
+  ir_sensor_plugin: ^0.3.1
+  webview_flutter: ^4.13.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/gesturemapping.png
+    - assets/deviceaction.png
+    - assets/connection/okhand.png
+    - assets/connection/sound.png
+    - assets/connection/action.png
+    - assets/surfacezone.png
+    - assets/connection/menu/
+    - assets/connection/menu/music.png
+    - assets/connection/menu/hand.png
+    - assets/connection/menu/sound1.png
+    - assets/plus.png
