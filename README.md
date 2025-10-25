@@ -172,12 +172,16 @@ The current version runs entirely on a **laptop** and connects to a **Flutter mo
 
 - **Gesture Recognition (Python + MediaPipe)**
 
-  - Two gestures available:
+  - Gestures available:
 
-    - Thumb + Index touching
-    - Thumb + Middle finger touching
+  - Thumb + Index touching
+  - Thumb + Middle finger touching
+  - Moving hand to the right
+  - Moving hand to the left
+  - Closing Fist
+  - Opening Open Palm
 
-  - Detection is consistent and stable at ~10–15 FPS
+  - Detection is consistent and stable at ~30+ FPS depending on hardware
 
 - **FastAPI Server**
 
