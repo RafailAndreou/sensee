@@ -300,3 +300,31 @@ Sensee aims to make interaction **natural and quiet**, replacing voice assistant
 - Integrate IR or Bluetooth action layer later
 - Add persistent settings storage (JSON or SQLite)
 - Improve latency and FPS stability
+
+# Installation
+
+## Run from clone(windows)
+
+1. Clone the repo:
+
+```
+git clone https://github.com/your/repo.git
+cd repo
+```
+
+2. Create & activate a virtual environment:
+
+```
+python -m venv venv
+# PowerShell
+.\venv\Scripts\Activate.ps1
+# cmd.exe
+venv\Scripts\activate
+```
+
+3. Install dependencies and run:
+
+```
+python -m pip install -r requirements.txt
+python raspi\gesture.py
+```
