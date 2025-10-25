@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:surface_controller/globals/global.dart';
 
-const String serverUrl = "https://10.180.97.82:8000//configuration";
+const String serverUrl = "http://10.180.97.82:8000/configuration";
 
 Future<void> sendConfiguration(ConnectionConfig config) async {
   final configData = {
