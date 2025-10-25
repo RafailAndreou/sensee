@@ -328,3 +328,11 @@ venv\Scripts\activate
 python -m pip install -r requirements.txt
 python raspi\gesture.py
 ```
+
+4. Change ip address
+
+Manually change the ip address to the ones that's printed when you run the gesture.py from:
+
+- mobile\surface_controller\android\app\src\main\res\xml\network_security_config.xml
+- camera.dart
+- server.dart
