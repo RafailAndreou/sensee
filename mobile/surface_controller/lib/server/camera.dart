@@ -6,7 +6,7 @@ class VideoPage extends StatelessWidget {
 
   final controller = WebViewController()
     ..setJavaScriptMode(JavaScriptMode.unrestricted)
-    ..loadRequest(Uri.parse('http://10.219.41.82:8000/video'));
+    ..loadRequest(Uri.parse('https://10.180.97.82:8000/video'));
 
   @override
   Widget build(BuildContext context) {
