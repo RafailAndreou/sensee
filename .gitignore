@@ -1,0 +1,29 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+# Virtual envs
+env/
+venv/
+# Byte-compiled / optimized / DLL files
+*.so
+# IDEs
+.vscode/
+.idea/
+# macOS
+.DS_Store
+# Windows
+Thumbs.db
+# Flutter / Dart
+.dart_tool/
+build/
+**/build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+# Gradle
+.gradle/
+**/*.iml
+# Logs
+*.log
