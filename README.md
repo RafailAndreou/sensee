@@ -252,7 +252,7 @@ sensee/
 1. **Start the server**
 
    ```bash
-   python gesture.py
+   python gesture
    ```
 
    - This automatically launches the FastAPI app on your local IP (e.g., `http://192.168.1.x:8000`).
