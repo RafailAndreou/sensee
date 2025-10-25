@@ -1,4 +1,130 @@
-Perfect — here’s a version of the `README.md` focused **only on your current setup** (the **laptop FastAPI server + Flutter mobile app** version), leaving out Raspberry Pi and hardware plans for now.
+# Sensee
+
+Invisible Smart Gesture Controller — Laptop prototype
+
+A minimal, local-first system that detects hand gestures using your laptop camera and exposes a small HTTP API to a Flutter mobile app which serves as the configuration UI.
+
+## Table of contents
+
+- [Overview](#overview)
+- [Quickstart](#quickstart)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Project structure](#project-structure)
+- [Communication flow](#communication-flow)
+- [Tech stack](#tech-stack)
+- [Example configuration](#example-configuration)
+- [Next steps](#next-steps)
+
+## Overview
+
+Sensee detects simple hand gestures (using MediaPipe + OpenCV) on a laptop and exposes:
+
+- an MJPEG `/video` endpoint for a live camera feed
+- configuration endpoints to accept gesture → action mappings from a Flutter app
+
+The current repository focuses on the laptop/server prototype and the Flutter mobile UI.
+
+## Quickstart
+
+1. Run the gesture server (from the `raspi/` or server folder):
+
+   ```powershell
+   python gesture.py
+   ```
+
+   The server will print the local URL (e.g. `http://192.168.1.42:8000`).
+
+2. Open the Flutter app (`mobile/surface_controller`) on your phone/emulator and point it to the same IP.
+
+3. Build an APK (optional — for distribution):
+
+   ```powershell
+   cd mobile\surface_controller
+   flutter clean
+   flutter pub get
+   flutter build apk --release
+   ```
+
+   Output APK:
+
+   `mobile/surface_controller/build/app/outputs/flutter-apk/app-release.apk`
+
+   Notes:
+
+   - Use `--split-per-abi` for smaller per-ABI APKs.
+   - For Play Store, prefer `flutter build appbundle --release` and configure a proper signing keystore.
+
+## Architecture
+
+### Laptop (server)
+
+- FastAPI backend
+- OpenCV + MediaPipe for hand detection
+- MJPEG endpoint for live frames
+
+### Mobile (client)
+
+- Flutter app that reads the MJPEG stream and posts configuration JSON to the server
+
+## Features
+
+- Gesture recognition (basic gestures implemented)
+- MJPEG live stream (`/video`)
+- Configuration endpoints for mapping gestures to actions
+
+## Project structure
+
+```
+sensee/
+├── raspi/                      # Python server + gesture detection
+│   ├── gesture.py
+│   └── server/                  # FastAPI app and helpers
+└── mobile/                      # Flutter mobile configuration UI
+    └── surface_controller/      # Flutter project
+```
+
+## Communication flow
+
+```
+Flutter App <---- HTTP (GET/POST) ----> FastAPI Server
+       |                                     |
+       |-- GET /video (MJPEG stream)         |-- Camera + MediaPipe + OpenCV
+       |-- POST /configuration               |
+```
+
+## Tech stack
+
+- Backend: Python + FastAPI
+- Vision: OpenCV + MediaPipe
+- Client: Flutter (Dart)
+
+## Example configuration (POST JSON)
+
+```json
+{
+  "brand": "Samsung",
+  "action": "VolumeUp",
+  "gesture": "ThumbIndex",
+  "sound": "click.wav",
+  "hand": "Right"
+}
+```
+
+## Next steps
+
+- Improve gesture set and add debounce
+- Persist settings (JSON/SQLite)
+- Integrate action layer (IR/Bluetooth)
+- Configure release signing for Play Store
+
+---
+
+If you'd like, I can also:
+
+- add a short developer-facing `mobile/README.md` with exact commands to build and attach the APK to a GitHub release
+- configure Android release signing (generate keystore + Gradle config)
+  Perfect — here’s a version of the `README.md` focused **only on your current setup** (the **laptop FastAPI server + Flutter mobile app** version), leaving out Raspberry Pi and hardware plans for now.
 
 ---
 
@@ -71,11 +197,13 @@ The current version runs entirely on a **laptop** and connects to a **Flutter mo
 
 ```
 sensee/
-├── gesture.py          # Handles camera input + MediaPipe gesture detection
-├── server/
-│   ├── main.py         # FastAPI app with MJPEG + config endpoints
-│   └── __init__.py
-└── flutter_app/        # Flutter client (mobile configuration interface)
+├── raspi/
+│   ├── server         # FastAPI app with MJPEG + config endpoints
+│   └── gesture.py
+└── mobile/      # Flutter client (mobile configuration interface)
+
+
+
 ```
 
 ---
