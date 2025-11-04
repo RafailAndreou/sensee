@@ -151,6 +151,13 @@ def _discovery_responder():
         except Exception as e:
             # keep responder alive
             print(f"[discovery] ❌ Error: {e}")
+# Start discovery responder in background so the Flutter app can discover the server
+try:
+    t = threading.Thread(target=_discovery_responder, daemon=True)
+    t.start()
+except Exception as e:
+    print(f"[discovery] failed to start responder thread: {e}")
+    
 class Listener:
     def __init__(self):
         self.found = {}
