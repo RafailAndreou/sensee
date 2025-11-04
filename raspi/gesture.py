@@ -68,7 +68,7 @@ def _run_server():
     import uvicorn
     uvicorn.run("server.main:app", host="0.0.0.0", port=8000, log_level="info")
 
-ip = main.get_local_ip()
+ip, bytes = main.get_local_ip()
 print(f"\n🌐 Access the configuration portal at: http://{ip}:8000\n")
 server_thread = threading.Thread(target=_run_server, daemon=True)
 server_thread.start()
