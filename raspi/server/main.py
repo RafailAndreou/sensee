@@ -8,7 +8,7 @@ import threading
 import time
 import cv2
 import numpy as np
-from zeroconf.asyncio import AsyncZeroconf,AsyncServiceBrowser
+from zeroconf.asyncio import AsyncZeroconf, AsyncServiceBrowser, AsyncServiceInfo
 import asyncio
 
 app = FastAPI()
@@ -152,11 +152,11 @@ def _discovery_responder():
             # keep responder alive
             print(f"[discovery] ❌ Error: {e}")
 # Start discovery responder in background so the Flutter app can discover the server
-try:
-    t = threading.Thread(target=_discovery_responder, daemon=True)
-    t.start()
-except Exception as e:
-    print(f"[discovery] failed to start responder thread: {e}")
+# try:
+#     t = threading.Thread(target=_discovery_responder, daemon=True)
+#     t.start()
+# except Exception as e:
+#     print(f"[discovery] failed to start responder thread: {e}")
     
 class Listener:
     def __init__(self):
@@ -196,6 +196,48 @@ async def discovery_responder_async():
     finally:
         await browser.async_cancel()
         await zc.async_close()
+
+try:
+    asyncio.run(discovery_responder_async())
+except Exception as e:
+    print(f"[discovery] ❌ Error in discovery responder: {e}")
+
+async def register_mdns_service():
+    """Register this server as sensee.local on the network."""
+    ip_str, ip_bytes = get_local_ip()
+    
+    # Create service info
+    info = AsyncServiceInfo(
+        SERVICE_TYPE,
+        "Sensee Server._sensee._tcp.local.",
+        addresses=[ip_bytes],  # Use the bytes from get_local_ip()
+        port=8000,
+        properties={"path": "/configuration"},
+        server="sensee.local.",
+    )
+    
+    zc = AsyncZeroconf()
+    try:
+        await zc.async_register_service(info)
+        print(f"✅ mDNS service registered as sensee.local at {ip_str}:8000")
+        # Keep it registered (block indefinitely)
+        await asyncio.Event().wait()
+    except Exception as e:
+        print(f"❌ Failed to register mDNS service: {e}")
+    finally:
+        await zc.async_unregister_service(info)
+        await zc.async_close()
+
+# Start mDNS registration in background thread
+def _start_mdns():
+    asyncio.run(register_mdns_service())
+
+try:
+    mdns_thread = threading.Thread(target=_start_mdns, daemon=True)
+    mdns_thread.start()
+    print("[mDNS] Registration thread started")
+except Exception as e:
+    print(f"[mDNS] Failed to start registration: {e}")
 
 # ---------------- Routes ----------------
 @app.get("/")
