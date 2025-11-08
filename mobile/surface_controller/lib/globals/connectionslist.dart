@@ -104,3 +104,21 @@ void saveConfigsToFile() async {
   final file = await _localFile;
   await file.writeAsString(jsonString);
 }
+
+void loadConfiruationsFromFile() async {
+  final file = await _localFile;
+  final jsonString = await file.readAsString();
+  final Map<String, dynamic> allConfigs = jsonDecode(jsonString);
+
+  allConfigs.forEach((connectionIdStr, configData) {
+    final connectionId = int.parse(connectionIdStr);
+    final config = getConnectionConfig(connectionId);
+
+    config.brand.value = configData['brand'] ?? '';
+    config.action.value = configData['action'] ?? '';
+    config.gesture.value = configData['gesture'] ?? '';
+    config.sound.value = configData['sound'] ?? '';
+    config.hand.value = configData['hand'] ?? '';
+    debugPrint('Loaded config for connection ID $connectionId');
+  });
+}
