@@ -121,7 +121,7 @@ def _discovery_responder():
         print(f"[discovery] ❌ Failed to bind UDP port {_DISCOVERY_PORT}: {e}")
         return
 
-    local_ip = get_local_ip()
+    local_ip, _ = get_local_ip()  # Unpack the tuple correctly
     print(f"[discovery] ✅ Responder listening on UDP port {_DISCOVERY_PORT}")
     print(f"[discovery] Server IP: {local_ip}")
     
@@ -212,7 +212,7 @@ async def register_mdns_service():
         "Sensee Server._sensee._tcp.local.",
         addresses=[ip_bytes],  # Use the bytes from get_local_ip()
         port=8000,
-        properties={"path": "/configuration"},
+        properties={"path": "/configuration", "ip": ip_str},  # Add IP to properties for easy discovery
         server="sensee.local.",
     )
     
@@ -220,10 +220,13 @@ async def register_mdns_service():
     try:
         await zc.async_register_service(info)
         print(f"✅ mDNS service registered as sensee.local at {ip_str}:8000")
+        print(f"   Other devices can connect using: http://{ip_str}:8000")
+        print(f"   Or using mDNS: http://sensee.local:8000 (requires Bonjour on Windows)")
         # Keep it registered (block indefinitely)
         await asyncio.Event().wait()
     except Exception as e:
         print(f"❌ Failed to register mDNS service: {e}")
+        print(f"   Server is still accessible at: http://{ip_str}:8000")
     finally:
         await zc.async_unregister_service(info)
         await zc.async_close()

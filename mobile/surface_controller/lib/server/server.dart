@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:surface_controller/globals/global.dart';
+import 'package:multicast_dns/multicast_dns.dart';
 
 const int _DISCOVERY_PORT = 54321;
 const String _DISCOVERY_TOKEN = 'SENSEE_DISCOVER';
@@ -111,4 +112,76 @@ Future<void> sendConfiguration(ConnectionConfig config) async {
   } catch (e) {
     print("❌ Failed to send configuration: $e");
   }
+}
+
+/// Discover server using mDNS (sensee.local)
+/// Returns a full configuration POST URL like 'http://<ip>:<port>/configuration'
+Future<String?> discoverServerMDNS({int timeoutMs = 3000}) async {
+  final MDnsClient client = MDnsClient();
+  await client.start();
+
+  try {
+    print('[mDNS] Looking for _sensee._tcp.local...');
+
+    await for (final PtrResourceRecord ptr
+        in client
+            .lookup<PtrResourceRecord>(
+              ResourceRecordQuery.serverPointer('_sensee._tcp.local'),
+            )
+            .timeout(Duration(milliseconds: timeoutMs))) {
+      print('[mDNS] Found service: ${ptr.domainName}');
+
+      // Now resolve the SRV and A records
+      await for (final SrvResourceRecord srv
+          in client
+              .lookup<SrvResourceRecord>(
+                ResourceRecordQuery.service(ptr.domainName),
+              )
+              .timeout(Duration(milliseconds: 1000))) {
+        print('[mDNS] SRV: ${srv.target}:${srv.port}');
+
+        await for (final IPAddressResourceRecord ip
+            in client
+                .lookup<IPAddressResourceRecord>(
+                  ResourceRecordQuery.addressIPv4(srv.target),
+                )
+                .timeout(Duration(milliseconds: 1000))) {
+          final url = 'http://${ip.address.address}:${srv.port}/configuration';
+          print('[mDNS] ✅ Server found at $url');
+          client.stop();
+          return url;
+        }
+      }
+    }
+
+    print('[mDNS] ❌ No server found');
+    client.stop();
+    return null;
+  } catch (e) {
+    print('[mDNS] ❌ Error: $e');
+    client.stop();
+    return null;
+  }
+}
+
+/// Try mDNS first, fallback to UDP discovery
+Future<String?> discoverServerSmart() async {
+  print('[Discovery] Trying mDNS first...');
+  String? result = await discoverServerMDNS(timeoutMs: 2000);
+
+  if (result != null) {
+    print('[Discovery] ✅ Found via mDNS');
+    return result;
+  }
+
+  print('[Discovery] mDNS failed, trying UDP broadcast...');
+  result = await discoverServer(timeoutMs: 3000);
+
+  if (result != null) {
+    print('[Discovery] ✅ Found via UDP');
+    return result;
+  }
+
+  print('[Discovery] ❌ All discovery methods failed');
+  return null;
 }
