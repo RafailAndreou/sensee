@@ -20,7 +20,7 @@ class _VideoPageState extends State<VideoPage> {
   }
 
   Future<void> _initControllerAndLoad() async {
-    // Try mDNS first, fallback to UDP
+    // Try mDNS first, fallback to UDP, then fallback to static IP
     String? discovered = await server_discovery.discoverServerSmart();
 
     if (discovered == null) {

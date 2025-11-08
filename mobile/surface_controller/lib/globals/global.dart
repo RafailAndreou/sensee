@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 
 // Legacy global variables (kept for backward compatibility)
-ValueNotifier<String> brand = ValueNotifier("test");
+ValueNotifier<String> brand = ValueNotifier("");
 ValueNotifier<String> action = ValueNotifier("");
 ValueNotifier<String> gesture = ValueNotifier("");
-ValueNotifier<String> sound = ValueNotifier("Test");
-ValueNotifier<String> hand = ValueNotifier("Test");
+ValueNotifier<String> sound = ValueNotifier("");
+ValueNotifier<String> hand = ValueNotifier("");
 
 // Connection-specific configuration
 class ConnectionConfig {
-  final ValueNotifier<String> brand = ValueNotifier("test");
+  final ValueNotifier<String> brand = ValueNotifier("");
   final ValueNotifier<String> action = ValueNotifier("");
   final ValueNotifier<String> gesture = ValueNotifier("");
-  final ValueNotifier<String> sound = ValueNotifier("Test");
-  final ValueNotifier<String> hand = ValueNotifier("Test");
+  final ValueNotifier<String> sound = ValueNotifier("");
+  final ValueNotifier<String> hand = ValueNotifier("");
 }
 
 // Store configuration for each connection ID

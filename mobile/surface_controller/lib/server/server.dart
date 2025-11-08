@@ -89,7 +89,7 @@ Future<void> sendConfiguration(ConnectionConfig config) async {
   };
 
   try {
-    final discovered = await discoverServer();
+    final discovered = await discoverServerSmart();
 
     if (discovered == null) {
       print(
@@ -164,7 +164,7 @@ Future<String?> discoverServerMDNS({int timeoutMs = 3000}) async {
   }
 }
 
-/// Try mDNS first, fallback to UDP discovery
+/// Try mDNS first, fallback to UDP discovery, then fallback to static IP
 Future<String?> discoverServerSmart() async {
   print('[Discovery] Trying mDNS first...');
   String? result = await discoverServerMDNS(timeoutMs: 2000);
@@ -182,6 +182,8 @@ Future<String?> discoverServerSmart() async {
     return result;
   }
 
-  print('[Discovery] ❌ All discovery methods failed');
-  return null;
+  print('[Discovery] ❌ All discovery methods failed, using fallback IP');
+  const fallbackUrl = 'http://10.161.67.82:8000/configuration';
+  print('[Discovery] Using fallback URL: $fallbackUrl');
+  return fallbackUrl;
 }

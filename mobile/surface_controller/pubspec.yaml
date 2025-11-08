@@ -13,6 +13,7 @@ dependencies:
   ir_sensor_plugin: ^0.3.1
   webview_flutter: ^4.13.0
   multicast_dns: ^0.3.2+6
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
