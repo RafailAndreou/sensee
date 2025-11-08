@@ -105,7 +105,7 @@ void saveConfigsToFile() async {
   await file.writeAsString(jsonString);
 }
 
-void loadConfiruationsFromFile() async {
+void loadConfigurationsFromFile() async {
   final file = await _localFile;
   final jsonString = await file.readAsString();
   final Map<String, dynamic> allConfigs = jsonDecode(jsonString);

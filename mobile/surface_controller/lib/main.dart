@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'screen/gesturemapping/gesturemapping.dart';
+import 'globals/connectionslist.dart';
 
 void main() {
   // You can process the message here
-
+  loadConfigurationsFromFile();
   runApp(MyApp());
 }
 
