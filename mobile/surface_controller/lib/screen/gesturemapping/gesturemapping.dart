@@ -51,6 +51,7 @@ class Gesturemapping extends StatelessWidget {
             readCountConnections().then((value) {
               debugPrint("Read from file: $value");
             });
+            configuesToJson();
           },
         ),
       ],

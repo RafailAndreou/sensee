@@ -1,3 +1,12 @@
 {
-  "test": "value"
+  "connections": [
+    {
+      "id": 0,
+      "brand": "philips",
+      "action": "TvTurnOn",
+      "gesture": "thumb+index",
+      "sound": "sound 1",
+      "hand": "both"
+    }
+  ]
 }

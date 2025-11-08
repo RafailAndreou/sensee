@@ -58,3 +58,49 @@ Future<String> readCountConnections() async {
     return 'Error: $e';
   }
 }
+
+void printAllConnections() {
+  for (var connectionId in connectionsList.value) {
+    debugPrint('Connection ID: $connectionId');
+    debugPrint('  Brand: ${getConnectionConfig(connectionId).brand.value}');
+    debugPrint('  Action: ${getConnectionConfig(connectionId).action.value}');
+    debugPrint('  Gesture: ${getConnectionConfig(connectionId).gesture.value}');
+    debugPrint('  Sound: ${getConnectionConfig(connectionId).sound.value}');
+    debugPrint('  Hand: ${getConnectionConfig(connectionId).hand.value}');
+  }
+}
+
+void configuesToJson() {
+  final Map<String, dynamic> allConfigs = {};
+
+  connectionConfigs.forEach((connectionId, config) {
+    allConfigs[connectionId.toString()] = {
+      'brand': config.brand.value,
+      'action': config.action.value,
+      'gesture': config.gesture.value,
+      'sound': config.sound.value,
+      'hand': config.hand.value,
+    };
+  });
+
+  final jsonString = jsonEncode(allConfigs);
+  debugPrint('All Connection Configs as JSON: $jsonString');
+}
+
+void saveConfigsToFile() async {
+  final Map<String, dynamic> allConfigs = {};
+
+  connectionConfigs.forEach((connectionId, config) {
+    allConfigs[connectionId.toString()] = {
+      'brand': config.brand.value,
+      'action': config.action.value,
+      'gesture': config.gesture.value,
+      'sound': config.sound.value,
+      'hand': config.hand.value,
+    };
+  });
+
+  final jsonString = jsonEncode(allConfigs);
+  final file = await _localFile;
+  await file.writeAsString(jsonString);
+}
