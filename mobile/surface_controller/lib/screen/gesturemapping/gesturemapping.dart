@@ -52,6 +52,7 @@ class Gesturemapping extends StatelessWidget {
               debugPrint("Read from file: $value");
             });
             configuesToJson();
+            saveConfigsToFile();
           },
         ),
       ],

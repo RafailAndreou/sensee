@@ -44,6 +44,11 @@ Future<File> get _localFile async {
   return File('$path/server.json');
 }
 
+Future<File> get _configurationsFile async {
+  final path = await _localPath;
+  return File('$path/configurations.json');
+}
+
 Future<File> writeCountConnections(int count) async {
   final file = await _localFile;
   return file.writeAsString('$count');
@@ -88,37 +93,94 @@ void configuesToJson() {
 }
 
 void saveConfigsToFile() async {
-  final Map<String, dynamic> allConfigs = {};
+  try {
+    final Map<String, dynamic> allConfigs = {};
 
-  connectionConfigs.forEach((connectionId, config) {
-    allConfigs[connectionId.toString()] = {
-      'brand': config.brand.value,
-      'action': config.action.value,
-      'gesture': config.gesture.value,
-      'sound': config.sound.value,
-      'hand': config.hand.value,
-    };
-  });
+    connectionConfigs.forEach((connectionId, config) {
+      allConfigs[connectionId.toString()] = {
+        'brand': config.brand.value,
+        'action': config.action.value,
+        'gesture': config.gesture.value,
+        'sound': config.sound.value,
+        'hand': config.hand.value,
+      };
+    });
 
-  final jsonString = jsonEncode(allConfigs);
-  final file = await _localFile;
-  await file.writeAsString(jsonString);
+    final jsonString = jsonEncode(allConfigs);
+    final file = await _configurationsFile;
+    await file.writeAsString(jsonString);
+    debugPrint('Configurations saved to file: $jsonString');
+  } catch (e) {
+    debugPrint('Error saving configurations to file: $e');
+  }
 }
 
-void loadConfigurationsFromFile() async {
-  final file = await _localFile;
-  final jsonString = await file.readAsString();
-  final Map<String, dynamic> allConfigs = jsonDecode(jsonString);
+Future<void> loadConfigurationsFromFile() async {
+  try {
+    final file = await _configurationsFile;
+    final path = file.path;
+    debugPrint('Attempting to load configurations from: $path');
 
-  allConfigs.forEach((connectionIdStr, configData) {
-    final connectionId = int.parse(connectionIdStr);
-    final config = getConnectionConfig(connectionId);
+    // Check if file exists
+    if (!await file.exists()) {
+      debugPrint('Configuration file does not exist yet at: $path');
+      return;
+    }
 
-    config.brand.value = configData['brand'] ?? '';
-    config.action.value = configData['action'] ?? '';
-    config.gesture.value = configData['gesture'] ?? '';
-    config.sound.value = configData['sound'] ?? '';
-    config.hand.value = configData['hand'] ?? '';
-    debugPrint('Loaded config for connection ID $connectionId');
-  });
+    final jsonString = await file.readAsString();
+    debugPrint('Read configuration file content: $jsonString');
+
+    // Check if file is empty
+    if (jsonString.isEmpty) {
+      debugPrint('Configuration file is empty');
+      return;
+    }
+
+    final decodedData = jsonDecode(jsonString);
+
+    // Check if decodedData is a Map (configurations) or something else (old format)
+    if (decodedData is! Map<String, dynamic>) {
+      debugPrint(
+        'Configuration file format is invalid or contains old data: $decodedData',
+      );
+      return;
+    }
+
+    final Map<String, dynamic> allConfigs = decodedData;
+    final List<int> loadedConnectionIds = [];
+
+    allConfigs.forEach((connectionIdStr, configData) {
+      // Skip if configData is not a Map (e.g., old count data)
+      if (configData is! Map<String, dynamic>) {
+        debugPrint('Skipping invalid config data for $connectionIdStr');
+        return;
+      }
+
+      final connectionId = int.parse(connectionIdStr);
+      loadedConnectionIds.add(connectionId);
+      final config = getConnectionConfig(connectionId);
+
+      config.brand.value = configData['brand'] ?? '';
+      config.action.value = configData['action'] ?? '';
+      config.gesture.value = configData['gesture'] ?? '';
+      config.sound.value = configData['sound'] ?? '';
+      config.hand.value = configData['hand'] ?? '';
+      debugPrint('Loaded config for connection ID $connectionId');
+    });
+
+    // Update the connectionsList with loaded connection IDs
+    if (loadedConnectionIds.isNotEmpty) {
+      loadedConnectionIds.sort();
+      final maxConnectionId = loadedConnectionIds.reduce(
+        (a, b) => a > b ? a : b,
+      );
+      _nextConnectionId = maxConnectionId + 1;
+      connectionsList.value = loadedConnectionIds;
+      debugPrint(
+        'Updated connectionsList with ${loadedConnectionIds.length} connections',
+      );
+    }
+  } catch (e) {
+    debugPrint('Error loading configurations from file: $e');
+  }
 }

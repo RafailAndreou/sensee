@@ -4,7 +4,7 @@ import '../../../brands/configurationscreen.dart';
 import 'package:surface_controller/globals/global.dart';
 import 'package:surface_controller/globals/sizes.dart';
 
-class DropDownMenu extends StatelessWidget {
+class DropDownMenu extends StatefulWidget {
   final String selectedValue;
   final List<String> options;
   final Widget leadingIcon;
@@ -28,9 +28,41 @@ class DropDownMenu extends StatelessWidget {
   });
 
   @override
+  State<DropDownMenu> createState() => _DropDownMenuState();
+}
+
+class _DropDownMenuState extends State<DropDownMenu> {
+  late String _currentValue;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the current value based on the config type
+    _currentValue = _getInitialValue();
+  }
+
+  String _getInitialValue() {
+    // Determine which config field is being used based on widget.options
+    if (widget.options.contains("Sound1")) {
+      // This is the sound dropdown
+      final sound = widget.config.sound.value;
+      return widget.options.contains(sound) ? sound : widget.selectedValue;
+    } else if (widget.options.contains("Thumb+Index")) {
+      // This is the gesture dropdown
+      final gesture = widget.config.gesture.value;
+      return widget.options.contains(gesture) ? gesture : widget.selectedValue;
+    } else {
+      // This is the action dropdown
+      final action = widget.config.action.value;
+      return widget.options.contains(action) ? action : widget.selectedValue;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return DropdownMenu<String>(
-      leadingIcon: leadingIcon,
+      initialSelection: _currentValue,
+      leadingIcon: widget.leadingIcon,
       menuStyle: MenuStyle(visualDensity: VisualDensity.standard),
       width: 105,
       textStyle: const TextStyle(
@@ -62,7 +94,7 @@ class DropDownMenu extends StatelessWidget {
         fillColor: Color.fromARGB(255, 255, 255, 255),
       ),
       hintText: "Add",
-      dropdownMenuEntries: options
+      dropdownMenuEntries: widget.options
           .map(
             (option) => DropdownMenuEntry<String>(value: option, label: option),
           )
@@ -70,29 +102,33 @@ class DropDownMenu extends StatelessWidget {
       onSelected: (String? value) {
         // Handle selection change
         print('Selected: $value');
+        setState(() {
+          _currentValue = value ?? widget.selectedValue;
+        });
+
         if (value == "Sound1" || value == "Sound2" || value == "Sound3") {
-          config.sound.value = value ?? '';
+          widget.config.sound.value = value ?? '';
         }
         if (value == "Thumb+Index" ||
             value == "Thumb+Middle" ||
             value == "Thumb+Ring") {
-          config.gesture.value = value ?? '';
+          widget.config.gesture.value = value ?? '';
         }
         if (value == "TV:Turn On" ||
             value == "TV:Turn Off" ||
             value == "TV:Increase Volume" ||
             value == "TV:Decrease Volume") {
-          config.action.value = value ?? '';
+          widget.config.action.value = value ?? '';
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => ConfigurationScreen(config: config),
+              builder: (context) => ConfigurationScreen(config: widget.config),
             ),
           );
           // You can add additional logic here if needed
         }
 
-        if (actions.contains(value)) {
-          config.action.value = value ?? '';
+        if (widget.actions.contains(value)) {
+          widget.config.action.value = value ?? '';
         }
       },
     );

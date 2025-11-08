@@ -30,6 +30,18 @@ class _ConnectionState extends State<Connection> {
   void initState() {
     super.initState();
     config = getConnectionConfig(widget.id);
+
+    // Initialize hand selection from saved config
+    final handValue = config.hand.value.toLowerCase();
+    if (handValue == 'left') {
+      _selected = HandSelection.left;
+    } else if (handValue == 'right') {
+      _selected = HandSelection.right;
+    } else if (handValue == 'both') {
+      _selected = HandSelection.both;
+    } else {
+      _selected = HandSelection.none;
+    }
   }
 
   @override

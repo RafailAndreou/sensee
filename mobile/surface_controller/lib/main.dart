@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'screen/gesturemapping/gesturemapping.dart';
 import 'globals/connectionslist.dart';
 
-void main() {
+void main() async {
   // You can process the message here
-  loadConfigurationsFromFile();
+  WidgetsFlutterBinding.ensureInitialized();
+  await loadConfigurationsFromFile();
+
   runApp(MyApp());
 }
 
