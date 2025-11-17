@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
@@ -87,6 +88,9 @@ Future<void> sendConfiguration(ConnectionConfig config) async {
     "sound": config.sound.value,
     "hand": config.hand.value,
   };
+
+  debugPrint('[Config] Full payload: $configData'); // ✅ Add this
+  // debugPrint('[Config] ID value: ${config.id.value}'); // ✅ And this
 
   try {
     final discovered = await discoverServerSmart();

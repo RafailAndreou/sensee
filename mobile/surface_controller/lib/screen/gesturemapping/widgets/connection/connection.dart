@@ -259,6 +259,12 @@ class _ConnectionState extends State<Connection> {
                     onPressed: () {
                       removeConnection(widget.id);
                       debugPrint("Removed connection with id: ${widget.id}");
+                      writeCountConnections(countConnections());
+                      readCountConnections().then((value) {
+                        debugPrint("Read from file: $value");
+                      });
+                      configuesToJson();
+                      saveConfigsToFile();
                     },
                   ),
                   const SizedBox(width: 5),
@@ -267,6 +273,12 @@ class _ConnectionState extends State<Connection> {
                     onPressed: () {
                       sendConfiguration(config);
                       print_config(config);
+                      writeCountConnections(countConnections());
+                      readCountConnections().then((value) {
+                        debugPrint("Read from file: $value");
+                      });
+                      configuesToJson();
+                      saveConfigsToFile();
                     },
                   ),
                 ],
