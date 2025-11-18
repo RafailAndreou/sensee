@@ -66,10 +66,30 @@ recognizer = GestureRecognizer.create_from_options(options)
 # ---- start FastAPI in background ----
 def _run_server():
     import uvicorn
-    uvicorn.run("server.main:app", host="0.0.0.0", port=8000, log_level="info")
+    
+    ports_to_try = [8000, 8001, 8002, 8003, 8004]
+    
+    for attempt_port in ports_to_try:
+        try:
+            print(f"\n🌐 Access the configuration portal at: http://{ip}:{attempt_port}\n")
+            uvicorn.run("server.main:app", host="0.0.0.0", port=attempt_port, log_level="info")
+            break
+        except OSError as e:
+            error_str = str(e)
+            if "10048" in error_str or "Address already in use" in error_str:
+                if attempt_port == ports_to_try[-1]:
+                    print(f"❌ All ports {ports_to_try} are already in use!")
+                    print("   Please kill the background process or restart your system.")
+                    exit(1)
+                else:
+                    print(f"⚠️  Port {attempt_port} in use, trying {attempt_port + 1}...")
+            else:
+                raise
+        except Exception as e:
+            print(f"❌ Unexpected error: {e}")
+            raise
 
 ip, bytes = main.get_local_ip()
-print(f"\n🌐 Access the configuration portal at: http://{ip}:8000\n")
 server_thread = threading.Thread(target=_run_server, daemon=True)
 server_thread.start()
 

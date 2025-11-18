@@ -13,6 +13,8 @@ import asyncio
 
 app = FastAPI()
 
+port = 8000
+
 SERVICE_TYPE = "_sensee._tcp.local."
 
 # ---------------- Models ----------------
@@ -101,7 +103,7 @@ def get_local_ip() -> str:
 _DISCOVERY_PORT = 54321
 _DISCOVERY_TOKEN = "SENSEE_DISCOVER"
 
-def _discovery_responder():
+def _discovery_responder(port):
     """Listen for discovery UDP probes and reply with server IP/port as JSON.
 
     Simple protocol:
@@ -139,7 +141,7 @@ def _discovery_responder():
                 continue
             
             if txt == _DISCOVERY_TOKEN:
-                payload = json.dumps({"ip": local_ip, "port": 8000}).encode()
+                payload = json.dumps({"ip": local_ip, "port": port}).encode()
                 print(f"[discovery] ✅ Sending response to {addr}: {payload.decode()}")
                 try:
                     sock.sendto(payload, addr)
@@ -219,14 +221,14 @@ async def register_mdns_service():
     zc = AsyncZeroconf()
     try:
         await zc.async_register_service(info)
-        print(f"✅ mDNS service registered as sensee.local at {ip_str}:8000")
-        print(f"   Other devices can connect using: http://{ip_str}:8000")
-        print(f"   Or using mDNS: http://sensee.local:8000 (requires Bonjour on Windows)")
+        print(f"✅ mDNS service registered as sensee.local at {ip_str}:{port}")
+        print(f"   Other devices can connect using: http://{ip_str}:{port}")
+        print(f"   Or using mDNS: http://sensee.local:{port} (requires Bonjour on Windows)")
         # Keep it registered (block indefinitely)
         await asyncio.Event().wait()
     except Exception as e:
         print(f"❌ Failed to register mDNS service: {e}")
-        print(f"   Server is still accessible at: http://{ip_str}:8000")
+        print(f"   Server is still accessible at: http://{ip_str}:{port}")
     finally:
         await zc.async_unregister_service(info)
         await zc.async_close()
@@ -287,6 +289,32 @@ def post_event(name: str):
 if __name__ == "__main__":
     import uvicorn
     ip, bytes = get_local_ip()
-    print(f"\n🌐 Server running at http://{ip}:8000\n")
-    uvicorn.run("server.main:app", host="0.0.0.0", port=8000)
+    
+    ports_to_try = [8000, 8001, 8002, 8003, 8004]
+    started = False
+    
+    for attempt_port in ports_to_try:
+        try:
+            print(f"\n🌐 Server running at http://{ip}:{attempt_port}\n")
+            uvicorn.run("server.main:app", host="0.0.0.0", port=attempt_port)
+            started = True
+            break
+        except OSError as e:
+            error_str = str(e)
+            if "10048" in error_str or "Address already in use" in error_str:
+                if attempt_port == ports_to_try[-1]:
+                    print(f"❌ All ports {ports_to_try} are already in use!")
+                    print("   Please kill the background process or restart your system.")
+                    exit(1)
+                else:
+                    print(f"⚠️  Port {attempt_port} in use, trying {attempt_port + 1}...")
+            else:
+                raise
+        except Exception as e:
+            print(f"❌ Unexpected error: {e}")
+            raise
+    
+    if not started:
+        print("❌ Failed to start server")
+        exit(1)
 

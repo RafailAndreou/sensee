@@ -187,7 +187,7 @@ Future<String?> discoverServerSmart() async {
   }
 
   print('[Discovery] ❌ All discovery methods failed, using fallback IP');
-  const fallbackUrl = 'http://10.161.67.82:8000/configuration';
+  const fallbackUrl = 'http://10.87.23.82:8000/configuration';
   print('[Discovery] Using fallback URL: $fallbackUrl');
   return fallbackUrl;
 }
