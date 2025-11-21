@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 from zeroconf.asyncio import AsyncZeroconf, AsyncServiceBrowser, AsyncServiceInfo
 import asyncio
+import os
 
 app = FastAPI()
 
@@ -200,12 +201,12 @@ async def discovery_responder_async():
         await browser.async_cancel()
         await zc.async_close()
 
-try:
-    asyncio.run(discovery_responder_async())
-except Exception as e:
-    print(f"[discovery] ❌ Error in discovery responder: {e}")
+# try:
+#     asyncio.run(discovery_responder_async())
+# except Exception as e:
+#     print(f"[discovery] ❌ Error in discovery responder: {e}")
 
-async def register_mdns_service():
+async def register_mdns_service(port: int):
     """Register this server as sensee.local on the network."""
     ip_str, ip_bytes = get_local_ip()
     
@@ -214,7 +215,7 @@ async def register_mdns_service():
         SERVICE_TYPE,
         "Sensee Server._sensee._tcp.local.",
         addresses=[ip_bytes],  # Use the bytes from get_local_ip()
-        port=8000,
+        port=port,
         properties={"path": "/configuration", "ip": ip_str},  # Add IP to properties for easy discovery
         server="sensee.local.",
     )
@@ -234,16 +235,26 @@ async def register_mdns_service():
         await zc.async_unregister_service(info)
         await zc.async_close()
 
-# Start mDNS registration in background thread
-def _start_mdns():
-    asyncio.run(register_mdns_service())
+mdns_task = None
 
-try:
-    mdns_thread = threading.Thread(target=_start_mdns, daemon=True)
-    mdns_thread.start()
-    print("[mDNS] Registration thread started")
-except Exception as e:
-    print(f"[mDNS] Failed to start registration: {e}")
+@app.on_event("startup")
+async def startup_event():
+    global mdns_task
+    port = int(os.environ.get("SENSEE_PORT", 8000))
+    # Start mDNS registration in background task
+    mdns_task = asyncio.create_task(register_mdns_service(port))
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global mdns_task
+    if mdns_task:
+        print("Stopping mDNS service...")
+        mdns_task.cancel()
+        try:
+            await mdns_task
+        except asyncio.CancelledError:
+            pass
+        print("mDNS service stopped.")
 
 # ---------------- Routes ----------------
 @app.get("/")
@@ -297,6 +308,7 @@ if __name__ == "__main__":
     for attempt_port in ports_to_try:
         try:
             print(f"\n🌐 Server running at http://{ip}:{attempt_port}\n")
+            os.environ["SENSEE_PORT"] = str(attempt_port)
             uvicorn.run("server.main:app", host="0.0.0.0", port=attempt_port)
             started = True
             break

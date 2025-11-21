@@ -82,7 +82,7 @@ Future<String?> discoverServer({int timeoutMs = 3000}) async {
 
 Future<void> sendConfiguration(ConnectionConfig config) async {
   final configData = {
-    "id": config.id.value,
+    "id": config.id.value.toString(),
     "brand": config.brand.value,
     "action": config.action.value,
     "gesture": config.gesture.value,

@@ -7,6 +7,7 @@ from server import main  # FastAPI app + helpers (set_frame_from_bgr, send_msg)
 from queue import Queue
 import threading
 import time
+import os
 
 model_path = "raspi/assets/gesture_recognizer.task"
 base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
@@ -72,6 +73,7 @@ def _run_server():
     for attempt_port in ports_to_try:
         try:
             print(f"\n🌐 Access the configuration portal at: http://{ip}:{attempt_port}\n")
+            os.environ["SENSEE_PORT"] = str(attempt_port)
             uvicorn.run("server.main:app", host="0.0.0.0", port=attempt_port, log_level="info")
             break
         except OSError as e:
