@@ -80,6 +80,7 @@ void configuesToJson() {
 
   connectionConfigs.forEach((connectionId, config) {
     allConfigs[connectionId.toString()] = {
+      'id': config.id.value,
       'brand': config.brand.value,
       'action': config.action.value,
       'gesture': config.gesture.value,
@@ -98,6 +99,7 @@ void saveConfigsToFile() async {
 
     connectionConfigs.forEach((connectionId, config) {
       allConfigs[connectionId.toString()] = {
+        'id': allConfigs[connectionId].toString(),
         'brand': config.brand.value,
         'action': config.action.value,
         'gesture': config.gesture.value,
@@ -159,7 +161,7 @@ Future<void> loadConfigurationsFromFile() async {
       final connectionId = int.parse(connectionIdStr);
       loadedConnectionIds.add(connectionId);
       final config = getConnectionConfig(connectionId);
-
+      config.id.value = configData['id'] ?? connectionId;
       config.brand.value = configData['brand'] ?? '';
       config.action.value = configData['action'] ?? '';
       config.gesture.value = configData['gesture'] ?? '';

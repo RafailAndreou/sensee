@@ -82,6 +82,7 @@ Future<String?> discoverServer({int timeoutMs = 3000}) async {
 
 Future<void> sendConfiguration(ConnectionConfig config) async {
   final configData = {
+    "id": config.id.value,
     "brand": config.brand.value,
     "action": config.action.value,
     "gesture": config.gesture.value,
@@ -187,7 +188,7 @@ Future<String?> discoverServerSmart() async {
   }
 
   print('[Discovery] ❌ All discovery methods failed, using fallback IP');
-  const fallbackUrl = 'http://10.87.23.82:8000/configuration';
+  const fallbackUrl = 'http://192.168.0.5:8000/configuration';
   print('[Discovery] Using fallback URL: $fallbackUrl');
   return fallbackUrl;
 }

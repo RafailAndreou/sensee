@@ -19,6 +19,7 @@ SERVICE_TYPE = "_sensee._tcp.local."
 
 # ---------------- Models ----------------
 class Configuration(BaseModel):
+    id: str
     brand: str
     action: str
     gesture: str

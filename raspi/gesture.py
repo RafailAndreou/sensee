@@ -175,7 +175,7 @@ with mp_hands.Hands(
             index_x = results.multi_hand_landmarks[0].landmark[8].x
             index_y = results.multi_hand_landmarks[0].landmark[8].y
             mouse_x, mouse_y = translate_coords(index_x, index_y)
-            pyautogui.moveTo(mouse_x, mouse_y, _pause=False)
+            # pyautogui.moveTo(mouse_x, mouse_y, _pause=False)
         except Exception:
             pass
 
