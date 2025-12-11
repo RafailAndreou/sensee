@@ -121,6 +121,8 @@ Future<void> sendConfiguration(ConnectionConfig config) async {
 
 /// Discover server using mDNS (sensee.local)
 /// Returns a full configuration POST URL like 'http://<ip>:<port>/configuration'
+// inside mobile/surface_controller/lib/server/server.dart
+
 Future<String?> discoverServerMDNS({int timeoutMs = 3000}) async {
   final MDnsClient client = MDnsClient();
   await client.start();
@@ -136,7 +138,7 @@ Future<String?> discoverServerMDNS({int timeoutMs = 3000}) async {
             .timeout(Duration(milliseconds: timeoutMs))) {
       print('[mDNS] Found service: ${ptr.domainName}');
 
-      // Now resolve the SRV and A records
+      // Resolve the SRV record to get the port and hostname
       await for (final SrvResourceRecord srv
           in client
               .lookup<SrvResourceRecord>(
@@ -145,17 +147,21 @@ Future<String?> discoverServerMDNS({int timeoutMs = 3000}) async {
               .timeout(Duration(milliseconds: 1000))) {
         print('[mDNS] SRV: ${srv.target}:${srv.port}');
 
-        await for (final IPAddressResourceRecord ip
-            in client
-                .lookup<IPAddressResourceRecord>(
-                  ResourceRecordQuery.addressIPv4(srv.target),
-                )
-                .timeout(Duration(milliseconds: 1000))) {
-          final url = 'http://${ip.address.address}:${srv.port}/configuration';
-          print('[mDNS] ✅ Server found at $url');
-          client.stop();
-          return url;
+        // --- NEW LOGIC START ---
+        // Instead of looking up the IP, use the hostname directly.
+        String hostname = srv.target;
+
+        // MDNS hostnames often end with a dot (e.g., "sensee.local."), remove it.
+        if (hostname.endsWith('.')) {
+          hostname = hostname.substring(0, hostname.length - 1);
         }
+
+        final url = 'http://$hostname:${srv.port}/configuration';
+        print('[mDNS] ✅ Server found at $url (using hostname)');
+
+        client.stop();
+        return url;
+        // --- NEW LOGIC END ---
       }
     }
 
