@@ -11,6 +11,7 @@ import numpy as np
 from zeroconf.asyncio import AsyncZeroconf, AsyncServiceBrowser, AsyncServiceInfo
 import asyncio
 import os
+from server import file
 
 app = FastAPI()
 
@@ -274,6 +275,7 @@ def configure(settings: Configuration):
     print("\n✅ Received configuration:")
     for k, v in current_config.items():
         print(f"  {k}: {v}")
+    file.save_configure_json(current_config)
     return {"status": "configured", "received": current_config}
 
 @app.get("/configuration")
