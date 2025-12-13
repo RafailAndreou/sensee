@@ -177,21 +177,31 @@ Future<String?> discoverServerMDNS({int timeoutMs = 3000}) async {
 
 /// Try mDNS first, fallback to UDP discovery, then fallback to static IP
 Future<String?> discoverServerSmart() async {
-  print('[Discovery] Trying mDNS first...');
+  // 1. FAST PATH: Just trust the OS resolver (like the browser does)
+  // If "sensee.local" works in Chrome, this will work immediately.
+  try {
+    print(
+      '[Discovery] 🚀 Trying direct connection to http://sensee.local:8000...',
+    );
+    final directUrl = 'http://sensee.local:8000/configuration';
+    // Send a quick HEAD or GET request to verify it's actually there
+    final response = await http
+        .get(Uri.parse(directUrl))
+        .timeout(const Duration(milliseconds: 1500));
+    if (response.statusCode == 200 || response.statusCode == 405) {
+      print('[Discovery] ✅ Direct connection successful!');
+      return directUrl;
+    }
+  } catch (e) {
+    print('[Discovery] Direct connection failed, falling back to scanning...');
+  }
+
+  // 2. SLOW PATH: Scan the network (your existing logic)
+  print('[Discovery] Scanning mDNS...');
   String? result = await discoverServerMDNS(timeoutMs: 2000);
+  if (result != null) return result;
 
-  if (result != null) {
-    print('[Discovery] ✅ Found via mDNS');
-    return result;
-  }
-
-  print('[Discovery] mDNS failed, trying UDP broadcast...');
+  print('[Discovery] Scanning UDP...');
   result = await discoverServer(timeoutMs: 3000);
-
-  if (result != null) {
-    print('[Discovery] ✅ Found via UDP');
-    return result;
-  }
-
-  print('[Discovery] ❌ All discovery methods failed');
+  return result;
 }
