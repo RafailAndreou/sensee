@@ -8,6 +8,7 @@ from queue import Queue
 import threading
 import time
 import os
+from server import file
 
 model_path = "raspi/assets/gesture_recognizer.task"
 base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
@@ -221,6 +222,7 @@ with mp_hands.Hands(
         cv2.imshow('MediaPipe Hands', frame)
 
 # Add cleanup for recognizer
+print(file.load_configure_json())
 cap.release()
 recognizer.close()
 cv2.destroyAllWindows()

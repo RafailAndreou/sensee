@@ -271,7 +271,8 @@ class _ConnectionState extends State<Connection> {
                   ConfigureButton(
                     label: "Configure",
                     onPressed: () {
-                      sendConfiguration(config);
+                      // sendConfiguration(config);
+                      sendAllConfigurations();
                       print_config(config);
                       writeCountConnections(countConnections());
                       readCountConnections().then((value) {

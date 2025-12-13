@@ -12,6 +12,7 @@ from zeroconf.asyncio import AsyncZeroconf, AsyncServiceBrowser, AsyncServiceInf
 import asyncio
 import os
 from server import file
+from typing import List
 
 app = FastAPI()
 
@@ -269,14 +270,15 @@ def index():
     """)
 
 @app.post("/configuration")
-def configure(settings: Configuration):
+def configure(settings: List[Configuration]):
     global current_config
-    current_config = settings.dict()
-    print("\n✅ Received configuration:")
-    for k, v in current_config.items():
-        print(f"  {k}: {v}")
+    current_config = [s.model_dump () for s in settings]
+    print(f"\n✅ Received {len(current_config)} configurations:")
+    for conf in current_config:
+        print(f"  - ID {conf['id']}: {conf['brand']} {conf['action']} ({conf['gesture']})")
     file.save_configure_json(current_config)
-    return {"status": "configured", "received": current_config}
+        
+    return {"status": "configured", "count": len(current_config)}
 
 @app.get("/configuration")
 def get_configuration_msg():

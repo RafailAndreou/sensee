@@ -80,6 +80,48 @@ Future<String?> discoverServer({int timeoutMs = 3000}) async {
   }
 }
 
+Future<void> sendAllConfigurations() async {
+  // 1. Convert the Map of configs into a List of JSON objects
+  final List<Map<String, dynamic>> allConfigsData = [];
+
+  connectionConfigs.forEach((id, config) {
+    allConfigsData.add({
+      "id": config.id.value.toString(),
+      "brand": config.brand.value,
+      "action": config.action.value,
+      "gesture": config.gesture.value,
+      "sound": config.sound.value,
+      "hand": config.hand.value,
+    });
+  });
+
+  debugPrint('[Config] Sending ${allConfigsData.length} configurations...');
+
+  try {
+    final discovered = await discoverServerSmart();
+
+    if (discovered == null) {
+      print("❌ Failed to discover server.");
+      return;
+    }
+
+    final response = await http.post(
+      Uri.parse(discovered),
+      headers: {"Content-Type": "application/json"},
+      // 2. Encode the LIST (not a single object) as the body
+      body: jsonEncode(allConfigsData),
+    );
+
+    if (response.statusCode == 200) {
+      print("✅ All configurations sent successfully!");
+    } else {
+      print("⚠️ Server error (${response.statusCode})");
+    }
+  } catch (e) {
+    print("❌ Failed to send configurations: $e");
+  }
+}
+
 Future<void> sendConfiguration(ConnectionConfig config) async {
   final configData = {
     "id": config.id.value.toString(),

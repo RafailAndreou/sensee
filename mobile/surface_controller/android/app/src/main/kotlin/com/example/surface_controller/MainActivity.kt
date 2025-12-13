@@ -6,23 +6,23 @@ import io.flutter.embedding.android.FlutterActivity
 import android.os.Bundle
 
 class MainActivity: FlutterActivity() {
-    // Hold a reference to the lock
     private var multicastLock: WifiManager.MulticastLock? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        acquireMulticastLock()
+        // 1. Get the WifiManager
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        
+        // 2. Create a lock that listens for ALL multicast packets
+        multicastLock = wifiManager.createMulticastLock("senseeMulticastLock")
+        multicastLock?.setReferenceCounted(true)
+        
+        // 3. Acquire it (This stops the OS from filtering the Pi's packets)
+        multicastLock?.acquire()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         multicastLock?.release()
-    }
-
-    private fun acquireMulticastLock() {
-        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        multicastLock = wifiManager.createMulticastLock("multicastLock")
-        multicastLock?.setReferenceCounted(true)
-        multicastLock?.acquire()
     }
 }
