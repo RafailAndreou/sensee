@@ -26,7 +26,7 @@ class _VideoPageState extends State<VideoPage> {
     if (discovered == null) {
       setState(() {
         _loadingMessage =
-            'Could not discover server. Please make sure the server is running.';
+            'Could not discover sensee. Please make sure the device is running and you are connected to it. If your sensee is running you can search http://sensee.local:8000/video in your browser to see the live camera.';
       });
       return;
     }

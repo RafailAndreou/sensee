@@ -7,9 +7,20 @@ import 'package:path_provider/path_provider.dart';
 ValueNotifier<List<int>> connectionsList = ValueNotifier<List<int>>([0]);
 int _nextConnectionId = 1;
 
+// In mobile/surface_controller/lib/globals/connectionslist.dart
+
 void addNewConnection() {
-  connectionsList.value = List.from(connectionsList.value)
-    ..add(_nextConnectionId++);
+  // 1. Capture the new ID
+  final newId = _nextConnectionId++;
+
+  // 2. IMPORTANT: Explicitly set the ID in the config object immediately
+  // This ensures config.id.value is 'newId' instead of the default '-1'
+  getConnectionConfig(newId).id.value = newId;
+
+  // 3. Add to the list to update the UI
+  connectionsList.value = List.from(connectionsList.value)..add(newId);
+
+  debugPrint("Created new connection with ID: $newId");
 }
 
 void removeConnection(int id) {
@@ -80,12 +91,12 @@ void configuesToJson() {
 
   connectionConfigs.forEach((connectionId, config) {
     allConfigs[connectionId.toString()] = {
-      'id': config.id.value,
-      'brand': config.brand.value,
-      'action': config.action.value,
-      'gesture': config.gesture.value,
-      'sound': config.sound.value,
-      'hand': config.hand.value,
+      "id": config.id.value,
+      "brand": config.brand.value,
+      "action": config.action.value,
+      "gesture": config.gesture.value,
+      "sound": config.sound.value,
+      "hand": config.hand.value,
     };
   });
 
@@ -99,12 +110,12 @@ void saveConfigsToFile() async {
 
     connectionConfigs.forEach((connectionId, config) {
       allConfigs[connectionId.toString()] = {
-        'id': allConfigs[connectionId].toString(),
-        'brand': config.brand.value,
-        'action': config.action.value,
-        'gesture': config.gesture.value,
-        'sound': config.sound.value,
-        'hand': config.hand.value,
+        "id": config.id.value,
+        "brand": config.brand.value,
+        "action": config.action.value,
+        "gesture": config.gesture.value,
+        "sound": config.sound.value,
+        "hand": config.hand.value,
       };
     });
 
@@ -161,12 +172,12 @@ Future<void> loadConfigurationsFromFile() async {
       final connectionId = int.parse(connectionIdStr);
       loadedConnectionIds.add(connectionId);
       final config = getConnectionConfig(connectionId);
-      config.id.value = configData['id'] ?? connectionId;
-      config.brand.value = configData['brand'] ?? '';
-      config.action.value = configData['action'] ?? '';
-      config.gesture.value = configData['gesture'] ?? '';
-      config.sound.value = configData['sound'] ?? '';
-      config.hand.value = configData['hand'] ?? '';
+      config.id.value = configData["id"] ?? connectionId;
+      config.brand.value = configData["brand"] ?? '';
+      config.action.value = configData["action"] ?? '';
+      config.gesture.value = configData["gesture"] ?? '';
+      config.sound.value = configData["sound"] ?? '';
+      config.hand.value = configData["hand"] ?? '';
       debugPrint('Loaded config for connection ID $connectionId');
     });
 
