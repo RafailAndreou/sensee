@@ -88,6 +88,10 @@ def send_msg(event: str):
         return
     _last_events[event] = now
     print(f"[gesture] {event}")
+    if event == "Thumb+Index":
+        for i in file.load_configure_json():
+            if i["gesture"]=="Thumb+Index":
+                print(i["action"])
     # TODO: integrate with ESP32/IR here
 
 # ---------------- Helpers ----------------

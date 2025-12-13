@@ -15,3 +15,16 @@ def load_configure_json() -> dict:
     except FileNotFoundError:
         print("⚠️  Configuration file not found, returning empty configuration.")
         return {}
+    
+if __name__ == "__main__":
+    test_dictionary = {
+        "setting1": True,
+        "setting2": "value",
+        "setting3": 42
+    }
+    loaded_config = load_configure_json()
+    print(type(loaded_config))
+    for i in loaded_config:
+        if i["gesture"]=="Thumb+Index":
+            print(i["action"])
+            

@@ -17,6 +17,7 @@ GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
 GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
 
+configuration = file.load_configure_json()
 # Add gesture queue
 gesture_queue = Queue()
 
@@ -45,9 +46,8 @@ def process_gestures():
                 continue
 
             gesture_name = gesture.category_name
-            confidence = gesture.score
-            print(f"Detected gesture: {gesture_name} (confidence: {confidence:.2f})")
-            main.send_msg(f"Gesture: {gesture_name}")
+            confidence = gesture.score 
+            main.send_msg(f"Gesture: {gesture_name} (Confidence: {confidence:.2f})")
             time.sleep(0.5)  # slight delay to avoid spamming
         except Exception as e:
             print(f"Error processing gesture: {e}")
@@ -145,9 +145,6 @@ def check_hand_movement(wrist_queue):
 hand_thread = threading.Thread(target=check_hand_movement, args=(wrist_queue,), daemon=True)
 hand_thread.start()
 
-def print_gestuere(gesture):
-    print(f"Detected gesture: {gesture}")
-
 with mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=2,
@@ -187,6 +184,11 @@ with mp_hands.Hands(
             middle = results.multi_hand_landmarks[0].landmark[12]
             if touching(thumb, middle):
                 main.send_msg("Thumb + middle finger touch detected")
+                gesture = "Thumb+Middle"
+                loaded_config = file.load_configure_json()
+                for i in loaded_config:
+                    if i["gesture"]=="Thumb+Middle":
+                        print(i["action"])
         except Exception:
             pass
 
@@ -195,6 +197,11 @@ with mp_hands.Hands(
             index = results.multi_hand_landmarks[0].landmark[8]
             if touching(thumb, index):
                 main.send_msg("Thumb + index finger touch detected")
+                gesture = "Thumb+Index"
+                loaded_config = file.load_configure_json()
+                for i in loaded_config:
+                    if i["gesture"]=="Thumb+Index":
+                        print(i["action"])
         except Exception:
             pass
 
