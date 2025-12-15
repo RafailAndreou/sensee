@@ -7,6 +7,8 @@ A minimal, local-first system that detects hand gestures using your laptop camer
 ## Table of contents
 
 - [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
 - [Quickstart](#quickstart)
 - [Architecture](#architecture)
 - [Features](#features)
@@ -24,6 +26,39 @@ Sensee detects simple hand gestures (using MediaPipe + OpenCV) on a laptop and e
 - configuration endpoints to accept gesture → action mappings from a Flutter app
 
 The current repository focuses on the laptop/server prototype and the Flutter mobile UI.
+
+## Prerequisites
+
+- Python 3.10 or higher
+- A webcam (for gesture detection)
+
+## Installation
+
+### Linux / Raspberry Pi
+
+1. Navigate to the server directory:
+
+   ```bash
+   cd raspi
+   ```
+
+2. Create a virtual environment:
+
+   ```bash
+   python3 -m venv venv
+   ```
+
+3. Activate the environment:
+
+   ```bash
+   source venv/bin/activate
+   ```
+
+4. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ## Quickstart
 
