@@ -9,7 +9,6 @@ import threading
 import time
 import os
 from server import file
-import time
 import utils
 
 model_path = "raspi/assets/gesture_recognizer.task"
