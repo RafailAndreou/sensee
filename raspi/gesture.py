@@ -200,35 +200,28 @@ with mp_hands.Hands(
             pass
 
         try:
-            if delay==False:
-                thumb = results.multi_hand_landmarks[0].landmark[4]
-                middle = results.multi_hand_landmarks[0].landmark[12]
-                if touching(thumb, middle):
+            thumb = results.multi_hand_landmarks[0].landmark[4]
+            middle = results.multi_hand_landmarks[0].landmark[12]
+            
+            if touching(thumb, middle):
+                # Check if any action for this gesture requires a delay
+                requires_delay = False
+                for i in file.loaded_config:
+                    if i["gesture"] == "Thumb+Middle":
+                        if i["action"] == "TV:Turn On" or i["action"] == "Open AC":
+                            requires_delay = True
+                            break
+                
+                # Process if no delay needed OR debouncer allows it
+                if not requires_delay or mid_debouncer.can_trigger():
                     main.send_msg("Thumb + middle finger touch detected")
                     gesture = "Thumb+Middle" 
                     for i in file.loaded_config:
                         if i["gesture"]=="Thumb+Middle":
-                            if(i["action"]=="TV:Turn On" or i["action"]=="Open AC"):
-                                delay = True
-                            else:
-                                delay= False
                             print(i["action"])
-            if delay:
-                if mid_debouncer.can_trigger():
-                    thumb = results.multi_hand_landmarks[0].landmark[4]
-                    middle = results.multi_hand_landmarks[0].landmark[12]
-                    if touching(thumb, middle):
-                        main.send_msg("Thumb + middle finger touch detected")
-                        gesture = "Thumb+Middle" 
-                        for i in file.loaded_config:
-                            if i["gesture"]=="Thumb+Middle":
-                                if(i["action"]=="TV:Turn On" or i["action"]=="Open AC"):
-                                    delay = True
-                                else:
-                                    delay= False
-                                print(i["action"])
                     
-                    
+                    # Update delay state for consistency
+                    delay = requires_delay
             
         except Exception:
             pass
