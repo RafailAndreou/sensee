@@ -8,6 +8,7 @@ import 'package:surface_controller/configue.dart';
 import 'package:surface_controller/server/server.dart';
 import 'package:surface_controller/globals/sizes.dart';
 import 'removebutton.dart';
+import 'package:surface_controller/globals/locale.dart';
 
 class Connection extends StatefulWidget {
   Connection({super.key, required this.id}) {
@@ -46,93 +47,102 @@ class _ConnectionState extends State<Connection> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFE9E9E9),
-        gradient: LinearGradient(
-          colors: [
-            Color.fromARGB(255, 240, 240, 255),
-            Color.fromARGB(255, 220, 220, 255),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color.fromARGB(255, 141, 133, 232),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3), // changes position of shadow
+    return ValueListenableBuilder<String>(
+      valueListenable: currentLanguage,
+      builder: (context, lang, _) {
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFE9E9E9),
+            gradient: const LinearGradient(
+              colors: [
+                Color.fromARGB(255, 240, 240, 255),
+                Color.fromARGB(255, 220, 220, 255),
+              ],
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color.fromARGB(255, 141, 133, 232),
+                spreadRadius: 2,
+                blurRadius: 5,
+                offset: Offset(0, 3),
+              ),
+            ],
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(
+              color: const Color.fromARGB(75, 86, 81, 81),
+              width: 2,
+            ),
           ),
-        ],
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(
-          color: const Color.fromARGB(75, 86, 81, 81),
-          width: 2,
-        ),
-      ),
-      child: Column(
-        children: [
-          _buildTopRow(),
-          SizedBox(height: getProportionalHeight(context, 10)),
-          _buildMenuRow(),
-          SizedBox(height: getProportionalHeight(context, 20)),
-          _buildHandLabel(),
-          _buildHandButtons(),
-        ],
-      ),
+          child: Column(
+            children: [
+              _buildTopRow(lang),
+              SizedBox(height: getProportionalHeight(context, 10)),
+              _buildMenuRow(),
+              SizedBox(height: getProportionalHeight(context, 20)),
+              _buildHandLabel(lang),
+              _buildHandButtons(lang),
+            ],
+          ),
+        );
+      },
     );
   }
 
   /// Top row with icon labels (Action, Gesture, Play Music)
-  Widget _buildTopRow() {
+  Widget _buildTopRow(String lang) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        // Action (icon + label)
-        Spacer(),
+      children: [
+        const Spacer(),
         Flexible(
           flex: 4,
           child: Row(
             children: [
-              Image(
+              const Image(
                 image: AssetImage('assets/connection/action.png'),
                 width: 18,
                 height: 37,
               ),
-              SizedBox(width: 5),
-              Text("Action", style: TextStyle(color: Colors.black)),
+              const SizedBox(width: 5),
+              Text(
+                tr('action', lang),
+                style: const TextStyle(color: Colors.black),
+              ),
             ],
           ),
         ),
-
-        // Gesture (okhand icon + label)
         Flexible(
           flex: 4,
           child: Row(
             children: [
-              Image(
+              const Image(
                 image: AssetImage('assets/connection/okhand.png'),
                 width: 18,
                 height: 37,
               ),
-              SizedBox(width: 5),
-              Text("Gesture", style: TextStyle(color: Colors.black)),
+              const SizedBox(width: 5),
+              Text(
+                tr('gesture', lang),
+                style: const TextStyle(color: Colors.black),
+              ),
             ],
           ),
         ),
-
-        // Play Music (sound icon + label)
         Flexible(
           flex: 4,
           child: Row(
             children: [
-              Image(
+              const Image(
                 image: AssetImage('assets/connection/sound.png'),
                 width: 18,
                 height: 37,
               ),
-              SizedBox(width: 5),
-              Text("Play Music", style: TextStyle(color: Colors.black)),
+              const SizedBox(width: 5),
+              Text(
+                tr('playMusic', lang),
+                style: const TextStyle(color: Colors.black),
+              ),
             ],
           ),
         ),
@@ -144,7 +154,7 @@ class _ConnectionState extends State<Connection> {
   Widget _buildMenuRow() {
     return Row(
       children: [
-        Spacer(),
+        const Spacer(),
         Flexible(
           flex: 6,
           child: DropDownMenu(
@@ -165,7 +175,7 @@ class _ConnectionState extends State<Connection> {
             config: config,
           ),
         ),
-        Spacer(),
+        const Spacer(),
         Flexible(
           flex: 6,
           child: DropDownMenu(
@@ -177,7 +187,7 @@ class _ConnectionState extends State<Connection> {
             config: config,
           ),
         ),
-        Spacer(),
+        const Spacer(),
         Flexible(
           flex: 6,
           child: DropDownMenu(
@@ -189,26 +199,29 @@ class _ConnectionState extends State<Connection> {
             config: config,
           ),
         ),
-        Spacer(),
+        const Spacer(),
       ],
     );
   }
 
   /// "hand" label
-  Widget _buildHandLabel() {
+  Widget _buildHandLabel(String lang) {
     return Row(
-      children: const [
-        Spacer(flex: 1),
+      children: [
+        const Spacer(flex: 1),
         Flexible(
           flex: 7,
-          child: Text("Gesture Hand ", style: TextStyle(color: Colors.black)),
+          child: Text(
+            tr('gestureHand', lang),
+            style: const TextStyle(color: Colors.black),
+          ),
         ),
       ],
     );
   }
 
   /// Hand buttons (Left/Right) and Configure button
-  Widget _buildHandButtons() {
+  Widget _buildHandButtons(String lang) {
     return Row(
       children: [
         SizedBox(
@@ -219,7 +232,7 @@ class _ConnectionState extends State<Connection> {
                 children: [
                   const SizedBox(width: 10),
                   HandButton(
-                    label: "Left",
+                    label: tr('left', lang),
                     onPressed: () {
                       setState(() => _selected = HandSelection.left);
                       config.hand.value = "Left";
@@ -232,7 +245,7 @@ class _ConnectionState extends State<Connection> {
                   ),
                   const SizedBox(width: 5),
                   HandButton(
-                    label: "Right",
+                    label: tr('right', lang),
                     onPressed: () {
                       setState(() => _selected = HandSelection.right);
                       config.hand.value = "Right";
@@ -245,7 +258,7 @@ class _ConnectionState extends State<Connection> {
                   ),
                   const SizedBox(width: 5),
                   HandButton(
-                    label: "Both",
+                    label: tr('both', lang),
                     onPressed: () {
                       setState(() => _selected = HandSelection.both);
                       config.hand.value = "both";
@@ -256,6 +269,7 @@ class _ConnectionState extends State<Connection> {
                   ),
                   const SizedBox(width: 20),
                   RemoveButton(
+                    label: tr('remove', lang),
                     onPressed: () {
                       removeConnection(widget.id);
                       debugPrint("Removed connection with id: ${widget.id}");
@@ -269,9 +283,8 @@ class _ConnectionState extends State<Connection> {
                   ),
                   const SizedBox(width: 5),
                   ConfigureButton(
-                    label: "Configure",
+                    label: tr('configure', lang),
                     onPressed: () {
-                      // sendConfiguration(config);
                       sendAllConfigurations();
                       print_config(config);
                       writeCountConnections(countConnections());
@@ -284,7 +297,6 @@ class _ConnectionState extends State<Connection> {
                   ),
                 ],
               ),
-
               ValueListenableBuilder<String>(
                 valueListenable: config.brand,
                 builder: (context, value, child) => Text(value),

@@ -35,3 +35,5 @@ flutter:
     - assets/connection/menu/hand.png
     - assets/connection/menu/sound1.png
     - assets/plus.png
+    - assets/language/greece.png
+    - assets/language/uk.png

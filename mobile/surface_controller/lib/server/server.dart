@@ -80,6 +80,27 @@ Future<String?> discoverServer({int timeoutMs = 3000}) async {
   }
 }
 
+/// Simple GET request to sensee.local:8000/api
+Future<Map<String, dynamic>?> getApiStatus() async {
+  try {
+    print('[API] Fetching status from sensee.local:8000/api...');
+    final response = await http
+        .get(Uri.parse('http://sensee.local:8000/api'))
+        .timeout(const Duration(seconds: 3));
+
+    if (response.statusCode == 200) {
+      print('[API] ✅ Response received');
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      print('[API] ⚠️ Server returned ${response.statusCode}');
+      return null;
+    }
+  } catch (e) {
+    print('[API] ❌ Failed to fetch: $e');
+    return null;
+  }
+}
+
 Future<void> sendAllConfigurations() async {
   // 1. Convert the Map of configs into a List of JSON objects
   final List<Map<String, dynamic>> allConfigsData = [];

@@ -3,8 +3,13 @@ import 'package:surface_controller/globals/sizes.dart';
 
 class RemoveButton extends StatelessWidget {
   final VoidCallback onPressed;
+  final String label;
 
-  const RemoveButton({super.key, required this.onPressed});
+  const RemoveButton({
+    super.key,
+    required this.onPressed,
+    this.label = 'Remove',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -18,15 +23,12 @@ class RemoveButton extends StatelessWidget {
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(9),
-          side: const BorderSide(
-            color: Color(0xFFB0BEC5), // Border color
-            width: 2, // Border thickness
-          ),
+          side: const BorderSide(color: Color(0xFFB0BEC5), width: 2),
         ),
       ),
-      child: const Text(
-        'Remove',
-        style: TextStyle(fontSize: 11, color: Colors.white),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11, color: Colors.white),
       ),
     );
   }
