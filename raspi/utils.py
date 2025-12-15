@@ -1,3 +1,5 @@
+import time
+
 class Debouncer:
     def __init__(self, interval_seconds):
         self.interval = interval_seconds

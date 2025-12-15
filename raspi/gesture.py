@@ -202,9 +202,8 @@ with mp_hands.Hands(
             middle = results.multi_hand_landmarks[0].landmark[12]
             if touching(thumb, middle):
                 main.send_msg("Thumb + middle finger touch detected")
-                gesture = "Thumb+Middle"
-                loaded_config = file.load_configure_json()
-                for i in loaded_config:
+                gesture = "Thumb+Middle" 
+                for i in file.loaded_config:
                     if i["gesture"]=="Thumb+Middle":
                         print(i["action"])
         except Exception:
@@ -216,8 +215,7 @@ with mp_hands.Hands(
             if touching(thumb, index):
                 main.send_msg("Thumb + index finger touch detected")
                 gesture = "Thumb+Index"
-                loaded_config = file.load_configure_json()
-                for i in loaded_config:
+                for i in file.loaded_config:
                     if i["gesture"]=="Thumb+Index":
                         print(i["action"])
         except Exception:
