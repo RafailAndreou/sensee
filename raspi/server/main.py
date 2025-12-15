@@ -284,6 +284,9 @@ def configure(settings: List[Configuration]):
         
     return {"status": "configured", "count": len(current_config)}
 
+@app.get("/api")    
+
+
 @app.get("/configuration")
 def get_configuration_msg():
     return {"message": "Please use POST /configuration to configure settings"}

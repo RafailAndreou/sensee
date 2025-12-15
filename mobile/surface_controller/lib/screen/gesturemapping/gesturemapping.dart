@@ -42,19 +42,7 @@ class Gesturemapping extends StatelessWidget {
             ],
           ),
         ),
-        TextButton(
-          child: Text("Count Connections"),
-          onPressed: () {
-            debugPrint("Total Connections: ${countConnections()}");
-            PrintDirectory();
-            writeCountConnections(countConnections());
-            readCountConnections().then((value) {
-              debugPrint("Read from file: $value");
-            });
-            configuesToJson();
-            saveConfigsToFile();
-          },
-        ),
+        TextButton(child: Text("Apply API Changes"), onPressed: () {}),
       ],
     );
   }

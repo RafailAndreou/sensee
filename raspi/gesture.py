@@ -26,6 +26,13 @@ gesture_queue = Queue()
 latest_frame_ts = 0
 latest_frame_lock = threading.Lock()
 
+# ---- Debouncer Configuration ----
+GESTURE_RATE_LIMIT = 0.5  # seconds between gesture processing
+ACTION_RATE_LIMIT = 0.5   # seconds between action execution
+gesture_limiter = utils.Debouncer(GESTURE_RATE_LIMIT)
+action_debouncer = utils.Debouncer(ACTION_RATE_LIMIT)
+
+debounce_actions = {"TV:Turn On", "Open AC","TV:Turn Off","Close AC","AC:Hot","AC:cold"}
 # Modified gesture callback that puts results in queue
 def gesture_callback(result: GestureRecognizerResult, output_image: mp.Image, timestamp_ms: int):
     if result.gestures:
@@ -34,26 +41,34 @@ def gesture_callback(result: GestureRecognizerResult, output_image: mp.Image, ti
             gesture_queue.put((gesture[0], timestamp_ms))
 
 def take_action(gesture_name):
-    requires_delay = False
-    for i in file.loaded_config:
-        if i["gesture"] == gesture_name:
-            if i["action"] == "TV:Turn On" or i["action"] == "Open AC":
-                requires_delay = True
-                break
+    """Execute action for detected gesture with conditional debouncing.
     
-    # Process if no delay needed OR debouncer allows it
-    if not requires_delay or mid_debouncer.can_trigger():
-        main.send_msg(f"{gesture_name} touch detected")
-        for i in file.loaded_config:
-            if i["gesture"] == gesture_name:
-                print(i["action"])
-                # TODO: Execute the action here
-                break
-
-# ... existing imports ...
-
-# Initialize the debouncer with your 0.5s delay
-gesture_limiter = utils.Debouncer(0.5) 
+    Debouncing is applied only to actions that require delay (e.g., TV:Turn On, Open AC).
+    
+    Args:
+        gesture_name: The detected gesture name
+    """
+    # Check if this gesture's action requires debouncing
+    requires_debounce = False
+    for config_item in file.loaded_config:
+        if config_item["gesture"] == gesture_name:
+            if config_item["action"] in ("TV:Turn On", "Open AC"):
+                requires_debounce = True
+            break
+    
+    # Skip if debouncing is needed but cooldown is active
+    if requires_debounce and not action_debouncer.can_trigger():
+        return
+    
+    main.send_msg(f"{gesture_name} touch detected")
+    
+    # Find and execute the configured action
+    for config_item in file.loaded_config:
+        if config_item["gesture"] == gesture_name:
+            action = config_item["action"]
+            print(f"Executing action: {action}")
+            # TODO: Execute the action here
+            break
 
 def process_gestures():
     while True:
@@ -177,8 +192,6 @@ def check_hand_movement(wrist_queue):
 
 hand_thread = threading.Thread(target=check_hand_movement, args=(wrist_queue,), daemon=True)
 hand_thread.start()
-delay = False
-mid_debouncer = utils.Debouncer(0.5)
 
 with mp_hands.Hands(
     static_image_mode=False,
