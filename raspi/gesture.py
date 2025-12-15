@@ -162,6 +162,8 @@ def check_hand_movement(wrist_queue):
 
 hand_thread = threading.Thread(target=check_hand_movement, args=(wrist_queue,), daemon=True)
 hand_thread.start()
+delay = False
+mid_debouncer = utils.Debouncer(0.5)
 
 with mp_hands.Hands(
     static_image_mode=False,
@@ -198,14 +200,36 @@ with mp_hands.Hands(
             pass
 
         try:
-            thumb = results.multi_hand_landmarks[0].landmark[4]
-            middle = results.multi_hand_landmarks[0].landmark[12]
-            if touching(thumb, middle):
-                main.send_msg("Thumb + middle finger touch detected")
-                gesture = "Thumb+Middle" 
-                for i in file.loaded_config:
-                    if i["gesture"]=="Thumb+Middle":
-                        print(i["action"])
+            if delay==False:
+                thumb = results.multi_hand_landmarks[0].landmark[4]
+                middle = results.multi_hand_landmarks[0].landmark[12]
+                if touching(thumb, middle):
+                    main.send_msg("Thumb + middle finger touch detected")
+                    gesture = "Thumb+Middle" 
+                    for i in file.loaded_config:
+                        if i["gesture"]=="Thumb+Middle":
+                            if(i["action"]=="TV:Turn On" or i["action"]=="Open AC"):
+                                delay = True
+                            else:
+                                delay= False
+                            print(i["action"])
+            if delay:
+                if mid_debouncer.can_trigger():
+                    thumb = results.multi_hand_landmarks[0].landmark[4]
+                    middle = results.multi_hand_landmarks[0].landmark[12]
+                    if touching(thumb, middle):
+                        main.send_msg("Thumb + middle finger touch detected")
+                        gesture = "Thumb+Middle" 
+                        for i in file.loaded_config:
+                            if i["gesture"]=="Thumb+Middle":
+                                if(i["action"]=="TV:Turn On" or i["action"]=="Open AC"):
+                                    delay = True
+                                else:
+                                    delay= False
+                                print(i["action"])
+                    
+                    
+            
         except Exception:
             pass
 
