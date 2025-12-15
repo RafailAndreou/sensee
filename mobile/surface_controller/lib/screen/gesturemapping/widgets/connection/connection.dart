@@ -77,10 +77,11 @@ class _ConnectionState extends State<Connection> {
             children: [
               _buildTopRow(lang),
               SizedBox(height: getProportionalHeight(context, 10)),
-              _buildMenuRow(),
+              _buildMenuRow(lang),
               SizedBox(height: getProportionalHeight(context, 20)),
               _buildHandLabel(lang),
               _buildHandButtons(lang),
+              _buildBrandDisplay(),
             ],
           ),
         );
@@ -151,24 +152,36 @@ class _ConnectionState extends State<Connection> {
   }
 
   /// Row with three dropdown menus
-  Widget _buildMenuRow() {
+  Widget _buildMenuRow(String lang) {
+    final actionOptions = [
+      tr('playMusicAction', lang),
+      tr('openAc', lang),
+      tr('acCold', lang),
+      tr('acHot', lang),
+      tr('tvTurnOn', lang),
+      tr('tvTurnOff', lang),
+      tr('tvIncreaseVolume', lang),
+      tr('tvDecreaseVolume', lang),
+    ];
+    final gestureOptions = [
+      tr('thumbIndex', lang),
+      tr('thumbMiddle', lang),
+      tr('thumbRing', lang),
+    ];
+    final soundOptions = [
+      tr('sound1', lang),
+      tr('sound2', lang),
+      tr('sound3', lang),
+    ];
+
     return Row(
       children: [
         const Spacer(),
         Flexible(
           flex: 6,
           child: DropDownMenu(
-            selectedValue: "Play Music",
-            options: const [
-              "Play Music",
-              "Open AC",
-              "AC:cold",
-              "AC:Hot",
-              "TV:Turn On",
-              "TV:Turn Off",
-              "TV:Increase Volume",
-              "TV:Decrease Volume",
-            ],
+            selectedValue: tr('playMusicAction', lang),
+            options: actionOptions,
             leadingIcon: const Image(
               image: AssetImage('assets/connection/menu/music.png'),
             ),
@@ -180,7 +193,7 @@ class _ConnectionState extends State<Connection> {
           flex: 6,
           child: DropDownMenu(
             selectedValue: "Test",
-            options: const ["Thumb+Index", "Thumb+Middle", "Thumb+Ring"],
+            options: gestureOptions,
             leadingIcon: const Image(
               image: AssetImage('assets/connection/menu/hand.png'),
             ),
@@ -191,8 +204,8 @@ class _ConnectionState extends State<Connection> {
         Flexible(
           flex: 6,
           child: DropDownMenu(
-            selectedValue: "Sound1",
-            options: const ["Sound1", "Sound2", "Sound3"],
+            selectedValue: tr('sound1', lang),
+            options: soundOptions,
             leadingIcon: const Image(
               image: AssetImage('assets/connection/menu/sound1.png'),
             ),
@@ -222,89 +235,86 @@ class _ConnectionState extends State<Connection> {
 
   /// Hand buttons (Left/Right) and Configure button
   Widget _buildHandButtons(String lang) {
-    return Row(
-      children: [
-        SizedBox(
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  const SizedBox(width: 10),
-                  HandButton(
-                    label: tr('left', lang),
-                    onPressed: () {
-                      setState(() => _selected = HandSelection.left);
-                      config.hand.value = "Left";
-                    },
-                    backgroundColor:
-                        (_selected == HandSelection.left ||
-                            _selected == HandSelection.both)
-                        ? const Color.fromARGB(255, 152, 209, 255)
-                        : const Color.fromARGB(255, 255, 255, 255),
-                  ),
-                  const SizedBox(width: 5),
-                  HandButton(
-                    label: tr('right', lang),
-                    onPressed: () {
-                      setState(() => _selected = HandSelection.right);
-                      config.hand.value = "Right";
-                    },
-                    backgroundColor:
-                        (_selected == HandSelection.right ||
-                            _selected == HandSelection.both)
-                        ? const Color.fromARGB(255, 152, 209, 255)
-                        : Colors.white,
-                  ),
-                  const SizedBox(width: 5),
-                  HandButton(
-                    label: tr('both', lang),
-                    onPressed: () {
-                      setState(() => _selected = HandSelection.both);
-                      config.hand.value = "both";
-                    },
-                    backgroundColor: _selected == HandSelection.both
-                        ? const Color.fromARGB(255, 152, 209, 255)
-                        : Colors.white,
-                  ),
-                  const SizedBox(width: 20),
-                  RemoveButton(
-                    label: tr('remove', lang),
-                    onPressed: () {
-                      removeConnection(widget.id);
-                      debugPrint("Removed connection with id: ${widget.id}");
-                      writeCountConnections(countConnections());
-                      readCountConnections().then((value) {
-                        debugPrint("Read from file: $value");
-                      });
-                      configuesToJson();
-                      saveConfigsToFile();
-                    },
-                  ),
-                  const SizedBox(width: 5),
-                  ConfigureButton(
-                    label: tr('configure', lang),
-                    onPressed: () {
-                      sendAllConfigurations();
-                      print_config(config);
-                      writeCountConnections(countConnections());
-                      readCountConnections().then((value) {
-                        debugPrint("Read from file: $value");
-                      });
-                      configuesToJson();
-                      saveConfigsToFile();
-                    },
-                  ),
-                ],
-              ),
-              ValueListenableBuilder<String>(
-                valueListenable: config.brand,
-                builder: (context, value, child) => Text(value),
-              ),
-            ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          const SizedBox(width: 10),
+          HandButton(
+            label: tr('left', lang),
+            onPressed: () {
+              setState(() => _selected = HandSelection.left);
+              config.hand.value = "Left";
+            },
+            backgroundColor:
+                (_selected == HandSelection.left ||
+                    _selected == HandSelection.both)
+                ? const Color.fromARGB(255, 152, 209, 255)
+                : const Color.fromARGB(255, 255, 255, 255),
           ),
-        ),
-      ],
+          const SizedBox(width: 5),
+          HandButton(
+            label: tr('right', lang),
+            onPressed: () {
+              setState(() => _selected = HandSelection.right);
+              config.hand.value = "Right";
+            },
+            backgroundColor:
+                (_selected == HandSelection.right ||
+                    _selected == HandSelection.both)
+                ? const Color.fromARGB(255, 152, 209, 255)
+                : Colors.white,
+          ),
+          const SizedBox(width: 5),
+          HandButton(
+            label: tr('both', lang),
+            onPressed: () {
+              setState(() => _selected = HandSelection.both);
+              config.hand.value = "both";
+            },
+            backgroundColor: _selected == HandSelection.both
+                ? const Color.fromARGB(255, 152, 209, 255)
+                : Colors.white,
+          ),
+          const SizedBox(width: 15),
+          RemoveButton(
+            label: tr('remove', lang),
+            onPressed: () {
+              removeConnection(widget.id);
+              debugPrint("Removed connection with id: ${widget.id}");
+              writeCountConnections(countConnections());
+              readCountConnections().then((value) {
+                debugPrint("Read from file: $value");
+              });
+              configuesToJson();
+              saveConfigsToFile();
+            },
+          ),
+          const SizedBox(width: 5),
+          ConfigureButton(
+            label: tr('configure', lang),
+            onPressed: () {
+              sendAllConfigurations();
+              print_config(config);
+              writeCountConnections(countConnections());
+              readCountConnections().then((value) {
+                debugPrint("Read from file: $value");
+              });
+              configuesToJson();
+              saveConfigsToFile();
+            },
+          ),
+          const SizedBox(width: 10),
+        ],
+      ),
+    );
+  }
+
+  /// Brand display
+  Widget _buildBrandDisplay() {
+    return ValueListenableBuilder<String>(
+      valueListenable: config.brand,
+      builder: (context, value, child) => Text(value),
     );
   }
 }

@@ -1,1 +1,1 @@
-[{"id": "-1", "brand": "Samsung", "action": "TV:Turn On", "gesture": "Thumb+Index", "sound": "", "hand": "Right"}, {"id": "1", "brand": "Samsung", "action": "TV:Increase Volume", "gesture": "Thumb+Middle", "sound": "", "hand": "Right"}]
+[{"id": "-1", "brand": "", "action": "Open AC", "gesture": "Thumb+Index", "sound": "", "hand": "Right"}, {"id": "1", "brand": "", "action": "", "gesture": "", "sound": "", "hand": "Right"}]

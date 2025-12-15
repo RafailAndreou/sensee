@@ -20,7 +20,7 @@ class HandButton extends StatelessWidget {
         backgroundColor: backgroundColor,
         // Set fixed size (width x height)
         fixedSize: Size(
-          getProportionalWidth(context, 50),
+          getProportionalWidth(context, 60),
           getProportionalHeight(context, 20),
         ),
         padding: EdgeInsets.zero,

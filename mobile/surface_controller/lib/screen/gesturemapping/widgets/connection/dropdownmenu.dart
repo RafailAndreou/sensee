@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../brands/configurationscreen.dart';
 import 'package:surface_controller/globals/global.dart';
 import 'package:surface_controller/globals/sizes.dart';
+import 'package:surface_controller/globals/locale.dart';
 
 class DropDownMenu extends StatefulWidget {
   final String selectedValue;
@@ -64,14 +65,14 @@ class _DropDownMenuState extends State<DropDownMenu> {
       initialSelection: _currentValue,
       leadingIcon: widget.leadingIcon,
       menuStyle: MenuStyle(visualDensity: VisualDensity.standard),
-      width: 105,
+      width: 140,
       textStyle: const TextStyle(
         color: Colors.black,
         fontSize: 10,
         overflow: TextOverflow.visible,
       ),
       inputDecorationTheme: InputDecorationTheme(
-        constraints: BoxConstraints(maxHeight: 37, maxWidth: 103),
+        constraints: BoxConstraints(maxHeight: 37, maxWidth: 138),
         isDense: true,
 
         suffixIconColor: Color.fromARGB(255, 52, 52, 196),
@@ -102,23 +103,27 @@ class _DropDownMenuState extends State<DropDownMenu> {
       onSelected: (String? value) {
         // Handle selection change
         print('Selected: $value');
+        final englishValue = toEnglishValue(value ?? '');
+
         setState(() {
           _currentValue = value ?? widget.selectedValue;
         });
 
-        if (value == "Sound1" || value == "Sound2" || value == "Sound3") {
-          widget.config.sound.value = value ?? '';
+        if (englishValue == "Sound1" ||
+            englishValue == "Sound2" ||
+            englishValue == "Sound3") {
+          widget.config.sound.value = englishValue;
         }
-        if (value == "Thumb+Index" ||
-            value == "Thumb+Middle" ||
-            value == "Thumb+Ring") {
-          widget.config.gesture.value = value ?? '';
+        if (englishValue == "Thumb+Index" ||
+            englishValue == "Thumb+Middle" ||
+            englishValue == "Thumb+Ring") {
+          widget.config.gesture.value = englishValue;
         }
-        if (value == "TV:Turn On" ||
-            value == "TV:Turn Off" ||
-            value == "TV:Increase Volume" ||
-            value == "TV:Decrease Volume") {
-          widget.config.action.value = value ?? '';
+        if (englishValue == "TV:Turn On" ||
+            englishValue == "TV:Turn Off" ||
+            englishValue == "TV:Increase Volume" ||
+            englishValue == "TV:Decrease Volume") {
+          widget.config.action.value = englishValue;
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ConfigurationScreen(config: widget.config),
@@ -127,8 +132,8 @@ class _DropDownMenuState extends State<DropDownMenu> {
           // You can add additional logic here if needed
         }
 
-        if (widget.actions.contains(value)) {
-          widget.config.action.value = value ?? '';
+        if (widget.actions.contains(englishValue)) {
+          widget.config.action.value = englishValue;
         }
       },
     );
