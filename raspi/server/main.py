@@ -13,6 +13,8 @@ import asyncio
 import os
 from server import file
 from typing import List
+from collections import defaultdict
+import utils
 
 app = FastAPI()
 
@@ -78,20 +80,17 @@ def set_frame_from_bgr(frame_bgr):
 
 # ---------------- Events from gestures ----------------
 _last_events: dict[str, float] = {}
-_DEBOUNCE_S = 0.18
+
+_event_debouncers = defaultdict(lambda: utils.Debouncer(0.18))
+
 
 def send_msg(event: str):
     """Called by gesture loop; here you could map to IR/BLE/whatever."""
-    now = time.monotonic()
-    last = _last_events.get(event, 0.0)
-    if now - last < _DEBOUNCE_S:
+    # Check the specific debouncer for THIS event name
+    if not _event_debouncers[event].can_trigger():
         return
-    _last_events[event] = now
+
     print(f"[gesture] {event}")
-    if event == "Thumb+Index":
-        for i in file.load_configure_json():
-            if i["gesture"]=="Thumb+Index":
-                print(i["action"])
     # TODO: integrate with ESP32/IR here
 
 # ---------------- Helpers ----------------

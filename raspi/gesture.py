@@ -9,22 +9,8 @@ import threading
 import time
 import os
 from server import file
-
-
 import time
-
-class Debouncer:
-    def __init__(self, interval_seconds):
-        self.interval = interval_seconds
-        self.last_trigger_time = 0
-
-    def can_trigger(self):
-        """Returns True if enough time has passed since the last trigger."""
-        now = time.monotonic()
-        if now - self.last_trigger_time > self.interval:
-            self.last_trigger_time = now
-            return True
-        return False
+import utils
 
 model_path = "raspi/assets/gesture_recognizer.task"
 base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
@@ -52,7 +38,7 @@ def gesture_callback(result: GestureRecognizerResult, output_image: mp.Image, ti
 # ... existing imports ...
 
 # Initialize the debouncer with your 0.5s delay
-gesture_limiter = Debouncer(0.5) 
+gesture_limiter = utils.Debouncer(0.5) 
 
 def process_gestures():
     while True:
