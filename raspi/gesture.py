@@ -34,6 +34,22 @@ def gesture_callback(result: GestureRecognizerResult, output_image: mp.Image, ti
             # put tuple (gesture, timestamp) so we can check staleness later
             gesture_queue.put((gesture[0], timestamp_ms))
 
+def take_action(gesture_name):
+    requires_delay = False
+    for i in file.loaded_config:
+        if i["gesture"] == gesture_name:
+            if i["action"] == "TV:Turn On" or i["action"] == "Open AC":
+                requires_delay = True
+                break
+    
+    # Process if no delay needed OR debouncer allows it
+    if not requires_delay or mid_debouncer.can_trigger():
+        main.send_msg(f"{gesture_name} touch detected")
+        for i in file.loaded_config:
+            if i["gesture"] == gesture_name:
+                print(i["action"])
+                # TODO: Execute the action here
+                break
 
 # ... existing imports ...
 
@@ -205,23 +221,7 @@ with mp_hands.Hands(
             
             if touching(thumb, middle):
                 # Check if any action for this gesture requires a delay
-                requires_delay = False
-                for i in file.loaded_config:
-                    if i["gesture"] == "Thumb+Middle":
-                        if i["action"] == "TV:Turn On" or i["action"] == "Open AC":
-                            requires_delay = True
-                            break
-                
-                # Process if no delay needed OR debouncer allows it
-                if not requires_delay or mid_debouncer.can_trigger():
-                    main.send_msg("Thumb + middle finger touch detected")
-                    gesture = "Thumb+Middle" 
-                    for i in file.loaded_config:
-                        if i["gesture"]=="Thumb+Middle":
-                            print(i["action"])
-                    
-                    # Update delay state for consistency
-                    delay = requires_delay
+                take_action("Thumb+Middle")
             
         except Exception:
             pass
@@ -230,11 +230,7 @@ with mp_hands.Hands(
             thumb = results.multi_hand_landmarks[0].landmark[4]
             index = results.multi_hand_landmarks[0].landmark[8]
             if touching(thumb, index):
-                main.send_msg("Thumb + index finger touch detected")
-                gesture = "Thumb+Index"
-                for i in file.loaded_config:
-                    if i["gesture"]=="Thumb+Index":
-                        print(i["action"])
+                take_action("Thumb+Index")
         except Exception:
             pass
 
