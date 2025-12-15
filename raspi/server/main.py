@@ -280,7 +280,7 @@ def configure(settings: List[Configuration]):
     for conf in current_config:
         print(f"  - ID {conf['id']}: {conf['brand']} {conf['action']} ({conf['gesture']})")
     file.save_configure_json(current_config)
-    loaded_config = file.load_configure_json()
+    file.loaded_config = file.load_configure_json()
         
     return {"status": "configured", "count": len(current_config)}
 

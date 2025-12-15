@@ -1,5 +1,5 @@
 import json
-global loaded_config
+
 
 
 def save_configure_json(configuration: dict):
@@ -7,7 +7,7 @@ def save_configure_json(configuration: dict):
         content = f.write(json.dumps(configuration))
         print("✅ Configuration saved to raspi/server/configure.json")
        
-def load_configure_json() -> dict:
+def load_configure_json() -> list:
     try:
         with open("raspi/server/configure.json", "r") as f:
             content = f.read()
@@ -16,7 +16,9 @@ def load_configure_json() -> dict:
             return configuration
     except FileNotFoundError:
         print("⚠️  Configuration file not found, returning empty configuration.")
-        return {}
+        return []
+
+loaded_config = load_configure_json()
     
 if __name__ == "__main__":
     test_dictionary = {
