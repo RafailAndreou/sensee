@@ -10,6 +10,22 @@ import time
 import os
 from server import file
 
+
+import time
+
+class Debouncer:
+    def __init__(self, interval_seconds):
+        self.interval = interval_seconds
+        self.last_trigger_time = 0
+
+    def can_trigger(self):
+        """Returns True if enough time has passed since the last trigger."""
+        now = time.monotonic()
+        if now - self.last_trigger_time > self.interval:
+            self.last_trigger_time = now
+            return True
+        return False
+
 model_path = "raspi/assets/gesture_recognizer.task"
 base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
 GestureRecognizer = mp.tasks.vision.GestureRecognizer
@@ -32,23 +48,39 @@ def gesture_callback(result: GestureRecognizerResult, output_image: mp.Image, ti
             # put tuple (gesture, timestamp) so we can check staleness later
             gesture_queue.put((gesture[0], timestamp_ms))
 
-# Add gesture processing thread
+
+# ... existing imports ...
+
+# Initialize the debouncer with your 0.5s delay
+gesture_limiter = Debouncer(0.5) 
+
 def process_gestures():
     while True:
         try:
+            # This .get() blocks until data arrives, which is good (efficient)
             gesture, ts = gesture_queue.get()
-            # check if this result is too old compared to the latest frame we sent
+
+            # 1. Staleness Check (Keep your existing logic)
             with latest_frame_lock:
                 current_ts = latest_frame_ts
-            # drop results older than 300 ms (adjust threshold as needed)
             if ts < current_ts - 300:
-                # stale result, skip
                 continue
 
+            # 2. Rate Limit Check (The Fix)
+            # If we are in the "cooldown" period, skip this gesture immediately
+            if not gesture_limiter.can_trigger():
+                continue
+
+            # 3. Process the gesture
             gesture_name = gesture.category_name
-            confidence = gesture.score 
-            main.send_msg(f"Gesture: {gesture_name} (Confidence: {confidence:.2f})")
-            time.sleep(0.5)  # slight delay to avoid spamming
+            confidence = gesture.score
+            print(f"Detected gesture: {gesture_name} (confidence: {confidence:.2f})")
+            main.send_msg(f"Gesture: {gesture_name}")
+            
+            # REMOVED: time.sleep(0.5) 
+            # The loop immediately restarts, ready to clear the queue 
+            # or wait for new data efficiently.
+
         except Exception as e:
             print(f"Error processing gesture: {e}")
 
