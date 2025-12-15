@@ -11,7 +11,9 @@ import os
 from server import file
 import utils
 
-model_path = "raspi/assets/gesture_recognizer.task"
+# Resolve the model path relative to this script's directory to avoid CWD issues
+script_dir = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(script_dir, "assets", "gesture_recognizer.task")
 base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
 GestureRecognizer = mp.tasks.vision.GestureRecognizer
 GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
