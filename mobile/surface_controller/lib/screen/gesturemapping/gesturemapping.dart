@@ -3,7 +3,6 @@ import 'widgets/connection/connection.dart';
 import 'addactionbutton.dart';
 import 'menu.dart';
 import '../../globals/connectionslist.dart';
-import 'widgets/redesign/dashboard.dart';
 
 class Gesturemapping extends StatelessWidget {
   const Gesturemapping({super.key});
@@ -13,7 +12,7 @@ class Gesturemapping extends StatelessWidget {
     return Column(
       children: [
         Spacer(flex: 1),
-        Flexible(flex: 6, child: Dashboard()),
+        // Flexible(flex: 6, child: Dashboard()),
         Spacer(flex: 1), // keep the connection widget at its intended height
         Flexible(
           flex: 13,

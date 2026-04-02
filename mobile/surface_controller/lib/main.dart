@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screen/gesturemapping/gesturemapping.dart';
 import 'globals/connectionslist.dart';
+import 'package:surface_controller/redesign/screens/dashboard/dashboard.dart';
 
 void main() async {
   // You can process the message here
@@ -18,11 +19,13 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar: AppBar(title: const Text('Sensee Smart Controller')),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Gesturemapping(),
+        appBar: AppBar(
+          title: const Text(
+            'Sensee  Gesture dashboard',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
         ),
+        body: Padding(padding: const EdgeInsets.all(16.0), child: Dashboard()),
       ),
     );
   }
