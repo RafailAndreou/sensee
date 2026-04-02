@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/actionselectorcard.dart';
 
 class ActionDetails extends StatelessWidget {
   final String deviceType;
@@ -23,12 +24,7 @@ class ActionDetails extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [Text('Device Type: $deviceType'), Text('Brand: $brand')],
-        ),
-      ),
+      body: ActionSelectorCard(deviceType: deviceType, brand: brand),
     );
   }
 }
