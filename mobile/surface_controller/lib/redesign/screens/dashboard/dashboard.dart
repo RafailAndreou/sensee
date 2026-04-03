@@ -39,7 +39,7 @@ class Dashboard extends StatelessWidget {
         }).toList();
 
         if (savedIds.isEmpty) {
-          return const Center(child: DashboardCard());
+          return const SizedBox.shrink();
         }
 
         return GridView.builder(

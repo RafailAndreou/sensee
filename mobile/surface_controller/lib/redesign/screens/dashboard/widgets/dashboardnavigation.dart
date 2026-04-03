@@ -22,6 +22,8 @@ class DashBoardNavigation extends StatelessWidget {
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
           child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image(
                 image: AssetImage(
@@ -50,6 +52,8 @@ class DashBoardNavigation extends StatelessWidget {
             ).push(MaterialPageRoute(builder: (_) => const VideoPage()));
           },
           child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image(
                 image: const AssetImage('assets/redesign/Camera.png'),
@@ -72,6 +76,8 @@ class DashBoardNavigation extends StatelessWidget {
             // Handle settings tap
           },
           child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Image(image: AssetImage("assets/redesign/settings.png")),
               const Text("Settings"),

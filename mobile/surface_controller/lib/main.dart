@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screen/gesturemapping/gesturemapping.dart';
-import 'globals/connectionslist.dart';
+import 'package:surface_controller/redesign/globals/connectionslist.dart';
 import 'package:surface_controller/redesign/screens/dashboard/dashboard.dart';
 
 void main() async {
