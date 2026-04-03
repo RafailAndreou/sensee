@@ -10,11 +10,13 @@ import 'widgets/gesturebutton.dart';
 class ActionDetails extends StatefulWidget {
   final String deviceType;
   final String brand;
+  final int? editingConnectionId;
 
   const ActionDetails({
     super.key,
     required this.deviceType,
     required this.brand,
+    this.editingConnectionId,
   });
 
   @override
@@ -26,17 +28,43 @@ class _ActionDetailsState extends State<ActionDetails> {
   String _selectedGesture = 'Index+Thumb';
   String _selectedHand = 'Right Hand';
 
-  Future<void> _saveConfiguration() async {
-    addNewConnection();
-    final int newId = connectionsList.value.last;
-    final config = getConnectionConfig(newId);
+  @override
+  void initState() {
+    super.initState();
+    if (widget.editingConnectionId != null) {
+      final config = getConnectionConfig(widget.editingConnectionId!);
+      _selectedAction = config.action.value.isEmpty
+          ? _selectedAction
+          : config.action.value;
+      _selectedGesture = config.gesture.value.isEmpty
+          ? _selectedGesture
+          : config.gesture.value;
+      _selectedHand = config.hand.value.isEmpty
+          ? _selectedHand
+          : config.hand.value;
+    }
+  }
 
-    config.id.value = newId;
+  Future<void> _saveConfiguration() async {
+    final int connectionId;
+    if (widget.editingConnectionId != null) {
+      connectionId = widget.editingConnectionId!;
+    } else {
+      addNewConnection();
+      connectionId = connectionsList.value.last;
+    }
+
+    final config = getConnectionConfig(connectionId);
+
+    config.id.value = connectionId;
     config.brand.value = widget.brand;
     config.action.value = _selectedAction;
     config.gesture.value = _selectedGesture;
     config.hand.value = _selectedHand;
     config.sound.value = widget.deviceType;
+
+    // Ensure dashboard cards listening to id-list updates also repaint on edits.
+    connectionsList.value = List.from(connectionsList.value);
 
     saveConfigsToFile();
     await server_sync.sendAllConfigurations();

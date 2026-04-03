@@ -4,16 +4,20 @@ import 'package:surface_controller/redesign/globals/sizes.dart';
 class DashboardCard extends StatelessWidget {
   const DashboardCard({
     super.key,
-    this.brandName = 'Philips',
-    this.deviceType = 'Tv',
-    this.actionName = 'Turn on',
-    this.gestureName = 'Thumb and index',
+    required this.brandName,
+    required this.deviceType,
+    required this.actionName,
+    required this.gestureName,
+    this.onTap,
+    this.onMoreTap,
   });
 
   final String brandName;
   final String deviceType;
   final String actionName;
   final String gestureName;
+  final VoidCallback? onTap;
+  final VoidCallback? onMoreTap;
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +38,7 @@ class DashboardCard extends StatelessWidget {
       ),
       child: GestureDetector(
         onTap: () {
-          // Handle dashboard card tap
-          print("Dashboard card tapped");
+          onTap?.call();
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,8 +55,7 @@ class DashboardCard extends StatelessWidget {
                   ),
                   GestureDetector(
                     onTap: () {
-                      print("More tapped");
-                      // Handle more tap
+                      onMoreTap?.call();
                     },
                     child: Image(
                       image: AssetImage("assets/redesign/more.png"),

@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:surface_controller/redesign/globals/connectionslist.dart';
+import 'package:surface_controller/redesign/globals/global.dart';
+import 'package:surface_controller/redesign/server/server.dart' as server_sync;
 import '../actions/actiondetails.dart';
 
 class BrandSelection extends StatefulWidget {
   final String deviceType;
+  final int? editingConnectionId;
 
-  const BrandSelection({super.key, required this.deviceType});
+  const BrandSelection({
+    super.key,
+    required this.deviceType,
+    this.editingConnectionId,
+  });
 
   @override
   State<BrandSelection> createState() => _BrandSelectionState();
@@ -146,7 +154,24 @@ class _BrandSelectionState extends State<BrandSelection> {
                     itemBuilder: (context, index) {
                       return ListTile(
                         title: Text(filteredBrands[index]),
-                        onTap: () {
+                        onTap: () async {
+                          if (widget.editingConnectionId != null) {
+                            final config = getConnectionConfig(
+                              widget.editingConnectionId!,
+                            );
+                            config.brand.value = filteredBrands[index];
+                            connectionsList.value = List.from(
+                              connectionsList.value,
+                            );
+                            saveConfigsToFile();
+                            await server_sync.sendAllConfigurations();
+                            if (!mounted) return;
+                            Navigator.of(
+                              context,
+                            ).popUntil((route) => route.isFirst);
+                            return;
+                          }
+
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => ActionDetails(
