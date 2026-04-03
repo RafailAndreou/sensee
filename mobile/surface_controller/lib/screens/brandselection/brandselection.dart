@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:surface_controller/globals/connectionslist.dart';
 import 'package:surface_controller/globals/global.dart';
 import 'package:surface_controller/server/server.dart' as server_sync;
@@ -164,11 +165,15 @@ class _BrandSelectionState extends State<BrandSelection> {
                               connectionsList.value,
                             );
                             saveConfigsToFile();
-                            await server_sync.sendAllConfigurations();
+
+                            // Update UI immediately, send to server in background
                             if (!mounted) return;
                             Navigator.of(
                               context,
                             ).popUntil((route) => route.isFirst);
+
+                            // Fire and forget - don't wait for server response
+                            unawaited(server_sync.sendAllConfigurations());
                             return;
                           }
 

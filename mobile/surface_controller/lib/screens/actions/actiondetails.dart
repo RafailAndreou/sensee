@@ -87,41 +87,46 @@ class _ActionDetailsState extends State<ActionDetails> {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Actionbutton(
-                      deviceType: widget.deviceType,
-                      actionName: _selectedAction,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Actionbutton(
+                        deviceType: widget.deviceType,
+                        actionName: _selectedAction,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(child: Gesturebutton(gestureName: _selectedGesture)),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Gesturebutton(gestureName: _selectedGesture),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const Spacer(),
-            ActionSelectorCard(
-              deviceType: widget.deviceType,
-              brand: widget.brand,
-              initialAction: _selectedAction,
-              initialGesture: _selectedGesture,
-              initialHand: _selectedHand,
-              onSelectionChanged:
-                  ({required action, required gesture, required hand}) {
-                    setState(() {
-                      _selectedAction = action;
-                      _selectedGesture = gesture;
-                      _selectedHand = hand;
-                    });
-                  },
-              onSave: _saveConfiguration,
-            ),
-          ],
+              const SizedBox(height: 24),
+              ActionSelectorCard(
+                deviceType: widget.deviceType,
+                brand: widget.brand,
+                initialAction: _selectedAction,
+                initialGesture: _selectedGesture,
+                initialHand: _selectedHand,
+                onSelectionChanged:
+                    ({required action, required gesture, required hand}) {
+                      setState(() {
+                        _selectedAction = action;
+                        _selectedGesture = gesture;
+                        _selectedHand = hand;
+                      });
+                    },
+                onSave: _saveConfiguration,
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: const SafeArea(
