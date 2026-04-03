@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 
-ValueNotifier<List<int>> connectionsList = ValueNotifier<List<int>>([0]);
+ValueNotifier<List<int>> connectionsList = ValueNotifier<List<int>>([]);
 int _nextConnectionId = 1;
 
 // In mobile/surface_controller/lib/globals/connectionslist.dart

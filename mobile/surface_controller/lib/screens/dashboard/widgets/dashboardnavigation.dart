@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:surface_controller/redesign/server/camera.dart';
+import 'package:surface_controller/server/camera.dart';
 
 enum DashboardTab { dashboard, camera, settings }
 

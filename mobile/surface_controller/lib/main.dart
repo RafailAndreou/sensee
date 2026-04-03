@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:surface_controller/redesign/globals/connectionslist.dart';
-import 'package:surface_controller/redesign/screens/dashboard/dashboard.dart';
+import 'package:surface_controller/globals/connectionslist.dart';
+import 'package:surface_controller/screens/dashboard/dashboard.dart';
 
 void main() async {
   // You can process the message here

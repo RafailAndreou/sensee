@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:surface_controller/redesign/globals/connectionslist.dart';
-import 'package:surface_controller/redesign/globals/global.dart';
-import 'package:surface_controller/redesign/server/server.dart' as server_sync;
+import 'package:surface_controller/globals/connectionslist.dart';
+import 'package:surface_controller/globals/global.dart';
+import 'package:surface_controller/server/server.dart' as server_sync;
 import '../actions/actiondetails.dart';
 
 class BrandSelection extends StatefulWidget {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:surface_controller/redesign/globals/sizes.dart';
+import 'package:surface_controller/globals/sizes.dart';
 
 class DashboardCard extends StatelessWidget {
   const DashboardCard({

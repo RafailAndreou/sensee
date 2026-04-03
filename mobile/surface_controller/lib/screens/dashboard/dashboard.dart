@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:surface_controller/redesign/globals/connectionslist.dart';
-import 'package:surface_controller/redesign/globals/global.dart';
-import 'package:surface_controller/redesign/server/server.dart' as server_sync;
-import 'package:surface_controller/redesign/screens/actions/actiondetails.dart';
-import 'package:surface_controller/redesign/screens/brandselection/brandselection.dart';
-import 'package:surface_controller/redesign/screens/dashboard/widgets/dashboardcard.dart';
-import 'package:surface_controller/redesign/screens/dashboard/widgets/dashboardnavigation.dart';
-import 'package:surface_controller/redesign/screens/devicetype/devicetype.dart';
+import 'package:surface_controller/globals/connectionslist.dart';
+import 'package:surface_controller/globals/global.dart';
+import 'package:surface_controller/server/server.dart' as server_sync;
+import 'package:surface_controller/screens/actions/actiondetails.dart';
+import 'package:surface_controller/screens/brandselection/brandselection.dart';
+import 'package:surface_controller/screens/dashboard/widgets/dashboardcard.dart';
+import 'package:surface_controller/screens/dashboard/widgets/dashboardnavigation.dart';
+import 'package:surface_controller/screens/devicetype/devicetype.dart';
 
 class Dashboard extends StatelessWidget {
   const Dashboard({super.key});

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:surface_controller/redesign/globals/connectionslist.dart';
-import 'package:surface_controller/redesign/globals/global.dart';
-import 'package:surface_controller/redesign/server/server.dart' as server_sync;
-import 'package:surface_controller/redesign/screens/dashboard/widgets/dashboardnavigation.dart';
+import 'package:surface_controller/globals/connectionslist.dart';
+import 'package:surface_controller/globals/global.dart';
+import 'package:surface_controller/server/server.dart' as server_sync;
+import 'package:surface_controller/screens/dashboard/widgets/dashboardnavigation.dart';
 import 'widgets/actionselectorcard.dart';
 import 'widgets/actionbutton.dart';
 import 'widgets/gesturebutton.dart';
