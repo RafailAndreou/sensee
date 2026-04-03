@@ -19,6 +19,20 @@ def load_configure_json() -> list:
         return []
 
 loaded_config = load_configure_json()
+
+def _is_valid_config_item(item: dict) -> bool:
+    if not isinstance(item, dict):
+        return False
+    if str(item.get("id", "")).strip() in ("", "-1"):
+        return False
+    if not str(item.get("gesture", "")).strip():
+        return False
+    if not str(item.get("action", "")).strip():
+        return False
+    return True
+
+def get_active_configs() -> list:
+    return [item for item in loaded_config if _is_valid_config_item(item)]
     
 if __name__ == "__main__":
     test_dictionary = {

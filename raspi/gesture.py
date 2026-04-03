@@ -35,8 +35,32 @@ gesture_limiter = utils.Debouncer(GESTURE_RATE_LIMIT)
 action_debouncer = utils.Debouncer(ACTION_RATE_LIMIT)
 
 debounce_actions = {"TV:Turn On", "Open AC","TV:Turn Off","Close AC","AC:Hot","AC:cold"}
+
+def _normalize_name(value):
+    return str(value).strip().lower().replace("_", " ").replace("+", " ")
+
+def _normalized_parts(value):
+    normalized = _normalize_name(value)
+    parts = [part for part in normalized.replace("/", " ").split() if part]
+    return parts
+
+def _gesture_matches(config_gesture, detected_gesture):
+    config_normalized = _normalize_name(config_gesture)
+    detected_normalized = _normalize_name(detected_gesture)
+
+    if config_normalized == detected_normalized:
+        return True
+
+    config_parts = _normalized_parts(config_gesture)
+    detected_parts = _normalized_parts(detected_gesture)
+
+    if len(config_parts) > 1 and len(config_parts) == len(detected_parts):
+        return sorted(config_parts) == sorted(detected_parts)
+
+    return False
+
 # Modified gesture callback that puts results in queue
-def gesture_callback(result: GestureRecognizerResult, output_image: mp.Image, timestamp_ms: int):
+def gesture_callback(result, output_image, timestamp_ms):
     if result.gestures:
         for gesture in result.gestures:
             # put tuple (gesture, timestamp) so we can check staleness later
@@ -52,8 +76,9 @@ def take_action(gesture_name):
     """
     # Check if this gesture's action requires debouncing
     requires_debounce = False
-    for config_item in file.loaded_config:
-        if config_item["gesture"] == gesture_name:
+    active_configs = file.get_active_configs()
+    for config_item in active_configs:
+        if _gesture_matches(config_item["gesture"], gesture_name):
             if config_item["action"] in ("TV:Turn On", "Open AC"):
                 requires_debounce = True
             break
@@ -65,12 +90,15 @@ def take_action(gesture_name):
     main.send_msg(f"{gesture_name} touch detected")
     
     # Find and execute the configured action
-    for config_item in file.loaded_config:
-        if config_item["gesture"] == gesture_name:
+    for config_item in active_configs:
+        if _gesture_matches(config_item["gesture"], gesture_name):
             action = config_item["action"]
             print(f"Executing action: {action}")
             # TODO: Execute the action here
             break
+    else:
+        print(f"No configured action matched gesture: {gesture_name}")
+        print(f"Active configs: {active_configs}")
 
 def process_gestures():
     while True:
@@ -94,6 +122,7 @@ def process_gestures():
             confidence = gesture.score
             print(f"Detected gesture: {gesture_name} (confidence: {confidence:.2f})")
             main.send_msg(f"Gesture: {gesture_name}")
+            take_action(gesture_name)
             
             # REMOVED: time.sleep(0.5) 
             # The loop immediately restarts, ready to clear the queue 
