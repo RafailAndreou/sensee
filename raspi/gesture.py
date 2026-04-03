@@ -9,7 +9,6 @@ import threading
 import time
 import os
 from server import file
-import utils
 
 # Resolve the model path relative to this script's directory to avoid CWD issues
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,13 +27,26 @@ gesture_queue = Queue()
 latest_frame_ts = 0
 latest_frame_lock = threading.Lock()
 
-# ---- Debouncer Configuration ----
-GESTURE_RATE_LIMIT = 0.5  # seconds between gesture processing
-ACTION_RATE_LIMIT = 0.5   # seconds between action execution
-gesture_limiter = utils.Debouncer(GESTURE_RATE_LIMIT)
-action_debouncer = utils.Debouncer(ACTION_RATE_LIMIT)
+ACTION_COOLDOWNS = {
+    "tv": 1.5,
+    "ac": 1.5,
+}
 
-debounce_actions = {"TV:Turn On", "Open AC","TV:Turn Off","Close AC","AC:Hot","AC:cold"}
+CONTROL_ACTION_KEYWORDS = (
+    "turn on",
+    "turn off",
+    "open",
+    "close",
+    "hot",
+    "cold",
+)
+
+action_trigger_times = {}
+action_trigger_lock = threading.Lock()
+
+GESTURE_LOG_INTERVAL_SECONDS = 1.0
+last_gesture_log_time = 0.0
+gesture_log_lock = threading.Lock()
 
 def _normalize_name(value):
     return str(value).strip().lower().replace("_", " ").replace("+", " ")
@@ -43,6 +55,59 @@ def _normalized_parts(value):
     normalized = _normalize_name(value)
     parts = [part for part in normalized.replace("/", " ").split() if part]
     return parts
+
+
+def _device_key(value):
+    parts = _normalized_parts(value)
+    if not parts:
+        return ""
+    return parts[0]
+
+
+def _action_key(action_name, device_name):
+    return f"{_normalize_name(device_name)}:{_normalize_name(action_name)}"
+
+
+def _action_cooldown_seconds(action_name, device_name):
+    action_normalized = _normalize_name(action_name)
+    if "volume" in action_normalized:
+        return 0.0
+
+    # Always cooldown core control actions (TV/AC power/mode style actions),
+    # regardless of whether device labels are present/consistent.
+    for keyword in CONTROL_ACTION_KEYWORDS:
+        if keyword in action_normalized:
+            return 1.5
+
+    device_key = _device_key(device_name)
+    return ACTION_COOLDOWNS.get(device_key, 0.0)
+
+
+def _can_run_action(action_name, device_name):
+    cooldown_seconds = _action_cooldown_seconds(action_name, device_name)
+    if cooldown_seconds <= 0:
+        return True
+
+    key = _action_key(action_name, device_name)
+    now = time.monotonic()
+
+    with action_trigger_lock:
+        last_trigger_time = action_trigger_times.get(key, 0)
+        if now - last_trigger_time < cooldown_seconds:
+            return False
+
+        action_trigger_times[key] = now
+        return True
+
+
+def _can_log_detected_gesture():
+    global last_gesture_log_time
+    now = time.monotonic()
+    with gesture_log_lock:
+        if now - last_gesture_log_time < GESTURE_LOG_INTERVAL_SECONDS:
+            return False
+        last_gesture_log_time = now
+        return True
 
 def _gesture_matches(config_gesture, detected_gesture):
     config_normalized = _normalize_name(config_gesture)
@@ -67,38 +132,26 @@ def gesture_callback(result, output_image, timestamp_ms):
             gesture_queue.put((gesture[0], timestamp_ms))
 
 def take_action(gesture_name):
-    """Execute action for detected gesture with conditional debouncing.
-    
-    Debouncing is applied only to actions that require delay (e.g., TV:Turn On, Open AC).
-    
-    Args:
-        gesture_name: The detected gesture name
-    """
-    # Check if this gesture's action requires debouncing
-    requires_debounce = False
     active_configs = file.get_active_configs()
+    matched_config = None
+
     for config_item in active_configs:
         if _gesture_matches(config_item["gesture"], gesture_name):
-            if config_item["action"] in ("TV:Turn On", "Open AC"):
-                requires_debounce = True
+            matched_config = config_item
             break
-    
-    # Skip if debouncing is needed but cooldown is active
-    if requires_debounce and not action_debouncer.can_trigger():
+
+    if matched_config is None:
         return
-    
+
+    action = str(matched_config.get("action", ""))
+    device_name = str(matched_config.get("sound", ""))
+
+    if not _can_run_action(action, device_name):
+        return
+
     main.send_msg(f"{gesture_name} touch detected")
-    
-    # Find and execute the configured action
-    for config_item in active_configs:
-        if _gesture_matches(config_item["gesture"], gesture_name):
-            action = config_item["action"]
-            print(f"Executing action: {action}")
-            # TODO: Execute the action here
-            break
-    else:
-        print(f"No configured action matched gesture: {gesture_name}")
-        print(f"Active configs: {active_configs}")
+    print(f"Executing action: {device_name} {action}")
+    # TODO: Execute the action here
 
 def process_gestures():
     while True:
@@ -112,15 +165,11 @@ def process_gestures():
             if ts < current_ts - 300:
                 continue
 
-            # 2. Rate Limit Check (The Fix)
-            # If we are in the "cooldown" period, skip this gesture immediately
-            if not gesture_limiter.can_trigger():
-                continue
-
-            # 3. Process the gesture
+            # 2. Process the gesture
             gesture_name = gesture.category_name
             confidence = gesture.score
-            print(f"Detected gesture: {gesture_name} (confidence: {confidence:.2f})")
+            if _can_log_detected_gesture():
+                print(f"Detected gesture: {gesture_name} (confidence: {confidence:.2f})")
             main.send_msg(f"Gesture: {gesture_name}")
             take_action(gesture_name)
             
