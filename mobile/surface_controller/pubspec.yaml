@@ -40,5 +40,6 @@ flutter:
     - assets/redesign/hand.png
     - assets/redesign/Camera.png
     - assets/redesign/dashboard-active.png
+    - assets/redesign/dashboard-inactive.png
     - assets/redesign/settings.png
     - assets/redesign/gesture.png

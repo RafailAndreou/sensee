@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:surface_controller/redesign/globals/connectionslist.dart';
 import 'package:surface_controller/redesign/globals/global.dart';
+import 'package:surface_controller/redesign/server/server.dart' as server_sync;
+import 'package:surface_controller/redesign/screens/dashboard/widgets/dashboardnavigation.dart';
 import 'widgets/actionselectorcard.dart';
 import 'widgets/actionbutton.dart';
 import 'widgets/gesturebutton.dart';
@@ -37,6 +39,7 @@ class _ActionDetailsState extends State<ActionDetails> {
     config.sound.value = widget.deviceType;
 
     saveConfigsToFile();
+    await server_sync.sendAllConfigurations();
 
     if (!mounted) return;
     Navigator.of(context).popUntil((route) => route.isFirst);
@@ -47,10 +50,7 @@ class _ActionDetailsState extends State<ActionDetails> {
     return Scaffold(
       backgroundColor: const Color(0xFFEAEDF4),
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
         title: Text(
           '${widget.brand} - Action Details',
           style: const TextStyle(fontWeight: FontWeight.w900),
@@ -92,6 +92,13 @@ class _ActionDetailsState extends State<ActionDetails> {
               onSave: _saveConfiguration,
             ),
           ],
+        ),
+      ),
+      bottomNavigationBar: const SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(0, 8, 0, 16),
+          child: DashBoardNavigation(selectedTab: DashboardTab.settings),
         ),
       ),
     );

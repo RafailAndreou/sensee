@@ -1,57 +1,84 @@
 import 'package:flutter/material.dart';
+import 'package:surface_controller/redesign/server/camera.dart';
+
+enum DashboardTab { dashboard, camera, settings }
 
 class DashBoardNavigation extends StatelessWidget {
-  const DashBoardNavigation({super.key});
+  const DashBoardNavigation({
+    super.key,
+    this.selectedTab = DashboardTab.dashboard,
+  });
+
+  final DashboardTab selectedTab;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          GestureDetector(
-            onTap: () {
-              // Handle dashboard tap
-            },
-            child: Column(
-              children: [
-                Image(
-                  image: AssetImage("assets/redesign/dashboard-active.png"),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        GestureDetector(
+          onTap: () {
+            if (selectedTab == DashboardTab.dashboard) return;
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
+          child: Column(
+            children: [
+              Image(
+                image: AssetImage(
+                  selectedTab == DashboardTab.dashboard
+                      ? 'assets/redesign/dashboard-active.png'
+                      : 'assets/redesign/dashboard-inactive.png',
                 ),
-                const Text(
-                  "Dashboard",
-                  style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              Text(
+                "Dashboard",
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: selectedTab == DashboardTab.dashboard
+                      ? Colors.black
+                      : Colors.black87,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          GestureDetector(
-            onTap: () {
-              // Handle camera tap
-            },
-            child: Column(
-              children: [
-                Image(image: AssetImage("assets/redesign/Camera.png")),
-                const Text(
-                  "Camera",
-                  style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        GestureDetector(
+          onTap: () {
+            if (selectedTab == DashboardTab.camera) return;
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const VideoPage()));
+          },
+          child: Column(
+            children: [
+              Image(
+                image: const AssetImage('assets/redesign/Camera.png'),
+                color: selectedTab == DashboardTab.camera ? Colors.blue : null,
+              ),
+              Text(
+                "Camera",
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: selectedTab == DashboardTab.camera
+                      ? Colors.blue
+                      : Colors.black,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          GestureDetector(
-            onTap: () {
-              // Handle settings tap
-            },
-            child: Column(
-              children: [
-                Image(image: AssetImage("assets/redesign/settings.png")),
-                const Text("Settings"),
-              ],
-            ),
+        ),
+        GestureDetector(
+          onTap: () {
+            // Handle settings tap
+          },
+          child: Column(
+            children: [
+              const Image(image: AssetImage("assets/redesign/settings.png")),
+              const Text("Settings"),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -16,7 +16,10 @@ class Dashboard extends StatelessWidget {
           children: [
             Expanded(flex: 7, child: _dashboardCards()),
             const Divider(thickness: 1, color: Colors.black87),
-            const Expanded(flex: 1, child: DashBoardNavigation()),
+            const Expanded(
+              flex: 1,
+              child: DashBoardNavigation(selectedTab: DashboardTab.dashboard),
+            ),
             const SizedBox(height: 32),
           ],
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:surface_controller/redesign/screens/dashboard/widgets/dashboardnavigation.dart';
 import 'package:surface_controller/redesign/server/server.dart'
     as server_discovery;
 
@@ -24,31 +25,36 @@ class _VideoPageState extends State<VideoPage> {
     // Try mDNS first, fallback to UDP, then fallback to static IP
     String? discovered = await server_discovery.discoverServerSmart();
 
-    if (discovered == null) {
-      setState(() {
-        _loadingMessage =
-            'Could not discover sensee. Please make sure the device is running and you are connected to it. If your sensee is running you can search http://sensee.local:8000/video in your browser to see the live camera.';
-      });
-      return;
-    }
-
-    final videoUrl = discovered.replaceFirst('/configuration', '/video');
+    final pageUrl = discovered == null
+        ? 'http://sensee.local:8000'
+        : discovered.replaceFirst('/configuration', '');
 
     setState(() {
-      _loadingMessage = 'Loading video from $videoUrl';
+      _loadingMessage = 'Loading video from $pageUrl';
       _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..loadRequest(Uri.parse(videoUrl));
+        ..loadRequest(Uri.parse(pageUrl));
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Video Stream')),
+      backgroundColor: const Color(0xFFEAEDF4),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Video Stream'),
+      ),
       body: _controller == null
           ? Center(child: Text(_loadingMessage ?? 'Starting...'))
           : WebViewWidget(controller: _controller!),
+      bottomNavigationBar: const SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(0, 8, 0, 16),
+          child: DashBoardNavigation(selectedTab: DashboardTab.camera),
+        ),
+      ),
     );
   }
 }
