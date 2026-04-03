@@ -20,11 +20,11 @@ class DeviceType extends StatelessWidget {
         ),
       ),
       body: GridView.count(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
         crossAxisCount: 2,
-        crossAxisSpacing: 20,
+        crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 1,
+        childAspectRatio: 1.08,
         children: [
           GestureDetector(
             onTap: () {
@@ -34,10 +34,7 @@ class DeviceType extends StatelessWidget {
                 ),
               );
             },
-            child: const Align(
-              alignment: Alignment.topLeft,
-              child: DeviceTypeButton(devicetype: 'Tv'),
-            ),
+            child: const DeviceTypeButton(devicetype: 'Tv'),
           ),
           GestureDetector(
             onTap: () {
@@ -47,10 +44,7 @@ class DeviceType extends StatelessWidget {
                 ),
               );
             },
-            child: const Align(
-              alignment: Alignment.topRight,
-              child: DeviceTypeButton(devicetype: 'Ac'),
-            ),
+            child: const DeviceTypeButton(devicetype: 'Ac'),
           ),
           GestureDetector(
             onTap: () {
@@ -60,10 +54,7 @@ class DeviceType extends StatelessWidget {
                 ),
               );
             },
-            child: const Align(
-              alignment: Alignment.topLeft,
-              child: DeviceTypeButton(devicetype: 'Light'),
-            ),
+            child: const DeviceTypeButton(devicetype: 'Light'),
           ),
           GestureDetector(
             onTap: () {
@@ -73,10 +64,7 @@ class DeviceType extends StatelessWidget {
                 ),
               );
             },
-            child: const Align(
-              alignment: Alignment.topRight,
-              child: DeviceTypeButton(devicetype: 'Fan'),
-            ),
+            child: const DeviceTypeButton(devicetype: 'Fan'),
           ),
         ],
       ),

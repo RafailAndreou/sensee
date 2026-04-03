@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:surface_controller/redesign/globals/connectionslist.dart';
 import 'package:surface_controller/redesign/globals/global.dart';
 import 'package:surface_controller/redesign/server/server.dart' as server_sync;
@@ -67,10 +68,11 @@ class _ActionDetailsState extends State<ActionDetails> {
     connectionsList.value = List.from(connectionsList.value);
 
     saveConfigsToFile();
-    await server_sync.sendAllConfigurations();
 
     if (!mounted) return;
     Navigator.of(context).popUntil((route) => route.isFirst);
+
+    unawaited(server_sync.sendAllConfigurations());
   }
 
   @override

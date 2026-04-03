@@ -105,6 +105,7 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
                 child: DropdownButton<String>(
                   value: selectedAction,
                   isExpanded: true,
+                  iconSize: 40,
                   underline: const SizedBox(),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -115,7 +116,7 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
                       value: action,
                       child: Row(
                         children: [
-                          Icon(_deviceIcon(widget.deviceType), size: 20),
+                          Icon(_deviceIcon(widget.deviceType), size: 30),
                           const SizedBox(width: 8),
                           Text('${widget.deviceType}: $action'),
                         ],
@@ -148,6 +149,7 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
                 child: DropdownButton<String>(
                   value: selectedGesture,
                   isExpanded: true,
+                  iconSize: 40,
                   underline: const SizedBox(),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -158,7 +160,7 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
                       value: gesture,
                       child: Row(
                         children: [
-                          const Icon(Icons.pan_tool, size: 20),
+                          const Icon(Icons.pan_tool, size: 30),
                           const SizedBox(width: 8),
                           Text(gesture),
                         ],
@@ -183,48 +185,51 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: hands
-                    .map(
-                      (hand) => Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedHand = hand;
-                            });
-                            _notifySelectionChanged();
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: selectedHand == hand
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCE3EC),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  children: hands
+                      .map(
+                        (hand) => Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedHand = hand;
+                              });
+                              _notifySelectionChanged();
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeOut,
+                              height: 38,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: selectedHand == hand
                                     ? Colors.blue
-                                    : const Color(0xFFDCE3EC),
-                                foregroundColor: selectedHand == hand
-                                    ? Colors.white
-                                    : Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                hand,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: selectedHand == hand
+                                      ? Colors.white
+                                      : Colors.black87,
                                 ),
                               ),
-                              onPressed: () {
-                                setState(() {
-                                  selectedHand = hand;
-                                });
-                                _notifySelectionChanged();
-                              },
-                              child: Text(hand),
                             ),
                           ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
+                ),
               ),
               const SizedBox(height: 32),
 

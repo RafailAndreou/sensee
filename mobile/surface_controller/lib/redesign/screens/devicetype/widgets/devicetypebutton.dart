@@ -8,38 +8,48 @@ class DeviceTypeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      child: Container(
-        width: getProportionalWidth(context, 110),
-        height: getProportionalHeight(context, 90),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.black, width: 1),
-        ),
-        child: Padding(
-          padding: EdgeInsets.only(left: 8),
+    return Material(
+      color: Colors.white,
+      elevation: 3,
+      shadowColor: Colors.black26,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: getProportionalWidth(context, 92),
+          height: getProportionalHeight(context, 88),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFB7C0CF), width: 1),
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(height: 10),
-              if (devicetype == 'Tv')
-                Icon(Icons.tv)
-              else if (devicetype == 'Ac')
-                Icon(Icons.ac_unit)
-              else if (devicetype == 'Light')
-                Icon(Icons.light_mode)
-              else if (devicetype == 'Fan')
-                Icon(Icons.air),
-
-              SizedBox(height: 25),
+              Icon(_deviceIcon(), size: 28, color: Colors.black87),
+              const SizedBox(height: 8),
               Text(
                 devicetype,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87,
+                ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  IconData _deviceIcon() {
+    if (devicetype == 'Tv') return Icons.tv;
+    if (devicetype == 'Ac') return Icons.ac_unit;
+    if (devicetype == 'Light') return Icons.light_mode;
+    if (devicetype == 'Fan') return Icons.air;
+    return Icons.device_unknown;
   }
 }
