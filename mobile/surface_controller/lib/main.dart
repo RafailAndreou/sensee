@@ -19,6 +19,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
+        backgroundColor: const Color(0xFFEAEDF4),
         appBar: AppBar(
           title: const Text(
             'Sensee  Gesture dashboard',

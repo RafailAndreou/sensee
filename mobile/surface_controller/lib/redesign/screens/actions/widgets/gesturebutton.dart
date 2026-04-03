@@ -1,23 +1,37 @@
 import 'package:flutter/material.dart';
 
-class DeviceType extends StatefulWidget {
-  const DeviceType({super.key, required this.gestureName});
+class Gesturebutton extends StatelessWidget {
+  const Gesturebutton({super.key, required this.gestureName});
 
   final String gestureName;
 
   @override
-  State<DeviceType> createState() => _DeviceTypeState();
-}
-
-class _DeviceTypeState extends State<DeviceType> {
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Row(
+    return Container(
+      height: 140,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset('assets/redesign/gesture.png'),
-            Text(widget.gestureName),
+            Image.asset('assets/redesign/gesture.png', width: 42, height: 42),
+            const SizedBox(height: 10),
+            Text(
+              'Gesture:\n$gestureName',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),

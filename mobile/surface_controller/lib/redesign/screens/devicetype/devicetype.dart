@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'devicetypebutton.dart';
+import 'widgets/devicetypebutton.dart';
 import '../brandselection/brandselection.dart';
 
 class DeviceType extends StatelessWidget {
@@ -8,6 +8,7 @@ class DeviceType extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFEAEDF4),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

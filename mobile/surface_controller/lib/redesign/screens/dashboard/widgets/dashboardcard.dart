@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:surface_controller/redesign/globals/sizes.dart';
-import 'package:surface_controller/redesign/globals/connectionslist.dart';
 
 class DashboardCard extends StatelessWidget {
-  const DashboardCard({super.key});
+  const DashboardCard({
+    super.key,
+    this.brandName = 'Philips',
+    this.deviceType = 'Tv',
+    this.actionName = 'Turn on',
+    this.gestureName = 'Thumb and index',
+  });
+
+  final String brandName;
+  final String deviceType;
+  final String actionName;
+  final String gestureName;
 
   @override
   Widget build(BuildContext context) {
@@ -55,20 +65,20 @@ class DashboardCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                "Philips",
+                brandName,
                 textAlign: TextAlign.left,
-                style: TextStyle(fontWeight: FontWeight.w900),
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                "Tv Turn on",
+                '$deviceType $actionName',
                 textAlign: TextAlign.left,
-                style: TextStyle(fontWeight: FontWeight.w500),
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
             ),
             Row(
@@ -79,9 +89,9 @@ class DashboardCard extends StatelessWidget {
                   height: 50,
                 ),
                 const SizedBox(width: 35),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    "Thumb and index",
+                    gestureName,
                     softWrap: true,
                     maxLines: 2,
                     overflow: TextOverflow.visible,

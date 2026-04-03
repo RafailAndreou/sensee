@@ -100,6 +100,7 @@ class _BrandSelectionState extends State<BrandSelection> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFEAEDF4),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

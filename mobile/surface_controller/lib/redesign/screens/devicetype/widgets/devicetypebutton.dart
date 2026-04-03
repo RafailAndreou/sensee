@@ -13,7 +13,6 @@ class DeviceTypeButton extends StatelessWidget {
         width: getProportionalWidth(context, 110),
         height: getProportionalHeight(context, 90),
         decoration: BoxDecoration(
-          color: Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.black, width: 1),
         ),
