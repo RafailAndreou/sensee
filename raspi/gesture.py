@@ -3,6 +3,7 @@
 import cv2
 import mediapipe as mp
 import pyautogui
+import webbrowser
 from server import main  # FastAPI app + helpers (set_frame_from_bgr, send_msg)
 from queue import Queue
 import threading
@@ -30,6 +31,7 @@ latest_frame_lock = threading.Lock()
 ACTION_COOLDOWNS = {
     "tv": 1.5,
     "ac": 1.5,
+    "pc": 1.5,
 }
 
 CONTROL_ACTION_KEYWORDS = (
@@ -73,6 +75,9 @@ def _action_cooldown_seconds(action_name, device_name):
     if "volume" in action_normalized:
         return 0.0
 
+    if _device_key(device_name) == "pc":
+        return ACTION_COOLDOWNS["pc"]
+
     # Always cooldown core control actions (TV/AC power/mode style actions),
     # regardless of whether device labels are present/consistent.
     for keyword in CONTROL_ACTION_KEYWORDS:
@@ -98,6 +103,39 @@ def _can_run_action(action_name, device_name):
 
         action_trigger_times[key] = now
         return True
+
+
+def _open_url(url):
+    try:
+        webbrowser.open_new_tab(url)
+        return True
+    except Exception as e:
+        print(f"Failed to open URL {url}: {e}")
+        return False
+
+
+def _execute_pc_action(action_name):
+    action_normalized = _normalize_name(action_name)
+
+    if action_normalized == "open spotify":
+        return _open_url("https://open.spotify.com/")
+
+    if action_normalized == "open youtube":
+        return _open_url("https://www.youtube.com/")
+
+    if action_normalized == "open browser":
+        return _open_url("https://www.google.com/")
+
+    if action_normalized == "close window":
+        try:
+            pyautogui.hotkey("alt", "f4")
+            return True
+        except Exception as e:
+            print(f"Failed to close active window: {e}")
+            return False
+
+    print(f"Unsupported PC action: {action_name}")
+    return False
 
 
 def _can_log_detected_gesture():
@@ -151,7 +189,12 @@ def take_action(gesture_name):
 
     main.send_msg(f"{gesture_name} touch detected")
     print(f"Executing action: {device_name} {action}")
-    # TODO: Execute the action here
+
+    if _device_key(device_name) == "pc":
+        _execute_pc_action(action)
+        return
+
+    # TODO: Execute non-PC actions here.
 
 def process_gestures():
     while True:
