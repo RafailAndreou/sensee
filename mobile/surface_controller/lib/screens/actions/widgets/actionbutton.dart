@@ -48,6 +48,7 @@ class Actionbutton extends StatelessWidget {
     if (type == 'Ac') return const Icon(Icons.ac_unit);
     if (type == 'Light') return const Icon(Icons.light_mode);
     if (type == 'Fan') return const Icon(Icons.air);
+    if (type == 'PC') return const Icon(Icons.computer);
     return const Icon(Icons.device_unknown);
   }
 }

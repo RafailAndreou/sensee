@@ -37,8 +37,9 @@ class Dashboard extends StatelessWidget {
       builder: (context, ids, _) {
         final savedIds = ids.where((id) {
           final config = getConnectionConfig(id);
-          return config.brand.value.isNotEmpty &&
-              config.action.value.isNotEmpty;
+          final deviceType = _deviceTypeForConfig(config);
+          return config.action.value.isNotEmpty &&
+              (config.brand.value.isNotEmpty || deviceType == 'PC');
         }).toList();
 
         if (savedIds.isEmpty) {
@@ -57,11 +58,10 @@ class Dashboard extends StatelessWidget {
           itemBuilder: (context, index) {
             final config = getConnectionConfig(savedIds[index]);
             final connectionId = savedIds[index];
+            final deviceType = _deviceTypeForConfig(config);
             return DashboardCard(
               brandName: config.brand.value,
-              deviceType: config.sound.value.isEmpty
-                  ? 'Tv'
-                  : config.sound.value,
+              deviceType: deviceType,
               actionName: config.action.value,
               gestureName: config.gesture.value.isEmpty
                   ? 'Thumb and index'
@@ -70,25 +70,28 @@ class Dashboard extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => ActionDetails(
-                      deviceType: config.sound.value.isEmpty
-                          ? 'Tv'
-                          : config.sound.value,
+                      deviceType: deviceType,
                       brand: config.brand.value,
                       editingConnectionId: connectionId,
                     ),
                   ),
                 );
               },
-              onMoreTap: () => _showCardActions(
-                context,
-                connectionId,
-                config.sound.value.isEmpty ? 'Tv' : config.sound.value,
-              ),
+              onMoreTap: () =>
+                  _showCardActions(context, connectionId, deviceType),
             );
           },
         );
       },
     );
+  }
+
+  String _deviceTypeForConfig(ConnectionConfig config) {
+    if (config.sound.value.isEmpty) {
+      return 'Tv';
+    }
+
+    return config.sound.value;
   }
 
   Future<void> _showCardActions(
@@ -113,21 +116,22 @@ class Dashboard extends StatelessWidget {
                   await server_sync.sendAllConfigurations();
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.edit_outlined),
-                title: const Text('Change brand'),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => BrandSelection(
-                        deviceType: deviceType,
-                        editingConnectionId: connectionId,
+              if (deviceType != 'PC')
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Change brand'),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BrandSelection(
+                          deviceType: deviceType,
+                          editingConnectionId: connectionId,
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ),
             ],
           ),
         );

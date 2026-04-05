@@ -50,6 +50,7 @@ class DeviceTypeButton extends StatelessWidget {
     if (devicetype == 'Ac') return Icons.ac_unit;
     if (devicetype == 'Light') return Icons.light_mode;
     if (devicetype == 'Fan') return Icons.air;
+    if (devicetype == 'PC') return Icons.computer;
     return Icons.device_unknown;
   }
 }

@@ -21,6 +21,8 @@ class DashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayName = brandName.isEmpty ? deviceType : brandName;
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -47,10 +49,18 @@ class DashboardCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Image(
-                    image: const AssetImage("assets/redesign/AC_icon.png"),
-                    width: 30,
-                    height: 38,
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: _deviceColor(deviceType).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _deviceIcon(deviceType),
+                      size: 22,
+                      color: _deviceColor(deviceType),
+                    ),
                   ),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
@@ -59,7 +69,7 @@ class DashboardCard extends StatelessWidget {
                       width: 33,
                       height: 28,
                       child: Image(
-                        image: AssetImage("assets/redesign/more.png"),
+                        image: AssetImage('assets/redesign/more.png'),
                         width: 33,
                         height: 28,
                       ),
@@ -72,7 +82,7 @@ class DashboardCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                brandName,
+                displayName,
                 textAlign: TextAlign.left,
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
@@ -88,7 +98,7 @@ class DashboardCard extends StatelessWidget {
             Row(
               children: [
                 Image(
-                  image: const AssetImage("assets/redesign/hand.png"),
+                  image: const AssetImage('assets/redesign/hand.png'),
                   width: 50,
                   height: 50,
                 ),
@@ -108,5 +118,39 @@ class DashboardCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  IconData _deviceIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'tv':
+        return Icons.tv;
+      case 'ac':
+        return Icons.ac_unit;
+      case 'light':
+        return Icons.light_mode;
+      case 'fan':
+        return Icons.air;
+      case 'pc':
+        return Icons.computer;
+      default:
+        return Icons.device_unknown;
+    }
+  }
+
+  Color _deviceColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'tv':
+        return const Color(0xFF2F80ED);
+      case 'ac':
+        return const Color(0xFF38A169);
+      case 'light':
+        return const Color(0xFFF2C94C);
+      case 'fan':
+        return const Color(0xFF9B51E0);
+      case 'pc':
+        return const Color(0xFF4A5568);
+      default:
+        return Colors.black54;
+    }
   }
 }

@@ -32,16 +32,10 @@ class ActionSelectorCard extends StatefulWidget {
 }
 
 class _ActionSelectorCardState extends State<ActionSelectorCard> {
+  late List<String> actions;
   late String selectedAction;
   late String selectedGesture;
   late String selectedHand;
-
-  final List<String> actions = [
-    'Turn on',
-    'Turn off',
-    'Increase volume',
-    'Decrease volume',
-  ];
   final List<String> gestures = [
     'Index+Thumb',
     'Middle+Thumb',
@@ -55,9 +49,21 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
   @override
   void initState() {
     super.initState();
-    selectedAction = widget.initialAction;
+    actions = _actionsForDeviceType(widget.deviceType);
+    selectedAction = actions.contains(widget.initialAction)
+        ? widget.initialAction
+        : actions.first;
     selectedGesture = widget.initialGesture;
     selectedHand = widget.initialHand;
+  }
+
+  List<String> _actionsForDeviceType(String type) {
+    switch (type.toLowerCase()) {
+      case 'pc':
+        return ['Open Spotify', 'Open YouTube', 'Close Window', 'Open Browser'];
+      default:
+        return ['Turn on', 'Turn off', 'Increase volume', 'Decrease volume'];
+    }
   }
 
   void _notifySelectionChanged() {
@@ -78,6 +84,8 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
         return Icons.light_mode;
       case 'fan':
         return Icons.air;
+      case 'pc':
+        return Icons.computer;
       default:
         return Icons.device_unknown;
     }

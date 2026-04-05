@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'widgets/devicetypebutton.dart';
 import '../brandselection/brandselection.dart';
+import '../actions/actiondetails.dart';
 
 class DeviceType extends StatelessWidget {
   const DeviceType({super.key});
@@ -65,6 +66,17 @@ class DeviceType extends StatelessWidget {
               );
             },
             child: const DeviceTypeButton(devicetype: 'Fan'),
+          ),
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const ActionDetails(deviceType: 'PC', brand: ''),
+                ),
+              );
+            },
+            child: const DeviceTypeButton(devicetype: 'PC'),
           ),
         ],
       ),

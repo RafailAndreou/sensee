@@ -77,12 +77,14 @@ class _ActionDetailsState extends State<ActionDetails> {
 
   @override
   Widget build(BuildContext context) {
+    final displayName = widget.brand.isEmpty ? widget.deviceType : widget.brand;
+
     return Scaffold(
       backgroundColor: const Color(0xFFEAEDF4),
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text(
-          '${widget.brand} - Action Details',
+          '$displayName - Action Details',
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
