@@ -42,7 +42,14 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
     'Increase volume',
     'Decrease volume',
   ];
-  final List<String> gestures = ['Index+Thumb', 'Peace', 'OK', 'Point', 'Fist'];
+  final List<String> gestures = [
+    'Index+Thumb',
+    'Middle+Thumb',
+    'Open Palm',
+    'OK',
+    'Point',
+    'Fist',
+  ];
   final List<String> hands = ['Left Hand', 'Right Hand', 'Both Hands'];
 
   @override
