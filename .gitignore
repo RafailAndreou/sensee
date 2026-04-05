@@ -27,3 +27,11 @@ build/
 **/*.iml
 # Logs
 *.log
+
+# PyInstaller / release artifacts
+raspi/build/
+raspi/dist/
+raspi/*.spec
+release/*.zip
+release/*/windows/
+release/*/android/
