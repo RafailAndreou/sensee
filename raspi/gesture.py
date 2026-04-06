@@ -11,6 +11,7 @@ import threading
 import time
 import os
 from server import file
+from server import homeassistant
 
 # Resolve the model path relative to this script's directory to avoid CWD issues
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -200,6 +201,8 @@ def take_action(gesture_name, detected_hand="Unknown"):
 
     action = str(matched_config.get("action", ""))
     device_name = str(matched_config.get("sound", ""))
+    connection_type = str(matched_config.get("connectionType", "ir"))
+    entity_id = str(matched_config.get("entityId", ""))
 
     if not _can_run_action(action, device_name):
         return
@@ -209,6 +212,10 @@ def take_action(gesture_name, detected_hand="Unknown"):
 
     if _device_key(device_name) == "pc":
         _execute_pc_action(action)
+        return
+
+    if connection_type == "smart":
+        homeassistant.trigger_ha_action(entity_id, action)
         return
 
     # TODO: Execute non-PC actions here.

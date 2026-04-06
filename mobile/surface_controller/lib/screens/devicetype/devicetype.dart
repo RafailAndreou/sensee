@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'widgets/devicetypebutton.dart';
-import '../brandselection/brandselection.dart';
+import 'connection_method.dart';
 import '../actions/actiondetails.dart';
 
 class DeviceType extends StatelessWidget {
@@ -31,7 +31,7 @@ class DeviceType extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const BrandSelection(deviceType: 'Tv'),
+                  builder: (_) => const ConnectionMethod(deviceType: 'Tv'),
                 ),
               );
             },
@@ -41,7 +41,7 @@ class DeviceType extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const BrandSelection(deviceType: 'Ac'),
+                  builder: (_) => const ConnectionMethod(deviceType: 'Ac'),
                 ),
               );
             },
@@ -51,7 +51,7 @@ class DeviceType extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const BrandSelection(deviceType: 'Light'),
+                  builder: (_) => const ConnectionMethod(deviceType: 'Light'),
                 ),
               );
             },
@@ -61,7 +61,7 @@ class DeviceType extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const BrandSelection(deviceType: 'Fan'),
+                  builder: (_) => const ConnectionMethod(deviceType: 'Fan'),
                 ),
               );
             },

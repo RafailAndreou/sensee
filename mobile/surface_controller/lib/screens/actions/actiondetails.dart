@@ -12,12 +12,16 @@ class ActionDetails extends StatefulWidget {
   final String deviceType;
   final String brand;
   final int? editingConnectionId;
+  final String connectionType;
+  final String entityId;
 
   const ActionDetails({
     super.key,
     required this.deviceType,
     required this.brand,
     this.editingConnectionId,
+    this.connectionType = 'ir',
+    this.entityId = '',
   });
 
   @override
@@ -53,6 +57,9 @@ class _ActionDetailsState extends State<ActionDetails> {
     } else {
       addNewConnection();
       connectionId = connectionsList.value.last;
+      final config = getConnectionConfig(connectionId);
+      config.connectionType.value = widget.connectionType;
+      config.entityId.value = widget.entityId;
     }
 
     final config = getConnectionConfig(connectionId);

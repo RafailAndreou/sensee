@@ -17,6 +17,8 @@ app = FastAPI()
 # ---------------- Models ----------------
 class Configuration(BaseModel):
     id: str
+    connectionType: str = "ir"
+    entityId: str = ""
     brand: str
     action: str
     gesture: str
@@ -86,6 +88,20 @@ def get_configuration_msg():
 @app.get("/current")
 def get_current_config():
     return current_config
+
+@app.get("/smart-devices")
+def get_smart_devices():
+    # Mock endpoint simulating a Home Assistant fetch response
+    return {
+        "status": "success",
+        "devices": [
+            {"entity_id": "media_player.living_room_tv", "friendly_name": "Living Room TV", "type": "Tv"},
+            {"entity_id": "light.bedroom_lamp", "friendly_name": "Bedroom Lamp", "type": "Light"},
+            {"entity_id": "climate.downstairs_ac", "friendly_name": "Living Room AC", "type": "Ac"},
+            {"entity_id": "fan.kitchen_fan", "friendly_name": "Kitchen Fan", "type": "Fan"},
+            {"entity_id": "media_player.samsung_tv", "friendly_name": "Samsung TV", "type": "Tv"}
+        ]
+    }
 
 @app.get("/video")
 def video():

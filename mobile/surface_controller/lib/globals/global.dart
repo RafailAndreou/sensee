@@ -11,6 +11,8 @@ ValueNotifier<String> hand = ValueNotifier("");
 // Connection-specific configuration
 class ConnectionConfig {
   final ValueNotifier<int> id = ValueNotifier(-1);
+  final ValueNotifier<String> connectionType = ValueNotifier("ir");
+  final ValueNotifier<String> entityId = ValueNotifier("");
   final ValueNotifier<String> brand = ValueNotifier("");
   final ValueNotifier<String> action = ValueNotifier("");
   final ValueNotifier<String> gesture = ValueNotifier("");

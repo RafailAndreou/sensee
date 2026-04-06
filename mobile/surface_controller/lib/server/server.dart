@@ -87,6 +87,8 @@ Future<void> sendAllConfigurations() async {
   connectionConfigs.forEach((id, config) {
     allConfigsData.add({
       "id": config.id.value.toString(),
+      "connectionType": config.connectionType.value,
+      "entityId": config.entityId.value,
       "brand": config.brand.value,
       "action": config.action.value,
       "gesture": config.gesture.value,
@@ -128,6 +130,8 @@ Future<void> sendAllConfigurations() async {
 Future<void> sendConfiguration(ConnectionConfig config) async {
   final configData = {
     "id": config.id.value.toString(),
+    "connectionType": config.connectionType.value,
+    "entityId": config.entityId.value,
     "brand": config.brand.value,
     "action": config.action.value,
     "gesture": config.gesture.value,
