@@ -169,16 +169,28 @@ def gesture_callback(result, output_image, timestamp_ms):
     global latest_result
     latest_result = result
     if result.gestures:
-        for gesture in result.gestures:
-            # put tuple (gesture, timestamp) so we can check staleness later
-            gesture_queue.put((gesture[0], timestamp_ms))
+        for i, gesture_list in enumerate(result.gestures):
+            handedness = result.handedness[i][0].category_name if result.handedness else "Unknown"
+            # put tuple (gesture, handedness, timestamp) so we can check staleness later
+            gesture_queue.put((gesture_list[0], handedness, timestamp_ms))
 
-def take_action(gesture_name):
+def take_action(gesture_name, detected_hand="Unknown"):
     active_configs = file.get_active_configs()
     matched_config = None
 
     for config_item in active_configs:
-        if _gesture_matches(config_item["gesture"], gesture_name):
+        config_hand = str(config_item.get("hand", "")).strip().lower()
+        
+        # Check hand match first
+        hand_match = False
+        if "both" in config_hand or not config_hand:
+            hand_match = True
+        elif "right" in config_hand and "right" in detected_hand.lower():
+            hand_match = True
+        elif "left" in config_hand and "left" in detected_hand.lower():
+            hand_match = True
+
+        if hand_match and _gesture_matches(config_item["gesture"], gesture_name):
             matched_config = config_item
             break
 
@@ -204,7 +216,7 @@ def process_gestures():
     while True:
         try:
             # This .get() blocks until data arrives, which is good (efficient)
-            gesture, ts = gesture_queue.get()
+            gesture, handedness, ts = gesture_queue.get()
 
             # 1. Staleness Check (Keep your existing logic)
             with latest_frame_lock:
@@ -216,9 +228,9 @@ def process_gestures():
             gesture_name = gesture.category_name
             confidence = gesture.score
             if _can_log_detected_gesture():
-                print(f"Detected gesture: {gesture_name} (confidence: {confidence:.2f})")
-            main.send_msg(f"Gesture: {gesture_name}")
-            take_action(gesture_name)
+                print(f"Detected gesture: {gesture_name} ({handedness} Hand, confidence: {confidence:.2f})")
+            main.send_msg(f"Gesture: {gesture_name} ({handedness})")
+            take_action(gesture_name, handedness)
             
             # REMOVED: time.sleep(0.5) 
             # The loop immediately restarts, ready to clear the queue 
@@ -367,10 +379,15 @@ try:
                 index = hand_landmarks.landmark[8]
                 middle = hand_landmarks.landmark[12]
                 
+                # Fetch handedness from latest_result if available
+                detected_hand = "Unknown"
+                if latest_result and latest_result.handedness:
+                    detected_hand = latest_result.handedness[0][0].category_name
+                
                 if touching(thumb, middle):
-                    take_action("Thumb+Middle")
+                    take_action("Thumb+Middle", detected_hand)
                 elif touching(thumb, index):
-                    take_action("Thumb+Index")
+                    take_action("Thumb+Index", detected_hand)
                     
                 wrist = hand_landmarks.landmark[0]
                 if wrist:
