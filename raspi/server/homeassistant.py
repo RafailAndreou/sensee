@@ -12,8 +12,13 @@ MOCK_MODE = False
 def get_ha_config():
     """Loads the URL and Token dynamically from the config file."""
     config = file.load_ha_config()
-    url = config.get("url", "http://172.28.106.37:8123")
-    token = config.get("token", "")
+    url = config.get("url", "").strip()
+    token = config.get("token", "").strip()
+    # Fall back to hardcoded values if the config file is empty
+    if not url:
+        url = "http://172.28.106.37:8123"
+    if not token:
+        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI1ZTI0MTk3YjNjZmE0OWY0ODViMWVhNzNkYjY0ODNmOCIsImlhdCI6MTc3NTQ0NDM4NiwiZXhwIjoyMDkwODA0Mzg2fQ.RUSQ82UgKsvM9zQe-YxmkXdXVWCxOL9ZKY0YIV2l8q4"
     return url, token
 
 # Initial load (can be refreshed by calling get_ha_config again)

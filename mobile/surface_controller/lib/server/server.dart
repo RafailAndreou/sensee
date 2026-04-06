@@ -227,33 +227,136 @@ Future<String?> discoverServerMDNS({int timeoutMs = 3000}) async {
   }
 }
 
+/// Cache the server URL after the first successful discovery.
+String? _cachedServerUrl;
+
 /// Try mDNS first, fallback to UDP discovery, then fallback to static IP
 Future<String?> discoverServerSmart() async {
+  // 0. INSTANT PATH: Return cached URL if we already found the server this session.
+  if (_cachedServerUrl != null) {
+    print('[Discovery] ⚡ Using cached server: $_cachedServerUrl');
+    return _cachedServerUrl;
+  }
+
   // 1. FAST PATH: Just trust the OS resolver (like the browser does)
-  // If "sensee.local" works in Chrome, this will work immediately.
   try {
-    print(
-      '[Discovery] 🚀 Trying direct connection to http://sensee.local:8000...',
-    );
+    print('[Discovery] 🚀 Trying direct connection to http://sensee.local:8000...');
     final directUrl = 'http://sensee.local:8000/configuration';
-    // Send a quick HEAD or GET request to verify it's actually there
     final response = await http
         .get(Uri.parse(directUrl))
         .timeout(const Duration(milliseconds: 1500));
     if (response.statusCode == 200 || response.statusCode == 405) {
       print('[Discovery] ✅ Direct connection successful!');
-      return directUrl;
+      _cachedServerUrl = directUrl;
+      return _cachedServerUrl;
     }
   } catch (e) {
     print('[Discovery] Direct connection failed, falling back to scanning...');
   }
 
-  // 2. SLOW PATH: Scan the network (your existing logic)
+  // 2. SLOW PATH: Scan the network
   print('[Discovery] Scanning mDNS...');
   String? result = await discoverServerMDNS(timeoutMs: 2000);
-  if (result != null) return result;
+  if (result != null) {
+    _cachedServerUrl = result;
+    return _cachedServerUrl;
+  }
 
   print('[Discovery] Scanning UDP...');
   result = await discoverServer(timeoutMs: 3000);
-  return result;
+  if (result != null) {
+    _cachedServerUrl = result;
+  }
+  return _cachedServerUrl;
+}
+
+// ---------------- Home Assistant Setup API ----------------
+
+Future<Map<String, dynamic>?> getHAConfig() async {
+  try {
+    final baseUrl = await discoverServerSmart();
+    if (baseUrl == null) return null;
+    final url = baseUrl.replaceFirst('/configuration', '/ha/config');
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+  } catch (e) {
+    print('❌ Error getting HA config: $e');
+  }
+  return null;
+}
+
+Future<bool> saveHAConfig(String url, String token) async {
+  try {
+    final baseUrl = await discoverServerSmart();
+    if (baseUrl == null) return false;
+    final targetUrl = baseUrl.replaceFirst('/configuration', '/ha/config');
+    final response = await http.post(
+      Uri.parse(targetUrl),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"url": url, "token": token}),
+    );
+    return response.statusCode == 200;
+  } catch (e) {
+    print('❌ Error saving HA config: $e');
+    return false;
+  }
+}
+
+Future<List<dynamic>> getHADiscovered() async {
+  try {
+    final baseUrl = await discoverServerSmart();
+    if (baseUrl == null) return [];
+    final url = baseUrl.replaceFirst('/configuration', '/ha/discovered');
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      return decoded['flows'] ?? [];
+    }
+  } catch (e) {
+    print('❌ Error fetching discovered HA devices: $e');
+  }
+  return [];
+}
+
+Future<Map<String, dynamic>?> startHAPairing(String handler) async {
+  try {
+    final baseUrl = await discoverServerSmart();
+    if (baseUrl == null) return null;
+    final url = baseUrl.replaceFirst('/configuration', '/ha/pair/start');
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"handler": handler}),
+    );
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      return decoded['result'];
+    }
+  } catch (e) {
+    print('❌ Error starting HA pairing: $e');
+  }
+  return null;
+}
+
+Future<Map<String, dynamic>?> submitHAPairingStep(
+  String flowId,
+  Map<String, dynamic> userInput,
+) async {
+  try {
+    final baseUrl = await discoverServerSmart();
+    if (baseUrl == null) return null;
+    final url = baseUrl.replaceFirst('/configuration', '/ha/pair/submit');
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"flow_id": flowId, "user_input": userInput}),
+    );
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      return decoded['result'];
+    }
+  } catch (e) {
+    print('❌ Error submitting HA pairing step: $e');
+  }
+  return null;
 }

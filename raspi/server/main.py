@@ -26,6 +26,17 @@ class Configuration(BaseModel):
     sound: str
     hand: str
 
+class HAConfigRequest(BaseModel):
+    url: str
+    token: str
+
+class HAPairStartRequest(BaseModel):
+    handler: str
+
+class HAPairSubmitRequest(BaseModel):
+    flow_id: str
+    user_input: dict
+
 # ---------------- Config store ----------------
 current_config: dict = {}
 
@@ -98,6 +109,38 @@ def get_smart_devices():
         "status": "success",
         "devices": devices
     }
+
+@app.get("/ha/config")
+def get_ha_config():
+    config = file.load_ha_config()
+    # Mask the token for security
+    masked_token = config.get("token", "")
+    if len(masked_token) > 10:
+        masked_token = masked_token[:5] + "..." + masked_token[-5:]
+    return {
+        "url": config.get("url", ""),
+        "token": masked_token
+    }
+
+@app.post("/ha/config")
+def post_ha_config(req: HAConfigRequest):
+    file.save_ha_config({"url": req.url, "token": req.token})
+    return {"status": "success"}
+
+@app.get("/ha/discovered")
+def get_ha_discovered():
+    flows = homeassistant.get_discovered_flows()
+    return {"status": "success", "flows": flows}
+
+@app.post("/ha/pair/start")
+def post_ha_pair_start(req: HAPairStartRequest):
+    result = homeassistant.start_pairing_flow(req.handler)
+    return {"status": "success", "result": result}
+
+@app.post("/ha/pair/submit")
+def post_ha_pair_submit(req: HAPairSubmitRequest):
+    result = homeassistant.submit_pairing_step(req.flow_id, req.user_input)
+    return {"status": "success", "result": result}
 
 @app.get("/video")
 def video():

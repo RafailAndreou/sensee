@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:surface_controller/server/camera.dart';
+import 'package:surface_controller/screens/setup/ha_settings.dart';
 
 enum DashboardTab { dashboard, camera, settings }
 
@@ -73,7 +74,10 @@ class DashBoardNavigation extends StatelessWidget {
         ),
         GestureDetector(
           onTap: () {
-            // Handle settings tap
+            if (selectedTab == DashboardTab.settings) return;
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HASettings()),
+            );
           },
           child: Column(
             mainAxisSize: MainAxisSize.min,

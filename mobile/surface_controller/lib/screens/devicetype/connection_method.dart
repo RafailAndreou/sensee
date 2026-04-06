@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../brandselection/brandselection.dart';
 import 'smartdevice_list.dart';
+import '../setup/pairing_wizard.dart';
 
 class ConnectionMethod extends StatelessWidget {
   final String deviceType;
@@ -36,6 +37,20 @@ class ConnectionMethod extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => SmartDeviceList(deviceType: deviceType),
+                  ),
+                );
+              },
+            ),
+            _buildOptionCard(
+              context,
+              title: "Pair New TV",
+              subtitle: "Scan for TVs on your network and link them",
+              icon: Icons.search,
+              color: Colors.orange,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => PairingWizard(deviceType: deviceType),
                   ),
                 );
               },
