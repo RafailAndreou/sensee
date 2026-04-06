@@ -2,6 +2,7 @@
 
 import cv2
 import mediapipe as mp
+from mediapipe.framework.formats import landmark_pb2
 import pyautogui
 import webbrowser
 from server import main  # FastAPI app + helpers (set_frame_from_bgr, send_msg)
@@ -163,7 +164,10 @@ def _gesture_matches(config_gesture, detected_gesture):
     return False
 
 # Modified gesture callback that puts results in queue
+latest_result = None
 def gesture_callback(result, output_image, timestamp_ms):
+    global latest_result
+    latest_result = result
     if result.gestures:
         for gesture in result.gestures:
             # put tuple (gesture, timestamp) so we can check staleness later
@@ -316,12 +320,7 @@ def check_hand_movement(wrist_queue):
 hand_thread = threading.Thread(target=check_hand_movement, args=(wrist_queue,), daemon=True)
 hand_thread.start()
 
-with mp_hands.Hands(
-    static_image_mode=False,
-    max_num_hands=2,
-    min_detection_confidence=0.6,
-    min_tracking_confidence=0.3
-) as hands:
+if True:
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -335,7 +334,18 @@ with mp_hands.Hands(
         timestamp_ms = int(time.time() * 1000)
         recognizer.recognize_async(mp_image, timestamp_ms)
         
-        results = hands.process(rgb)
+        # Build mock results object from latest async recognizer output
+        class MockResults: pass
+        results = MockResults()
+        multi_hand_landmarks = []
+        if latest_result and latest_result.hand_landmarks:
+            for hand in latest_result.hand_landmarks:
+                proto = landmark_pb2.NormalizedLandmarkList()
+                proto.landmark.extend([
+                    landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in hand
+                ])
+                multi_hand_landmarks.append(proto)
+        results.multi_hand_landmarks = multi_hand_landmarks if multi_hand_landmarks else None
 
         # quit hotkey
         if cv2.waitKey(1) & 0xFF in (ord('q'), ord('Q')):
