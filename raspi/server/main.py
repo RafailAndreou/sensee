@@ -9,6 +9,7 @@ from collections import defaultdict
 
 from server import file
 import utils
+from server import homeassistant
 from server.streamer import frame_hub, set_frame_from_bgr
 from server.discovery import register_mdns_service, get_local_ip
 
@@ -91,16 +92,11 @@ def get_current_config():
 
 @app.get("/smart-devices")
 def get_smart_devices():
-    # Mock endpoint simulating a Home Assistant fetch response
+    # Fetch REAL devices from your Home Assistant
+    devices = homeassistant.get_ha_entities()
     return {
         "status": "success",
-        "devices": [
-            {"entity_id": "media_player.living_room_tv", "friendly_name": "Living Room TV", "type": "Tv"},
-            {"entity_id": "light.bedroom_lamp", "friendly_name": "Bedroom Lamp", "type": "Light"},
-            {"entity_id": "climate.downstairs_ac", "friendly_name": "Living Room AC", "type": "Ac"},
-            {"entity_id": "fan.kitchen_fan", "friendly_name": "Kitchen Fan", "type": "Fan"},
-            {"entity_id": "media_player.samsung_tv", "friendly_name": "Samsung TV", "type": "Tv"}
-        ]
+        "devices": devices
     }
 
 @app.get("/video")

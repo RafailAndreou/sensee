@@ -3,11 +3,11 @@ import json
 import os
 
 # MOCK MODE: Set this to False when your Home Assistant is actually running!
-MOCK_MODE = True
+MOCK_MODE = False
 
 # We will load these from environment variables later
-HA_URL = os.getenv("HA_URL", "http://homeassistant.local:8123")
-HA_TOKEN = os.getenv("HA_TOKEN", "YOUR_LONG_LIVED_ACCESS_TOKEN_HERE")
+HA_URL = os.getenv("HA_URL", "http://172.28.106.37:8123")
+HA_TOKEN = os.getenv("HA_TOKEN", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI1ZTI0MTk3YjNjZmE0OWY0ODViMWVhNzNkYjY0ODNmOCIsImlhdCI6MTc3NTQ0NDM4NiwiZXhwIjoyMDkwODA0Mzg2fQ.RUSQ82UgKsvM9zQe-YxmkXdXVWCxOL9ZKY0YIV2l8q4")
 
 def parse_action_to_service(action: str) -> str:
     """Converts Sensee UI actions into Home Assistant service calls."""
@@ -71,3 +71,63 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
     except requests.exceptions.RequestException as e:
         print(f"❌ Failed to reach Home Assistant at {HA_URL}: {e}")
         return False
+
+def get_ha_entities(device_type_filter: str = None):
+    """
+    Fetches all entities from Home Assistant and formats them for the Sensee UI.
+    """
+    if MOCK_MODE:
+        return [
+            {"entity_id": "media_player.living_room_tv", "friendly_name": "Mock Living Room TV", "type": "Tv"},
+            {"entity_id": "light.bedroom_lamp", "friendly_name": "Mock Bedroom Lamp", "type": "Light"},
+            {"entity_id": "climate.downstairs_ac", "friendly_name": "Mock Living Room AC", "type": "Ac"},
+            {"entity_id": "fan.kitchen_fan", "friendly_name": "Mock Kitchen Fan", "type": "Fan"},
+        ]
+
+    url = f"{HA_URL}/api/states"
+    headers = {
+        "Authorization": f"Bearer {HA_TOKEN}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=5)
+        if response.status_code != 200:
+            print(f"❌ HA Fetch Error {response.status_code}: {response.text}")
+            return []
+
+        all_states = response.json()
+        formatted_devices = []
+
+        # Map HA domains to Sensee Device Types
+        domain_map = {
+            "media_player": "Tv",
+            "light": "Light",
+            "switch": "Light",
+            "climate": "Ac",
+            "fan": "Fan"
+        }
+
+        for state in all_states:
+            entity_id = state["entity_id"]
+            domain = get_domain_from_entity(entity_id)
+            
+            if domain in domain_map:
+                friendly_name = state.get("attributes", {}).get("friendly_name", entity_id)
+                sensee_type = domain_map[domain]
+                
+                # Check if it matches the filter (e.g. if we only want 'Tv')
+                if device_type_filter and sensee_type.lower() != device_type_filter.lower():
+                    continue
+
+                formatted_devices.append({
+                    "entity_id": entity_id,
+                    "friendly_name": friendly_name,
+                    "type": sensee_type
+                })
+        
+        return formatted_devices
+
+    except Exception as e:
+        print(f"❌ Exception fetching entities from Home Assistant: {e}")
+        return []
