@@ -190,9 +190,10 @@ def take_action(gesture_name, detected_hand="Unknown"):
         elif "left" in config_hand and "left" in detected_hand.lower():
             hand_match = True
 
-        if hand_match and _gesture_matches(config_item["gesture"], gesture_name):
-            matched_config = config_item
-            break
+        if _gesture_matches(config_item["gesture"], gesture_name):
+            if hand_match:
+                matched_config = config_item
+                break
 
     if matched_config is None:
         return
