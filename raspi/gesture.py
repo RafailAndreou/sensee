@@ -320,8 +320,7 @@ def check_hand_movement(wrist_queue):
 hand_thread = threading.Thread(target=check_hand_movement, args=(wrist_queue,), daemon=True)
 hand_thread.start()
 
-if True:
-
+try:
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -351,40 +350,35 @@ if True:
         if cv2.waitKey(1) & 0xFF in (ord('q'), ord('Q')):
             break
 
-        # move pointer with index tip
-        try:
-            index_x = results.multi_hand_landmarks[0].landmark[8].x
-            index_y = results.multi_hand_landmarks[0].landmark[8].y
-            mouse_x, mouse_y = translate_coords(index_x, index_y)
-            # pyautogui.moveTo(mouse_x, mouse_y, _pause=False)
-        except Exception:
-            pass
-
-        try:
-            thumb = results.multi_hand_landmarks[0].landmark[4]
-            middle = results.multi_hand_landmarks[0].landmark[12]
-            
-            if touching(thumb, middle):
-                # Check if any action for this gesture requires a delay
-                take_action("Thumb+Middle")
-            
-        except Exception:
-            pass
-
-        try:
-            thumb = results.multi_hand_landmarks[0].landmark[4]
-            index = results.multi_hand_landmarks[0].landmark[8]
-            if touching(thumb, index):
-                take_action("Thumb+Index")
-        except Exception:
-            pass
-
-            
-        wrist = results.multi_hand_landmarks[0].landmark[0] if results.multi_hand_landmarks else None
-        if wrist:
-            wrist_queue.put(wrist)
-        # draw landmarks (preview only)
         if results.multi_hand_landmarks:
+            hand_landmarks = results.multi_hand_landmarks[0]
+            
+            # move pointer with index tip
+            try:
+                index_x = hand_landmarks.landmark[8].x
+                index_y = hand_landmarks.landmark[8].y
+                mouse_x, mouse_y = translate_coords(index_x, index_y)
+                # pyautogui.moveTo(mouse_x, mouse_y, _pause=False)
+            except Exception:
+                pass
+
+            try:
+                thumb = hand_landmarks.landmark[4]
+                index = hand_landmarks.landmark[8]
+                middle = hand_landmarks.landmark[12]
+                
+                if touching(thumb, middle):
+                    take_action("Thumb+Middle")
+                elif touching(thumb, index):
+                    take_action("Thumb+Index")
+                    
+                wrist = hand_landmarks.landmark[0]
+                if wrist:
+                    wrist_queue.put(wrist)
+            except Exception:
+                pass
+                
+            # draw landmarks (preview only)
             for hand_landmarks in results.multi_hand_landmarks:
                 mp_drawing.draw_landmarks(
                     frame,
@@ -402,8 +396,9 @@ if True:
             latest_frame_ts = timestamp_ms
         cv2.imshow('MediaPipe Hands', frame)
 
-# Add cleanup for recognizer
-print(file.load_configure_json())
-cap.release()
-recognizer.close()
-cv2.destroyAllWindows()
+finally:
+    # Add cleanup for recognizer
+    print("Shutting down gracefully...")
+    cap.release()
+    recognizer.close()
+    cv2.destroyAllWindows()

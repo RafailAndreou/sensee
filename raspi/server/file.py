@@ -1,18 +1,19 @@
 import json
+import os
 
-
+CONFIG_FILE_PATH = os.path.join(os.path.dirname(__file__), "configure.json")
 
 def save_configure_json(configuration: dict):
-    with open("raspi/server/configure.json", "w+") as f:
-        content = f.write(json.dumps(configuration))
-        print("✅ Configuration saved to raspi/server/configure.json")
+    with open(CONFIG_FILE_PATH, "w+") as f:
+        f.write(json.dumps(configuration))
+        print(f"✅ Configuration saved to {CONFIG_FILE_PATH}")
        
 def load_configure_json() -> list:
     try:
-        with open("raspi/server/configure.json", "r") as f:
+        with open(CONFIG_FILE_PATH, "r") as f:
             content = f.read()
             configuration = json.loads(content)
-            print("✅ Configuration loaded from raspi/server/configure.json")
+            print(f"✅ Configuration loaded from {CONFIG_FILE_PATH}")
             return configuration
     except FileNotFoundError:
         print("⚠️  Configuration file not found, returning empty configuration.")
