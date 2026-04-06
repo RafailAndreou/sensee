@@ -16,6 +16,7 @@ class ConnectionConfig {
   final ValueNotifier<String> gesture = ValueNotifier("");
   final ValueNotifier<String> sound = ValueNotifier("");
   final ValueNotifier<String> hand = ValueNotifier("");
+  final ValueNotifier<bool> isSynced = ValueNotifier(false);
 }
 
 // Store configuration for each connection ID

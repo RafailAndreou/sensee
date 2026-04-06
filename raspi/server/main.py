@@ -8,7 +8,7 @@ from typing import List
 from collections import defaultdict
 
 from server import file
-import server.utils as utils
+import utils
 from server.streamer import frame_hub, set_frame_from_bgr
 from server.discovery import register_mdns_service, get_local_ip
 

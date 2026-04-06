@@ -8,6 +8,7 @@ class DashboardCard extends StatelessWidget {
     required this.deviceType,
     required this.actionName,
     required this.gestureName,
+    required this.isSynced,
     this.onTap,
     this.onMoreTap,
   });
@@ -16,6 +17,7 @@ class DashboardCard extends StatelessWidget {
   final String deviceType;
   final String actionName;
   final String gestureName;
+  final ValueNotifier<bool> isSynced;
   final VoidCallback? onTap;
   final VoidCallback? onMoreTap;
 
@@ -61,6 +63,28 @@ class DashboardCard extends StatelessWidget {
                       size: 22,
                       color: _deviceColor(deviceType),
                     ),
+                  ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: isSynced,
+                    builder: (context, synced, _) {
+                      return Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: synced ? Colors.greenAccent : Colors.redAccent,
+                          boxShadow: [
+                            BoxShadow(
+                              color: synced 
+                                  ? Colors.greenAccent.withValues(alpha: 0.5) 
+                                  : Colors.redAccent.withValues(alpha: 0.5),
+                              blurRadius: 4,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,

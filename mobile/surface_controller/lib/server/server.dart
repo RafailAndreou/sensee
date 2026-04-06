@@ -114,11 +114,14 @@ Future<void> sendAllConfigurations() async {
 
     if (response.statusCode == 200) {
       print("✅ All configurations sent successfully!");
+      connectionConfigs.forEach((id, config) => config.isSynced.value = true);
     } else {
       print("⚠️ Server error (${response.statusCode})");
+      connectionConfigs.forEach((id, config) => config.isSynced.value = false);
     }
   } catch (e) {
     print("❌ Failed to send configurations: $e");
+    connectionConfigs.forEach((id, config) => config.isSynced.value = false);
   }
 }
 
@@ -152,11 +155,14 @@ Future<void> sendConfiguration(ConnectionConfig config) async {
     );
 
     if (response.statusCode == 200) {
+      config.isSynced.value = true;
       print("✅ Configuration sent successfully to $discovered!");
     } else {
+      config.isSynced.value = false;
       print("⚠️ Server error (${response.statusCode}) from $discovered");
     }
   } catch (e) {
+    config.isSynced.value = false;
     print("❌ Failed to send configuration: $e");
   }
 }

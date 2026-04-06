@@ -66,6 +66,7 @@ class Dashboard extends StatelessWidget {
               gestureName: config.gesture.value.isEmpty
                   ? 'Thumb and index'
                   : config.gesture.value,
+              isSynced: config.isSynced,
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
