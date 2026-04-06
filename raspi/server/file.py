@@ -1,6 +1,7 @@
-import json
 import os
+import copy
 
+HA_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "ha_config.json")
 CONFIG_FILE_PATH = os.path.join(os.path.dirname(__file__), "configure.json")
 
 def save_configure_json(configuration: dict):
@@ -18,6 +19,21 @@ def load_configure_json() -> list:
     except FileNotFoundError:
         print("⚠️  Configuration file not found, returning empty configuration.")
         return []
+
+def save_ha_config(config: dict):
+    with open(HA_CONFIG_PATH, "w+") as f:
+        json.dump(config, f, indent=4)
+        print(f"✅ HA Configuration saved to {HA_CONFIG_PATH}")
+
+def load_ha_config() -> dict:
+    try:
+        if not os.path.exists(HA_CONFIG_PATH):
+            return {"url": "", "token": ""}
+        with open(HA_CONFIG_PATH, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"⚠️ Error loading HA config: {e}")
+        return {"url": "", "token": ""}
 
 loaded_config = load_configure_json()
 

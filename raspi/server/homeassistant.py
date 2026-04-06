@@ -1,13 +1,23 @@
 import requests
 import json
 import os
+try:
+    from server import file
+except ImportError:
+    import file
 
 # MOCK MODE: Set this to False when your Home Assistant is actually running!
 MOCK_MODE = False
 
-# We will load these from environment variables later
-HA_URL = os.getenv("HA_URL", "http://172.28.106.37:8123")
-HA_TOKEN = os.getenv("HA_TOKEN", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI1ZTI0MTk3YjNjZmE0OWY0ODViMWVhNzNkYjY0ODNmOCIsImlhdCI6MTc3NTQ0NDM4NiwiZXhwIjoyMDkwODA0Mzg2fQ.RUSQ82UgKsvM9zQe-YxmkXdXVWCxOL9ZKY0YIV2l8q4")
+def get_ha_config():
+    """Loads the URL and Token dynamically from the config file."""
+    config = file.load_ha_config()
+    url = config.get("url", "http://172.28.106.37:8123")
+    token = config.get("token", "")
+    return url, token
+
+# Initial load (can be refreshed by calling get_ha_config again)
+HA_URL, HA_TOKEN = get_ha_config()
 
 def parse_action_to_service(action: str) -> str:
     """Converts Sensee UI actions into Home Assistant service calls."""
@@ -131,3 +141,45 @@ def get_ha_entities(device_type_filter: str = None):
     except Exception as e:
         print(f"❌ Exception fetching entities from Home Assistant: {e}")
         return []
+
+def get_discovered_flows():
+    """Fetches discovered devices from Home Assistant that haven't been added yet."""
+    url, token = get_ha_config()
+    api_url = f"{url}/api/config/config_entries/flow"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    try:
+        response = requests.get(api_url, headers=headers, timeout=5)
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except Exception as e:
+        print(f"❌ Error fetching discovered flows: {e}")
+        return []
+
+def start_pairing_flow(handler: str):
+    """Starts a pairing process for a specific device type."""
+    url, token = get_ha_config()
+    api_url = f"{url}/api/config/config_entries/flow"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    data = {"handler": handler}
+
+    try:
+        response = requests.post(api_url, headers=headers, json=data, timeout=5)
+        return response.json()
+    except Exception as e:
+        print(f"❌ Error starting pairing flow: {e}")
+        return {"error": str(e)}
+
+def submit_pairing_step(flow_id: str, user_input: dict):
+    """Submits data (like a PIN) to an active pairing flow."""
+    url, token = get_ha_config()
+    api_url = f"{url}/api/config/config_entries/flow/{flow_id}"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    try:
+        response = requests.post(api_url, headers=headers, json=user_input, timeout=5)
+        return response.json()
+    except Exception as e:
+        print(f"❌ Error submitting pairing step: {e}")
+        return {"error": str(e)}
