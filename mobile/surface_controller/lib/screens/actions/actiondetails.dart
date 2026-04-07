@@ -44,6 +44,36 @@ class _ActionDetailsState extends State<ActionDetails> {
     return value.trim().toLowerCase();
   }
 
+  String _normalizeHandValue(String value) {
+    final normalized = _normalizeSelectionValue(value);
+    if (normalized.contains('both')) return 'both hands';
+    if (normalized.contains('left')) return 'left hand';
+    if (normalized.contains('right')) return 'right hand';
+    return normalized;
+  }
+
+  Set<String> _existingHandsForGesture({required int? excludeConnectionId}) {
+    final targetGesture = _normalizeSelectionValue(_selectedGesture);
+    final hands = <String>{};
+
+    for (final entry in connectionConfigs.entries) {
+      final connectionId = entry.key;
+      if (excludeConnectionId != null && connectionId == excludeConnectionId) {
+        continue;
+      }
+
+      final config = entry.value;
+      final configGesture = _normalizeSelectionValue(config.gesture.value);
+      if (configGesture != targetGesture) {
+        continue;
+      }
+
+      hands.add(_normalizeHandValue(config.hand.value));
+    }
+
+    return hands;
+  }
+
   bool _hasDuplicateGestureHandMapping({required int? excludeConnectionId}) {
     final targetGesture = _normalizeSelectionValue(_selectedGesture);
     final targetHand = _normalizeSelectionValue(_selectedHand);
@@ -87,6 +117,69 @@ class _ActionDetailsState extends State<ActionDetails> {
 
   Future<void> _saveConfiguration() async {
     final existingConnectionId = widget.editingConnectionId;
+    final selectedHandNormalized = _normalizeHandValue(_selectedHand);
+    final existingHands = _existingHandsForGesture(
+      excludeConnectionId: existingConnectionId,
+    );
+
+    if (selectedHandNormalized == 'both hands') {
+      if (existingHands.contains('both hands')) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Both Hands is already assigned for this gesture.'),
+          ),
+        );
+        return;
+      }
+
+      final hasLeft = existingHands.contains('left hand');
+      final hasRight = existingHands.contains('right hand');
+      if (hasLeft && !hasRight) {
+        _selectedHand = 'Right Hand';
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Both Hands conflicts with existing Left Hand. Assigned to Right Hand instead.',
+            ),
+          ),
+        );
+      } else if (hasRight && !hasLeft) {
+        _selectedHand = 'Left Hand';
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Both Hands conflicts with existing Right Hand. Assigned to Left Hand instead.',
+            ),
+          ),
+        );
+      } else if (hasLeft && hasRight) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This gesture already uses Left and Right Hand mappings.',
+            ),
+          ),
+        );
+        return;
+      }
+    } else {
+      if (existingHands.contains('both hands')) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This gesture is already assigned to Both Hands. Edit that mapping instead.',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     if (_hasDuplicateGestureHandMapping(
       excludeConnectionId: existingConnectionId,
     )) {

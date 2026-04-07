@@ -111,6 +111,8 @@ void saveConfigsToFile() async {
     connectionConfigs.forEach((connectionId, config) {
       allConfigs[connectionId.toString()] = {
         "id": config.id.value,
+        "connectionType": config.connectionType.value,
+        "entityId": config.entityId.value,
         "brand": config.brand.value,
         "action": config.action.value,
         "gesture": config.gesture.value,
@@ -173,6 +175,8 @@ Future<void> loadConfigurationsFromFile() async {
       loadedConnectionIds.add(connectionId);
       final config = getConnectionConfig(connectionId);
       config.id.value = configData["id"] ?? connectionId;
+      config.connectionType.value = configData["connectionType"] ?? 'ir';
+      config.entityId.value = configData["entityId"] ?? '';
       config.brand.value = configData["brand"] ?? '';
       config.action.value = configData["action"] ?? '';
       config.gesture.value = configData["gesture"] ?? '';
@@ -196,4 +200,39 @@ Future<void> loadConfigurationsFromFile() async {
   } catch (e) {
     debugPrint('Error loading configurations from file: $e');
   }
+}
+
+void applyServerConfigurationsSnapshot(List<Map<String, dynamic>> incoming) {
+  final incomingIds = <int>{};
+
+  for (final configData in incoming) {
+    final parsedId = int.tryParse('${configData["id"] ?? ''}');
+    if (parsedId == null) {
+      continue;
+    }
+
+    incomingIds.add(parsedId);
+    final config = getConnectionConfig(parsedId);
+    config.id.value = parsedId;
+    config.connectionType.value = configData["connectionType"]?.toString() ?? 'ir';
+    config.entityId.value = configData["entityId"]?.toString() ?? '';
+    config.brand.value = configData["brand"]?.toString() ?? '';
+    config.action.value = configData["action"]?.toString() ?? '';
+    config.gesture.value = configData["gesture"]?.toString() ?? '';
+    config.sound.value = configData["sound"]?.toString() ?? '';
+    config.hand.value = configData["hand"]?.toString() ?? '';
+    config.isSynced.value = true;
+  }
+
+  final existingIds = connectionConfigs.keys.toList(growable: false);
+  for (final id in existingIds) {
+    if (!incomingIds.contains(id)) {
+      removeConnectionConfig(id);
+    }
+  }
+
+  final sortedIds = incomingIds.toList()..sort();
+  connectionsList.value = sortedIds;
+  _nextConnectionId = sortedIds.isEmpty ? 1 : (sortedIds.last + 1);
+  saveConfigsToFile();
 }

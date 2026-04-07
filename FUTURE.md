@@ -96,7 +96,6 @@
 💡 **Suggestions**
 
 - **Important:** Real-time multi-phone configuration sync: if Phone X creates configs A and B, Phone Y should instantly show A and B in its dashboard cards; if Phone Y adds C, both phones should show A, B, and C without manual refresh or re-save.
-- **Must-have:** Prevent duplicate mapping of the same `gesture + hand` pair (recommended default). If a user tries to save a duplicate, block it and prompt them to edit the existing mapping. Optional advanced mode: allow one-to-many mappings and execute all actions for that pair.
 - Add a configuration revision system (`version` or `updated_at`) so clients can detect and apply only new changes.
 - Add a live sync channel (WebSocket or Server-Sent Events) so all connected phones receive immediate dashboard updates.
 - Add conflict handling for concurrent edits with strict last-write-wins (no warning and no lock).
