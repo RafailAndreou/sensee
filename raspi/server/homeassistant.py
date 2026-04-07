@@ -1,6 +1,8 @@
 import requests
 import json
 import os
+import threading
+import time
 try:
     from server import file
 except ImportError:
@@ -8,6 +10,14 @@ except ImportError:
 
 # MOCK MODE: Set this to False when your Home Assistant is actually running!
 MOCK_MODE = False
+
+# Keep HA calls short so network hiccups don't stall nearby workflows.
+REQUEST_TIMEOUT = (0.8, 2.2)
+
+_entities_cache = []
+_entities_cache_time = 0.0
+_entities_cache_lock = threading.Lock()
+_ENTITIES_CACHE_TTL_SECONDS = 2.0
 
 def get_ha_config():
     """Loads the URL and Token dynamically from the config file."""
@@ -21,8 +31,8 @@ def get_ha_config():
         token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI1ZTI0MTk3YjNjZmE0OWY0ODViMWVhNzNkYjY0ODNmOCIsImlhdCI6MTc3NTQ0NDM4NiwiZXhwIjoyMDkwODA0Mzg2fQ.RUSQ82UgKsvM9zQe-YxmkXdXVWCxOL9ZKY0YIV2l8q4"
     return url, token
 
-# Initial load (can be refreshed by calling get_ha_config again)
-HA_URL, HA_TOKEN = get_ha_config()
+def _get_runtime_config():
+    return get_ha_config()
 
 def parse_action_to_service(action: str) -> str:
     """Converts Sensee UI actions into Home Assistant service calls."""
@@ -56,12 +66,13 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
 
     service = parse_action_to_service(action_type)
     domain = get_domain_from_entity(entity_id)
+    url_base, token = _get_runtime_config()
 
     # Home Assistant API Endpoint structure: /api/services/<domain>/<service>
-    url = f"{HA_URL}/api/services/{domain}/{service}"
+    url = f"{url_base}/api/services/{domain}/{service}"
     
     headers = {
-        "Authorization": f"Bearer {HA_TOKEN}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
     
@@ -76,7 +87,7 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
         return True
 
     try:
-        response = requests.post(url, headers=headers, json=data, timeout=5)
+        response = requests.post(url, headers=headers, json=data, timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             print(f"✅ Successfully triggered Home Assistant: {entity_id} -> {service}")
             return True
@@ -84,7 +95,7 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
             print(f"❌ Home Assistant error {response.status_code}: {response.text}")
             return False
     except requests.exceptions.RequestException as e:
-        print(f"❌ Failed to reach Home Assistant at {HA_URL}: {e}")
+        print(f"❌ Failed to reach Home Assistant at {url_base}: {e}")
         return False
 
 def get_ha_entities(device_type_filter: str = None):
@@ -99,17 +110,29 @@ def get_ha_entities(device_type_filter: str = None):
             {"entity_id": "fan.kitchen_fan", "friendly_name": "Mock Kitchen Fan", "type": "Fan"},
         ]
 
-    url = f"{HA_URL}/api/states"
+    now = time.monotonic()
+    with _entities_cache_lock:
+        if now - _entities_cache_time < _ENTITIES_CACHE_TTL_SECONDS:
+            if device_type_filter:
+                return [d for d in _entities_cache if d.get("type", "").lower() == device_type_filter.lower()]
+            return list(_entities_cache)
+
+    url_base, token = _get_runtime_config()
+    url = f"{url_base}/api/states"
     headers = {
-        "Authorization": f"Bearer {HA_TOKEN}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
     try:
-        response = requests.get(url, headers=headers, timeout=5)
+        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
         if response.status_code != 200:
             print(f"❌ HA Fetch Error {response.status_code}: {response.text}")
-            return []
+            with _entities_cache_lock:
+                cached = list(_entities_cache)
+            if device_type_filter:
+                return [d for d in cached if d.get("type", "").lower() == device_type_filter.lower()]
+            return cached
 
         all_states = response.json()
         formatted_devices = []
@@ -141,20 +164,31 @@ def get_ha_entities(device_type_filter: str = None):
                     "type": sensee_type
                 })
         
+        with _entities_cache_lock:
+            global _entities_cache_time
+            _entities_cache[:] = formatted_devices
+            _entities_cache_time = now
+
+        if device_type_filter:
+            return [d for d in formatted_devices if d.get("type", "").lower() == device_type_filter.lower()]
         return formatted_devices
 
     except Exception as e:
         print(f"❌ Exception fetching entities from Home Assistant: {e}")
-        return []
+        with _entities_cache_lock:
+            cached = list(_entities_cache)
+        if device_type_filter:
+            return [d for d in cached if d.get("type", "").lower() == device_type_filter.lower()]
+        return cached
 
 def get_discovered_flows():
     """Fetches discovered devices from Home Assistant that haven't been added yet."""
-    url, token = get_ha_config()
+    url, token = _get_runtime_config()
     api_url = f"{url}/api/config/config_entries/flow"
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.get(api_url, headers=headers, timeout=5)
+        response = requests.get(api_url, headers=headers, timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             return response.json()
         return []
@@ -164,13 +198,13 @@ def get_discovered_flows():
 
 def start_pairing_flow(handler: str):
     """Starts a pairing process for a specific device type."""
-    url, token = get_ha_config()
+    url, token = _get_runtime_config()
     api_url = f"{url}/api/config/config_entries/flow"
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     data = {"handler": handler}
 
     try:
-        response = requests.post(api_url, headers=headers, json=data, timeout=5)
+        response = requests.post(api_url, headers=headers, json=data, timeout=REQUEST_TIMEOUT)
         return response.json()
     except Exception as e:
         print(f"❌ Error starting pairing flow: {e}")
@@ -178,12 +212,12 @@ def start_pairing_flow(handler: str):
 
 def submit_pairing_step(flow_id: str, user_input: dict):
     """Submits data (like a PIN) to an active pairing flow."""
-    url, token = get_ha_config()
+    url, token = _get_runtime_config()
     api_url = f"{url}/api/config/config_entries/flow/{flow_id}"
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.post(api_url, headers=headers, json=user_input, timeout=5)
+        response = requests.post(api_url, headers=headers, json=user_input, timeout=REQUEST_TIMEOUT)
         return response.json()
     except Exception as e:
         print(f"❌ Error submitting pairing step: {e}")

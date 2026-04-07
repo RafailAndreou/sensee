@@ -6,7 +6,7 @@ from mediapipe.framework.formats import landmark_pb2
 import pyautogui
 import webbrowser
 from server import main  # FastAPI app + helpers (set_frame_from_bgr, send_msg)
-from queue import Queue
+from queue import Queue, Full
 import threading
 import time
 import os
@@ -215,7 +215,10 @@ def take_action(gesture_name, detected_hand="Unknown"):
         return
 
     if connection_type == "smart":
-        homeassistant.trigger_ha_action(entity_id, action)
+        try:
+            smart_action_queue.put_nowait((entity_id, action))
+        except Full:
+            print("⚠️ Smart action queue full; dropping action to keep camera responsive.")
         return
 
     # TODO: Execute non-PC actions here.
@@ -250,6 +253,23 @@ def process_gestures():
 # Start gesture processing thread
 gesture_thread = threading.Thread(target=process_gestures, daemon=True)
 gesture_thread.start()
+
+# Run Home Assistant actions on a separate worker so camera processing never
+# blocks on network delays/timeouts.
+smart_action_queue = Queue(maxsize=128)
+
+
+def _smart_action_worker():
+    while True:
+        try:
+            entity_id, action = smart_action_queue.get()
+            homeassistant.trigger_ha_action(entity_id, action)
+        except Exception as e:
+            print(f"Error in smart action worker: {e}")
+
+
+smart_action_thread = threading.Thread(target=_smart_action_worker, daemon=True)
+smart_action_thread.start()
 
 # Configure gesture recognizer
 options = GestureRecognizerOptions(
