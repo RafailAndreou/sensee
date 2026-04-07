@@ -35,3 +35,4 @@ raspi/*.spec
 release/*.zip
 release/*/windows/
 release/*/android/
+raspi/server/configure.json

@@ -15,6 +15,10 @@ MOCK_MODE = False
 REQUEST_TIMEOUT = (0.8, 2.2)
 VOLUME_MIN_INTERVAL_SECONDS = float(os.getenv("SENSEE_VOLUME_INTERVAL", "0.05"))
 DEBUG_HA_TIMING = os.getenv("SENSEE_DEBUG_HA_TIMING", "0") == "1"
+TV_WAKE_SCRIPT_ENTITY = os.getenv("SENSEE_TV_WAKE_SCRIPT", "script.sensee_tv_power_on").strip()
+TV_WAKE_SWITCH_ENTITY = os.getenv("SENSEE_TV_WAKE_SWITCH", "").strip()
+TV_WAKE_MAC = os.getenv("SENSEE_TV_WAKE_MAC", "").strip()
+TURN_ON_VERIFY_DELAY_SECONDS = float(os.getenv("SENSEE_TURN_ON_VERIFY_DELAY", "0.35"))
 
 _ha_config_cache = {"url": "", "token": ""}
 _ha_config_cache_lock = threading.Lock()
@@ -79,6 +83,94 @@ def get_domain_from_entity(entity_id: str) -> str:
         return entity_id.split(".")[0]
     return "homeassistant"
 
+
+def _post_service(url_base: str, token: str, domain: str, service: str, data: dict):
+    url = f"{url_base}/api/services/{domain}/{service}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    started = time.perf_counter()
+    response = _http_session.post(url, headers=headers, json=data, timeout=REQUEST_TIMEOUT)
+    elapsed_ms = (time.perf_counter() - started) * 1000.0
+    return response, elapsed_ms
+
+
+def _get_entity_state(url_base: str, token: str, entity_id: str):
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        response = _http_session.get(
+            f"{url_base}/api/states/{entity_id}",
+            headers=headers,
+            timeout=REQUEST_TIMEOUT,
+        )
+        if response.status_code != 200:
+            return None
+        return response.json().get("state")
+    except requests.exceptions.RequestException:
+        return None
+
+
+def _entity_is_on(state: str) -> bool:
+    return state in ("on", "playing", "idle", "paused")
+
+
+def _try_tv_wake_fallback(url_base: str, token: str, target_entity_id: str) -> bool:
+    attempted = False
+
+    if TV_WAKE_SCRIPT_ENTITY:
+        attempted = True
+        try:
+            response, _ = _post_service(
+                url_base,
+                token,
+                "script",
+                "turn_on",
+                {"entity_id": TV_WAKE_SCRIPT_ENTITY, "variables": {"target_entity_id": target_entity_id}},
+            )
+            if response.status_code == 200:
+                return True
+            print(f"⚠️ TV wake script failed ({response.status_code}): {response.text}")
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ TV wake script request failed: {e}")
+
+    if TV_WAKE_SWITCH_ENTITY:
+        attempted = True
+        try:
+            response, _ = _post_service(
+                url_base,
+                token,
+                "switch",
+                "turn_on",
+                {"entity_id": TV_WAKE_SWITCH_ENTITY},
+            )
+            if response.status_code == 200:
+                return True
+            print(f"⚠️ TV wake switch failed ({response.status_code}): {response.text}")
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ TV wake switch request failed: {e}")
+
+    if TV_WAKE_MAC:
+        attempted = True
+        try:
+            response, _ = _post_service(
+                url_base,
+                token,
+                "wake_on_lan",
+                "send_magic_packet",
+                {"mac": TV_WAKE_MAC},
+            )
+            if response.status_code == 200:
+                return True
+            print(f"⚠️ TV WOL failed ({response.status_code}): {response.text}")
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ TV WOL request failed: {e}")
+
+    if not attempted:
+        print("⚠️ No TV wake fallback configured. Set SENSEE_TV_WAKE_SCRIPT, SENSEE_TV_WAKE_SWITCH, or SENSEE_TV_WAKE_MAC.")
+
+    return False
+
 def trigger_ha_action(entity_id: str, action_type: str) -> bool:
     """
     Sends an HTTP POST to Home Assistant to trigger the device.
@@ -100,14 +192,6 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
                 return True
             _volume_send_times[key] = now
 
-    # Home Assistant API Endpoint structure: /api/services/<domain>/<service>
-    url = f"{url_base}/api/services/{domain}/{service}"
-    
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-    
     data = {"entity_id": entity_id}
 
     if MOCK_MODE:
@@ -119,17 +203,33 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
         return True
 
     try:
-        started = time.perf_counter()
-        response = _http_session.post(url, headers=headers, json=data, timeout=REQUEST_TIMEOUT)
-        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        response, elapsed_ms = _post_service(url_base, token, domain, service, data)
         if response.status_code == 200:
             if DEBUG_HA_TIMING:
                 print(f"✅ Home Assistant accepted {entity_id} -> {service} in {elapsed_ms:.1f}ms")
             else:
                 print(f"✅ Home Assistant accepted: {entity_id} -> {service}")
+
+            # If TV remains unavailable/off after turn_on, fall back to a wake path.
+            if domain == "media_player" and service == "turn_on":
+                time.sleep(TURN_ON_VERIFY_DELAY_SECONDS)
+                state = _get_entity_state(url_base, token, entity_id)
+                if state is None or not _entity_is_on(state):
+                    print(f"⚠️ TV state after turn_on is '{state}'. Trying wake fallback...")
+                    wake_ok = _try_tv_wake_fallback(url_base, token, entity_id)
+                    if wake_ok:
+                        return True
+
             return True
         else:
             print(f"❌ Home Assistant error {response.status_code}: {response.text}")
+
+            if domain == "media_player" and service == "turn_on":
+                print("⚠️ turn_on failed. Trying wake fallback...")
+                wake_ok = _try_tv_wake_fallback(url_base, token, entity_id)
+                if wake_ok:
+                    return True
+
             return False
     except requests.exceptions.RequestException as e:
         print(f"❌ Failed to reach Home Assistant at {url_base}: {e}")
