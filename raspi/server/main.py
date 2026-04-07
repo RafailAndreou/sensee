@@ -1,7 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
-import json
 import asyncio
 import os
 from typing import List
@@ -10,80 +8,17 @@ from collections import defaultdict
 from server import file
 import utils
 from server import homeassistant
+from server.config_validation import validate_configuration_payload
+from server.models import (
+    Configuration,
+    HAConfigRequest,
+    HAPairStartRequest,
+    HAPairSubmitRequest,
+)
 from server.streamer import frame_hub, set_frame_from_bgr
 from server.discovery import register_mdns_service, get_local_ip
 
 app = FastAPI()
-
-
-def _normalize_config_value(value: str) -> str:
-    return str(value).strip().lower()
-
-
-def _normalize_hand_value(value: str) -> str:
-    normalized = _normalize_config_value(value)
-    if "both" in normalized:
-        return "both hands"
-    if "left" in normalized:
-        return "left hand"
-    if "right" in normalized:
-        return "right hand"
-    return normalized
-
-
-def _find_duplicate_gesture_hand(configs: list[dict]):
-    seen: dict[tuple[str, str], dict] = {}
-    for config in configs:
-        gesture = _normalize_config_value(config.get("gesture", ""))
-        hand = _normalize_config_value(config.get("hand", ""))
-        key = (gesture, hand)
-
-        if key in seen:
-            return seen[key], config
-
-        seen[key] = config
-
-    return None, None
-
-
-def _find_invalid_hand_combination(configs: list[dict]):
-    gesture_to_hands: dict[str, set[str]] = {}
-    for config in configs:
-        gesture = _normalize_config_value(config.get("gesture", ""))
-        hand = _normalize_hand_value(config.get("hand", ""))
-        if not gesture or not hand:
-            continue
-
-        hands = gesture_to_hands.setdefault(gesture, set())
-        hands.add(hand)
-
-    for gesture, hands in gesture_to_hands.items():
-        if "both hands" in hands and ("left hand" in hands or "right hand" in hands):
-            return gesture, hands
-
-    return None, None
-
-# ---------------- Models ----------------
-class Configuration(BaseModel):
-    id: str
-    connectionType: str = "ir"
-    entityId: str = ""
-    brand: str
-    action: str
-    gesture: str
-    sound: str
-    hand: str
-
-class HAConfigRequest(BaseModel):
-    url: str
-    token: str
-
-class HAPairStartRequest(BaseModel):
-    handler: str
-
-class HAPairSubmitRequest(BaseModel):
-    flow_id: str
-    user_input: dict
 
 # ---------------- Config store ----------------
 current_config: dict = {}
@@ -135,23 +70,11 @@ def configure(settings: List[Configuration]):
     global current_config
     incoming_config = [s.model_dump() for s in settings]
 
-    first, second = _find_duplicate_gesture_hand(incoming_config)
-    if first and second:
-        gesture = second.get("gesture", "")
-        hand = second.get("hand", "")
+    validation_error = validate_configuration_payload(incoming_config)
+    if validation_error:
         raise HTTPException(
             status_code=400,
-            detail=f"Duplicate gesture+hand mapping is not allowed: {gesture} / {hand}",
-        )
-
-    invalid_gesture, invalid_hands = _find_invalid_hand_combination(incoming_config)
-    if invalid_gesture and invalid_hands:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Invalid hand combination for gesture "
-                f"'{invalid_gesture}': Both Hands cannot coexist with Left/Right Hand mappings"
-            ),
+            detail=validation_error,
         )
 
     current_config = incoming_config
@@ -163,8 +86,8 @@ def configure(settings: List[Configuration]):
     return {"status": "configured", "count": len(current_config)}
 
 @app.get("/configuration")
-def get_configuration_msg():
-    return {"message": "Please use POST /configuration to configure settings"}
+def get_configuration():
+    return file.get_active_configs()
 
 @app.get("/current")
 def get_current_config():

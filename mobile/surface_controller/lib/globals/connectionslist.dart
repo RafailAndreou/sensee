@@ -214,7 +214,8 @@ void applyServerConfigurationsSnapshot(List<Map<String, dynamic>> incoming) {
     incomingIds.add(parsedId);
     final config = getConnectionConfig(parsedId);
     config.id.value = parsedId;
-    config.connectionType.value = configData["connectionType"]?.toString() ?? 'ir';
+    config.connectionType.value =
+        configData["connectionType"]?.toString() ?? 'ir';
     config.entityId.value = configData["entityId"]?.toString() ?? '';
     config.brand.value = configData["brand"]?.toString() ?? '';
     config.action.value = configData["action"]?.toString() ?? '';

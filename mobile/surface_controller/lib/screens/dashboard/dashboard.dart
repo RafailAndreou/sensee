@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/connectionslist.dart';
 import 'package:surface_controller/globals/global.dart';
@@ -8,8 +10,41 @@ import 'package:surface_controller/screens/dashboard/widgets/dashboardcard.dart'
 import 'package:surface_controller/screens/dashboard/widgets/dashboardnavigation.dart';
 import 'package:surface_controller/screens/devicetype/devicetype.dart';
 
-class Dashboard extends StatelessWidget {
+class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
+
+  @override
+  State<Dashboard> createState() => _DashboardState();
+}
+
+class _DashboardState extends State<Dashboard> {
+  Timer? _syncTimer;
+  bool _syncInFlight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pullLatestServerConfigs();
+    _syncTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => _pullLatestServerConfigs(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _syncTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _pullLatestServerConfigs() async {
+    if (_syncInFlight) {
+      return;
+    }
+    _syncInFlight = true;
+    await server_sync.pullLatestConfigurationsFromServer();
+    _syncInFlight = false;
+  }
 
   @override
   Widget build(BuildContext context) {
