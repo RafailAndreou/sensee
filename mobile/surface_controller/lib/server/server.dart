@@ -8,6 +8,12 @@ import 'package:multicast_dns/multicast_dns.dart';
 
 const int _DISCOVERY_PORT = 54321;
 const String _DISCOVERY_TOKEN = 'SENSEE_DISCOVER';
+const List<int> _COMMON_SERVER_PORTS = <int>[8000, 8001, 8002, 8003, 8004];
+const List<String> _COMMON_SERVER_HOSTS = <String>[
+  'sensee.local',
+  '127.0.0.1',
+  '10.0.2.2',
+];
 
 /// Broadcast a UDP discovery probe and wait for the first JSON reply.
 /// Returns a full configuration POST URL like 'http://<ip>:<port>/configuration'
@@ -128,47 +134,7 @@ Future<void> sendAllConfigurations() async {
 }
 
 Future<void> sendConfiguration(ConnectionConfig config) async {
-  final configData = {
-    "id": config.id.value.toString(),
-    "connectionType": config.connectionType.value,
-    "entityId": config.entityId.value,
-    "brand": config.brand.value,
-    "action": config.action.value,
-    "gesture": config.gesture.value,
-    "sound": config.sound.value,
-    "hand": config.hand.value,
-  };
-
-  debugPrint('[Config] Full payload: $configData'); // ✅ Add this
-  // debugPrint('[Config] ID value: ${config.id.value}'); // ✅ And this
-
-  try {
-    final discovered = await discoverServerSmart();
-
-    if (discovered == null) {
-      print(
-        "❌ Failed to discover server. Make sure the server is running and accessible on the network.",
-      );
-      return;
-    }
-
-    final response = await http.post(
-      Uri.parse(discovered),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(configData),
-    );
-
-    if (response.statusCode == 200) {
-      config.isSynced.value = true;
-      print("✅ Configuration sent successfully to $discovered!");
-    } else {
-      config.isSynced.value = false;
-      print("⚠️ Server error (${response.statusCode}) from $discovered");
-    }
-  } catch (e) {
-    config.isSynced.value = false;
-    print("❌ Failed to send configuration: $e");
-  }
+  await sendAllConfigurations();
 }
 
 /// Discover server using mDNS (sensee.local)
@@ -229,45 +195,101 @@ Future<String?> discoverServerMDNS({int timeoutMs = 3000}) async {
 
 /// Cache the server URL after the first successful discovery.
 String? _cachedServerUrl;
+Future<String?>? _discoveryInFlight;
+
+String _toConfigurationUrl(String baseUrl) {
+  if (baseUrl.endsWith('/configuration')) {
+    return baseUrl;
+  }
+  return '$baseUrl/configuration';
+}
+
+String _toBaseUrl(String configurationUrl) {
+  return configurationUrl.replaceFirst('/configuration', '');
+}
+
+Future<bool> _probeServerBaseUrl(String baseUrl, {int timeoutMs = 900}) async {
+  try {
+    final response = await http
+        .get(Uri.parse(_toConfigurationUrl(baseUrl)))
+        .timeout(Duration(milliseconds: timeoutMs));
+    return response.statusCode == 200 || response.statusCode == 405;
+  } catch (_) {
+    return false;
+  }
+}
 
 /// Try mDNS first, fallback to UDP discovery, then fallback to static IP
 Future<String?> discoverServerSmart() async {
-  // 0. INSTANT PATH: Return cached URL if we already found the server this session.
-  if (_cachedServerUrl != null) {
-    print('[Discovery] ⚡ Using cached server: $_cachedServerUrl');
-    return _cachedServerUrl;
+  if (_discoveryInFlight != null) {
+    return _discoveryInFlight;
   }
 
-  // 1. FAST PATH: Just trust the OS resolver (like the browser does)
+  _discoveryInFlight = _discoverServerSmartInternal();
   try {
-    print('[Discovery] 🚀 Trying direct connection to http://sensee.local:8000...');
-    final directUrl = 'http://sensee.local:8000/configuration';
-    final response = await http
-        .get(Uri.parse(directUrl))
-        .timeout(const Duration(milliseconds: 1500));
-    if (response.statusCode == 200 || response.statusCode == 405) {
-      print('[Discovery] ✅ Direct connection successful!');
-      _cachedServerUrl = directUrl;
+    return await _discoveryInFlight;
+  } finally {
+    _discoveryInFlight = null;
+  }
+}
+
+Future<String?> _discoverServerSmartInternal() async {
+  // 0. INSTANT PATH: Return cached URL if still reachable.
+  if (_cachedServerUrl != null) {
+    final cachedBase = _toBaseUrl(_cachedServerUrl!);
+    if (await _probeServerBaseUrl(cachedBase)) {
       return _cachedServerUrl;
     }
-  } catch (e) {
-    print('[Discovery] Direct connection failed, falling back to scanning...');
+    _cachedServerUrl = null;
   }
 
-  // 2. SLOW PATH: Scan the network
-  print('[Discovery] Scanning mDNS...');
-  String? result = await discoverServerMDNS(timeoutMs: 2000);
-  if (result != null) {
-    _cachedServerUrl = result;
-    return _cachedServerUrl;
+  // 1. FAST PATH: probe known host candidates and common ports.
+  for (final host in _COMMON_SERVER_HOSTS) {
+    for (final port in _COMMON_SERVER_PORTS) {
+      final base = 'http://$host:$port';
+      if (await _probeServerBaseUrl(base)) {
+        _cachedServerUrl = _toConfigurationUrl(base);
+        return _cachedServerUrl;
+      }
+    }
   }
 
-  print('[Discovery] Scanning UDP...');
-  result = await discoverServer(timeoutMs: 3000);
-  if (result != null) {
-    _cachedServerUrl = result;
-  }
+  // Avoid mDNS/UDP fallback here: on some platforms this throws
+  // (reusePort unsupported) and the backend currently does not answer UDP discovery.
+  print('[Discovery] Direct probes failed for known hosts/ports.');
   return _cachedServerUrl;
+}
+
+Future<bool> isServerReachable({
+  int timeoutMs = 1200,
+  bool discoverIfUnknown = false,
+}) async {
+  try {
+    if (_cachedServerUrl != null) {
+      final cachedBase = _toBaseUrl(_cachedServerUrl!);
+      if (await _probeServerBaseUrl(cachedBase, timeoutMs: timeoutMs)) {
+        return true;
+      }
+    }
+
+    for (final host in _COMMON_SERVER_HOSTS) {
+      for (final port in _COMMON_SERVER_PORTS) {
+        final base = 'http://$host:$port';
+        if (await _probeServerBaseUrl(base, timeoutMs: timeoutMs)) {
+          _cachedServerUrl = _toConfigurationUrl(base);
+          return true;
+        }
+      }
+    }
+
+    if (!discoverIfUnknown) {
+      return false;
+    }
+
+    return await discoverServerSmart() != null;
+  } catch (_) {
+    return false;
+  }
 }
 
 // ---------------- Home Assistant Setup API ----------------

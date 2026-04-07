@@ -420,43 +420,48 @@ try:
             break
 
         if results.multi_hand_landmarks:
-            hand_landmarks = results.multi_hand_landmarks[0]
+            primary_hand_landmarks = results.multi_hand_landmarks[0]
             
             # move pointer with index tip
             try:
-                index_x = hand_landmarks.landmark[8].x
-                index_y = hand_landmarks.landmark[8].y
+                index_x = primary_hand_landmarks.landmark[8].x
+                index_y = primary_hand_landmarks.landmark[8].y
                 mouse_x, mouse_y = translate_coords(index_x, index_y)
                 # pyautogui.moveTo(mouse_x, mouse_y, _pause=False)
             except Exception:
                 pass
 
-            try:
-                thumb = hand_landmarks.landmark[4]
-                index = hand_landmarks.landmark[8]
-                middle = hand_landmarks.landmark[12]
-                
-                # Fetch handedness from latest_result if available
-                detected_hand = "Unknown"
-                if latest_result and latest_result.handedness:
-                    detected_hand = latest_result.handedness[0][0].category_name
-                
-                if touching(thumb, middle):
-                    take_action("Thumb+Middle", detected_hand)
-                elif touching(thumb, index):
-                    take_action("Thumb+Index", detected_hand)
-                    
-                wrist = hand_landmarks.landmark[0]
-                if wrist:
-                    wrist_queue.put(wrist)
-            except Exception:
-                pass
+            for hand_idx, hand_landmarks in enumerate(results.multi_hand_landmarks):
+                try:
+                    thumb = hand_landmarks.landmark[4]
+                    index = hand_landmarks.landmark[8]
+                    middle = hand_landmarks.landmark[12]
+
+                    detected_hand = "Unknown"
+                    if (
+                        latest_result
+                        and latest_result.handedness
+                        and hand_idx < len(latest_result.handedness)
+                        and latest_result.handedness[hand_idx]
+                    ):
+                        detected_hand = latest_result.handedness[hand_idx][0].category_name
+
+                    if touching(thumb, middle):
+                        take_action("Thumb+Middle", detected_hand)
+                    elif touching(thumb, index):
+                        take_action("Thumb+Index", detected_hand)
+
+                    wrist = hand_landmarks.landmark[0]
+                    if wrist:
+                        wrist_queue.put(wrist)
+                except Exception:
+                    pass
                 
             # draw landmarks (preview only)
-            for hand_landmarks in results.multi_hand_landmarks:
+            for draw_hand_landmarks in results.multi_hand_landmarks:
                 mp_drawing.draw_landmarks(
                     frame,
-                    hand_landmarks,
+                    draw_hand_landmarks,
                     mp_hands.HAND_CONNECTIONS
                 )
 

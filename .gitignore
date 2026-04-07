@@ -36,3 +36,5 @@ release/*.zip
 release/*/windows/
 release/*/android/
 raspi/server/configure.json
+raspi/server/ha_config.json
+raspi/oauth.json

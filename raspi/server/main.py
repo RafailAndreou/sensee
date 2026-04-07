@@ -125,6 +125,7 @@ def get_ha_config():
 @app.post("/ha/config")
 def post_ha_config(req: HAConfigRequest):
     file.save_ha_config({"url": req.url, "token": req.token})
+    homeassistant.refresh_ha_config_cache()
     return {"status": "success"}
 
 @app.get("/ha/discovered")

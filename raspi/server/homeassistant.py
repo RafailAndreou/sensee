@@ -15,6 +15,8 @@ MOCK_MODE = False
 REQUEST_TIMEOUT = (0.8, 2.2)
 VOLUME_MIN_INTERVAL_SECONDS = float(os.getenv("SENSEE_VOLUME_INTERVAL", "0.05"))
 DEBUG_HA_TIMING = os.getenv("SENSEE_DEBUG_HA_TIMING", "0") == "1"
+DEFAULT_HA_URL = os.getenv("SENSEE_HA_URL", "").strip()
+DEFAULT_HA_TOKEN = os.getenv("SENSEE_HA_TOKEN", "").strip()
 TV_WAKE_SCRIPT_ENTITY = os.getenv("SENSEE_TV_WAKE_SCRIPT", "script.sensee_tv_power_on").strip()
 TV_WAKE_SWITCH_ENTITY = os.getenv("SENSEE_TV_WAKE_SWITCH", "").strip()
 TV_WAKE_MAC = os.getenv("SENSEE_TV_WAKE_MAC", "").strip()
@@ -33,7 +35,7 @@ _entities_cache_lock = threading.Lock()
 _ENTITIES_CACHE_TTL_SECONDS = 2.0
 
 def get_ha_config():
-    """Loads the URL and Token dynamically from the config file."""
+    """Load Home Assistant URL/token from saved config, with env fallback only."""
     with _ha_config_cache_lock:
         if _ha_config_cache["url"] and _ha_config_cache["token"]:
             return _ha_config_cache["url"], _ha_config_cache["token"]
@@ -42,11 +44,11 @@ def get_ha_config():
         url = config.get("url", "").strip()
         token = config.get("token", "").strip()
 
-        # Fall back to hardcoded values if the config file is empty
+        # Env fallback keeps secrets out of source control.
         if not url:
-            url = "http://172.28.106.37:8123"
+            url = DEFAULT_HA_URL
         if not token:
-            token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI1ZTI0MTk3YjNjZmE0OWY0ODViMWVhNzNkYjY0ODNmOCIsImlhdCI6MTc3NTQ0NDM4NiwiZXhwIjoyMDkwODA0Mzg2fQ.RUSQ82UgKsvM9zQe-YxmkXdXVWCxOL9ZKY0YIV2l8q4"
+            token = DEFAULT_HA_TOKEN
 
         _ha_config_cache["url"] = url
         _ha_config_cache["token"] = token
@@ -60,6 +62,10 @@ def refresh_ha_config_cache():
 
 def _get_runtime_config():
     return get_ha_config()
+
+
+def _has_valid_runtime_config(url_base: str, token: str) -> bool:
+    return bool(url_base and token)
 
 def parse_action_to_service(action: str) -> str:
     """Converts Sensee UI actions into Home Assistant service calls."""
@@ -183,6 +189,10 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
     domain = get_domain_from_entity(entity_id)
     url_base, token = _get_runtime_config()
 
+    if not _has_valid_runtime_config(url_base, token):
+        print("❌ Home Assistant config missing. Save URL and token from the mobile app or set SENSEE_HA_URL/SENSEE_HA_TOKEN.")
+        return False
+
     if service in ("volume_up", "volume_down"):
         now = time.monotonic()
         key = f"{entity_id}:{service}"
@@ -257,6 +267,10 @@ def get_ha_entities(device_type_filter: str = None):
             return list(_entities_cache)
 
     url_base, token = _get_runtime_config()
+    if not _has_valid_runtime_config(url_base, token):
+        print("❌ Home Assistant config missing. Cannot fetch entities.")
+        return []
+
     url = f"{url_base}/api/states"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -322,6 +336,10 @@ def get_ha_entities(device_type_filter: str = None):
 def get_discovered_flows():
     """Fetches discovered devices from Home Assistant that haven't been added yet."""
     url, token = _get_runtime_config()
+    if not _has_valid_runtime_config(url, token):
+        print("❌ Home Assistant config missing. Cannot fetch discovered flows.")
+        return []
+
     api_url = f"{url}/api/config/config_entries/flow"
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
@@ -337,6 +355,9 @@ def get_discovered_flows():
 def start_pairing_flow(handler: str):
     """Starts a pairing process for a specific device type."""
     url, token = _get_runtime_config()
+    if not _has_valid_runtime_config(url, token):
+        return {"error": "Home Assistant config missing"}
+
     api_url = f"{url}/api/config/config_entries/flow"
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     data = {"handler": handler}
@@ -351,6 +372,9 @@ def start_pairing_flow(handler: str):
 def submit_pairing_step(flow_id: str, user_input: dict):
     """Submits data (like a PIN) to an active pairing flow."""
     url, token = _get_runtime_config()
+    if not _has_valid_runtime_config(url, token):
+        return {"error": "Home Assistant config missing"}
+
     api_url = f"{url}/api/config/config_entries/flow/{flow_id}"
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 

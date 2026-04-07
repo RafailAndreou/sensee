@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/connectionslist.dart';
 import 'package:surface_controller/screens/dashboard/dashboard.dart';
+import 'package:surface_controller/screens/dashboard/widgets/server_connectivity_banner.dart';
 
 void main() async {
   // You can process the message here
@@ -25,7 +26,17 @@ class MyApp extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
         ),
-        body: Padding(padding: const EdgeInsets.all(16.0), child: Dashboard()),
+        body: Column(
+          children: const [
+            ServerConnectivityBanner(),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Dashboard(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
