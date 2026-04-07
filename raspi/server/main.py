@@ -15,6 +15,25 @@ from server.discovery import register_mdns_service, get_local_ip
 
 app = FastAPI()
 
+
+def _normalize_config_value(value: str) -> str:
+    return str(value).strip().lower()
+
+
+def _find_duplicate_gesture_hand(configs: list[dict]):
+    seen: dict[tuple[str, str], dict] = {}
+    for config in configs:
+        gesture = _normalize_config_value(config.get("gesture", ""))
+        hand = _normalize_config_value(config.get("hand", ""))
+        key = (gesture, hand)
+
+        if key in seen:
+            return seen[key], config
+
+        seen[key] = config
+
+    return None, None
+
 # ---------------- Models ----------------
 class Configuration(BaseModel):
     id: str
@@ -85,7 +104,18 @@ def index():
 @app.post("/configuration")
 def configure(settings: List[Configuration]):
     global current_config
-    current_config = [s.model_dump() for s in settings]
+    incoming_config = [s.model_dump() for s in settings]
+
+    first, second = _find_duplicate_gesture_hand(incoming_config)
+    if first and second:
+        gesture = second.get("gesture", "")
+        hand = second.get("hand", "")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Duplicate gesture+hand mapping is not allowed: {gesture} / {hand}",
+        )
+
+    current_config = incoming_config
     print(f"\n✅ Received {len(current_config)} configurations:")
     for conf in current_config:
         print(f"  - ID {conf['id']}: {conf['brand']} {conf['action']} ({conf['gesture']})")

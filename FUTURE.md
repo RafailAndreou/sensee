@@ -15,7 +15,6 @@
 - **No screen. No projection. No voice.**
 - Detects hand gestures (e.g., thumb-index pinch, palm stop, swipe).
 - Maps each gesture to a **custom action**, such as:
-
   - Turning lights or AC on/off
   - Adjusting volume
   - Controlling music or TV
@@ -93,6 +92,19 @@
 - Additional gestures & improved detection stability
 - Integration of haptic/audio feedback
 - Cross-device SDK or closed API layer
+
+💡 **Suggestions**
+
+- **Important:** Real-time multi-phone configuration sync: if Phone X creates configs A and B, Phone Y should instantly show A and B in its dashboard cards; if Phone Y adds C, both phones should show A, B, and C without manual refresh or re-save.
+- **Must-have:** Prevent duplicate mapping of the same `gesture + hand` pair (recommended default). If a user tries to save a duplicate, block it and prompt them to edit the existing mapping. Optional advanced mode: allow one-to-many mappings and execute all actions for that pair.
+- Add a configuration revision system (`version` or `updated_at`) so clients can detect and apply only new changes.
+- Add a live sync channel (WebSocket or Server-Sent Events) so all connected phones receive immediate dashboard updates.
+- Add conflict handling for concurrent edits with strict last-write-wins (no warning and no lock).
+- Add a backup/restore export for all configurations (JSON profile import/export) to simplify migration between devices.
+- Add offline-first sync queue on mobile: store edits while offline and auto-push when the server reconnects.
+- Add full state pull on app start so each phone loads the latest server dashboard cards before local cache updates.
+- Add per-edit metadata (`device_id`, `updated_at`) to improve debugging and sync traceability across multiple phones.
+- Add a lightweight diagnostics page showing active server URL, last successful sync time, and pending unsynced changes.
 
 ---
 

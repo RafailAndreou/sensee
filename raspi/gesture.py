@@ -151,8 +151,20 @@ def _can_log_detected_gesture():
         return True
 
 def _gesture_matches(config_gesture, detected_gesture):
-    config_normalized = _normalize_name(config_gesture)
-    detected_normalized = _normalize_name(detected_gesture)
+    def _canonical_gesture_name(value):
+        normalized = _normalize_name(value)
+        alias_map = {
+            "closed fist": "fist",
+            "open palm": "open palm",
+            "thumb index": "thumb index",
+            "index thumb": "thumb index",
+            "thumb middle": "thumb middle",
+            "middle thumb": "thumb middle",
+        }
+        return alias_map.get(normalized, normalized)
+
+    config_normalized = _canonical_gesture_name(config_gesture)
+    detected_normalized = _canonical_gesture_name(detected_gesture)
 
     if config_normalized == detected_normalized:
         return True

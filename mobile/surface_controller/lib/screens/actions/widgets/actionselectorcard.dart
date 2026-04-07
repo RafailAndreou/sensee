@@ -40,8 +40,6 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
     'Index+Thumb',
     'Middle+Thumb',
     'Open Palm',
-    'OK',
-    'Point',
     'Fist',
   ];
   final List<String> hands = ['Left Hand', 'Right Hand', 'Both Hands'];

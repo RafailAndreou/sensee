@@ -29,17 +29,52 @@ class ActionDetails extends StatefulWidget {
 }
 
 class _ActionDetailsState extends State<ActionDetails> {
-  String _selectedAction = 'Turn on';
+  late String _selectedAction;
   String _selectedGesture = 'Index+Thumb';
   String _selectedHand = 'Right Hand';
+
+  String _defaultActionForDeviceType(String deviceType) {
+    if (deviceType.toLowerCase() == 'pc') {
+      return 'Open Spotify';
+    }
+    return 'Turn on';
+  }
+
+  String _normalizeSelectionValue(String value) {
+    return value.trim().toLowerCase();
+  }
+
+  bool _hasDuplicateGestureHandMapping({required int? excludeConnectionId}) {
+    final targetGesture = _normalizeSelectionValue(_selectedGesture);
+    final targetHand = _normalizeSelectionValue(_selectedHand);
+
+    for (final entry in connectionConfigs.entries) {
+      final connectionId = entry.key;
+      if (excludeConnectionId != null && connectionId == excludeConnectionId) {
+        continue;
+      }
+
+      final config = entry.value;
+      final configGesture = _normalizeSelectionValue(config.gesture.value);
+      final configHand = _normalizeSelectionValue(config.hand.value);
+
+      if (configGesture == targetGesture && configHand == targetHand) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   @override
   void initState() {
     super.initState();
+    _selectedAction = _defaultActionForDeviceType(widget.deviceType);
+
     if (widget.editingConnectionId != null) {
       final config = getConnectionConfig(widget.editingConnectionId!);
       _selectedAction = config.action.value.isEmpty
-          ? _selectedAction
+          ? _defaultActionForDeviceType(widget.deviceType)
           : config.action.value;
       _selectedGesture = config.gesture.value.isEmpty
           ? _selectedGesture
@@ -51,9 +86,24 @@ class _ActionDetailsState extends State<ActionDetails> {
   }
 
   Future<void> _saveConfiguration() async {
+    final existingConnectionId = widget.editingConnectionId;
+    if (_hasDuplicateGestureHandMapping(
+      excludeConnectionId: existingConnectionId,
+    )) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This gesture and hand are already assigned. Please edit the existing mapping.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final int connectionId;
-    if (widget.editingConnectionId != null) {
-      connectionId = widget.editingConnectionId!;
+    if (existingConnectionId != null) {
+      connectionId = existingConnectionId;
     } else {
       addNewConnection();
       connectionId = connectionsList.value.last;
