@@ -13,6 +13,15 @@ MOCK_MODE = False
 
 # Keep HA calls short so network hiccups don't stall nearby workflows.
 REQUEST_TIMEOUT = (0.8, 2.2)
+VOLUME_MIN_INTERVAL_SECONDS = float(os.getenv("SENSEE_VOLUME_INTERVAL", "0.05"))
+DEBUG_HA_TIMING = os.getenv("SENSEE_DEBUG_HA_TIMING", "0") == "1"
+
+_ha_config_cache = {"url": "", "token": ""}
+_ha_config_cache_lock = threading.Lock()
+_http_session = requests.Session()
+
+_volume_send_times = {}
+_volume_send_lock = threading.Lock()
 
 _entities_cache = []
 _entities_cache_time = 0.0
@@ -21,15 +30,29 @@ _ENTITIES_CACHE_TTL_SECONDS = 2.0
 
 def get_ha_config():
     """Loads the URL and Token dynamically from the config file."""
-    config = file.load_ha_config()
-    url = config.get("url", "").strip()
-    token = config.get("token", "").strip()
-    # Fall back to hardcoded values if the config file is empty
-    if not url:
-        url = "http://172.28.106.37:8123"
-    if not token:
-        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI1ZTI0MTk3YjNjZmE0OWY0ODViMWVhNzNkYjY0ODNmOCIsImlhdCI6MTc3NTQ0NDM4NiwiZXhwIjoyMDkwODA0Mzg2fQ.RUSQ82UgKsvM9zQe-YxmkXdXVWCxOL9ZKY0YIV2l8q4"
-    return url, token
+    with _ha_config_cache_lock:
+        if _ha_config_cache["url"] and _ha_config_cache["token"]:
+            return _ha_config_cache["url"], _ha_config_cache["token"]
+
+        config = file.load_ha_config()
+        url = config.get("url", "").strip()
+        token = config.get("token", "").strip()
+
+        # Fall back to hardcoded values if the config file is empty
+        if not url:
+            url = "http://172.28.106.37:8123"
+        if not token:
+            token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI1ZTI0MTk3YjNjZmE0OWY0ODViMWVhNzNkYjY0ODNmOCIsImlhdCI6MTc3NTQ0NDM4NiwiZXhwIjoyMDkwODA0Mzg2fQ.RUSQ82UgKsvM9zQe-YxmkXdXVWCxOL9ZKY0YIV2l8q4"
+
+        _ha_config_cache["url"] = url
+        _ha_config_cache["token"] = token
+        return url, token
+
+
+def refresh_ha_config_cache():
+    with _ha_config_cache_lock:
+        _ha_config_cache["url"] = ""
+        _ha_config_cache["token"] = ""
 
 def _get_runtime_config():
     return get_ha_config()
@@ -68,6 +91,15 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
     domain = get_domain_from_entity(entity_id)
     url_base, token = _get_runtime_config()
 
+    if service in ("volume_up", "volume_down"):
+        now = time.monotonic()
+        key = f"{entity_id}:{service}"
+        with _volume_send_lock:
+            last_sent = _volume_send_times.get(key, 0.0)
+            if now - last_sent < VOLUME_MIN_INTERVAL_SECONDS:
+                return True
+            _volume_send_times[key] = now
+
     # Home Assistant API Endpoint structure: /api/services/<domain>/<service>
     url = f"{url_base}/api/services/{domain}/{service}"
     
@@ -87,9 +119,14 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
         return True
 
     try:
-        response = requests.post(url, headers=headers, json=data, timeout=REQUEST_TIMEOUT)
+        started = time.perf_counter()
+        response = _http_session.post(url, headers=headers, json=data, timeout=REQUEST_TIMEOUT)
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
         if response.status_code == 200:
-            print(f"✅ Successfully triggered Home Assistant: {entity_id} -> {service}")
+            if DEBUG_HA_TIMING:
+                print(f"✅ Home Assistant accepted {entity_id} -> {service} in {elapsed_ms:.1f}ms")
+            else:
+                print(f"✅ Home Assistant accepted: {entity_id} -> {service}")
             return True
         else:
             print(f"❌ Home Assistant error {response.status_code}: {response.text}")
@@ -102,6 +139,8 @@ def get_ha_entities(device_type_filter: str = None):
     """
     Fetches all entities from Home Assistant and formats them for the Sensee UI.
     """
+    global _entities_cache_time
+
     if MOCK_MODE:
         return [
             {"entity_id": "media_player.living_room_tv", "friendly_name": "Mock Living Room TV", "type": "Tv"},
@@ -125,7 +164,7 @@ def get_ha_entities(device_type_filter: str = None):
     }
 
     try:
-        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = _http_session.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
         if response.status_code != 200:
             print(f"❌ HA Fetch Error {response.status_code}: {response.text}")
             with _entities_cache_lock:
@@ -165,7 +204,6 @@ def get_ha_entities(device_type_filter: str = None):
                 })
         
         with _entities_cache_lock:
-            global _entities_cache_time
             _entities_cache[:] = formatted_devices
             _entities_cache_time = now
 
@@ -188,7 +226,7 @@ def get_discovered_flows():
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.get(api_url, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = _http_session.get(api_url, headers=headers, timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             return response.json()
         return []
@@ -204,7 +242,7 @@ def start_pairing_flow(handler: str):
     data = {"handler": handler}
 
     try:
-        response = requests.post(api_url, headers=headers, json=data, timeout=REQUEST_TIMEOUT)
+        response = _http_session.post(api_url, headers=headers, json=data, timeout=REQUEST_TIMEOUT)
         return response.json()
     except Exception as e:
         print(f"❌ Error starting pairing flow: {e}")
@@ -217,7 +255,7 @@ def submit_pairing_step(flow_id: str, user_input: dict):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.post(api_url, headers=headers, json=user_input, timeout=REQUEST_TIMEOUT)
+        response = _http_session.post(api_url, headers=headers, json=user_input, timeout=REQUEST_TIMEOUT)
         return response.json()
     except Exception as e:
         print(f"❌ Error submitting pairing step: {e}")

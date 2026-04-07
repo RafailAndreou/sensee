@@ -6,7 +6,7 @@ from mediapipe.framework.formats import landmark_pb2
 import pyautogui
 import webbrowser
 from server import main  # FastAPI app + helpers (set_frame_from_bgr, send_msg)
-from queue import Queue, Full
+from queue import Empty, Queue
 import threading
 import time
 import os
@@ -25,6 +25,7 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 configuration = file.load_configure_json()
 # Add gesture queue
 gesture_queue = Queue()
+ha_action_queue = Queue(maxsize=1)
 
 # New: track latest frame timestamp (ms) so we can drop stale async results
 latest_frame_ts = 0
@@ -164,25 +165,13 @@ def _gesture_matches(config_gesture, detected_gesture):
 
     return False
 
-# Modified gesture callback that puts results in queue
-latest_result = None
-def gesture_callback(result, output_image, timestamp_ms):
-    global latest_result
-    latest_result = result
-    if result.gestures:
-        for i, gesture_list in enumerate(result.gestures):
-            handedness = result.handedness[i][0].category_name if result.handedness else "Unknown"
-            # put tuple (gesture, handedness, timestamp) so we can check staleness later
-            gesture_queue.put((gesture_list[0], handedness, timestamp_ms))
 
-def take_action(gesture_name, detected_hand="Unknown"):
+def _find_matched_config(gesture_name, detected_hand="Unknown"):
     active_configs = file.get_active_configs()
-    matched_config = None
 
     for config_item in active_configs:
         config_hand = str(config_item.get("hand", "")).strip().lower()
-        
-        # Check hand match first
+
         hand_match = False
         if "both" in config_hand or not config_hand:
             hand_match = True
@@ -191,18 +180,26 @@ def take_action(gesture_name, detected_hand="Unknown"):
         elif "left" in config_hand and "left" in detected_hand.lower():
             hand_match = True
 
-        if _gesture_matches(config_item["gesture"], gesture_name):
-            if hand_match:
-                matched_config = config_item
-                break
+        if _gesture_matches(config_item["gesture"], gesture_name) and hand_match:
+            return config_item
 
+    return None
+
+
+def _is_volume_action(config_item):
+    action = str(config_item.get("action", ""))
+    return "volume" in _normalize_name(action)
+
+
+def _trigger_matched_config(matched_config, gesture_name, detected_hand="Unknown"):
     if matched_config is None:
         return
 
     action = str(matched_config.get("action", ""))
     device_name = str(matched_config.get("sound", ""))
-    connection_type = str(matched_config.get("connectionType", "ir"))
+    connection_type = str(matched_config.get("connectionType", "ir")).strip().lower()
     entity_id = str(matched_config.get("entityId", ""))
+    is_volume = "volume" in _normalize_name(action)
 
     if not _can_run_action(action, device_name):
         return
@@ -215,19 +212,59 @@ def take_action(gesture_name, detected_hand="Unknown"):
         return
 
     if connection_type == "smart":
+        if is_volume:
+            threading.Thread(
+                target=homeassistant.trigger_ha_action,
+                args=(entity_id, action),
+                daemon=True,
+            ).start()
+            return
+
         try:
-            smart_action_queue.put_nowait((entity_id, action))
-        except Full:
-            print("⚠️ Smart action queue full; dropping action to keep camera responsive.")
+            if ha_action_queue.full():
+                try:
+                    ha_action_queue.get_nowait()
+                except Empty:
+                    pass
+            ha_action_queue.put_nowait((entity_id, action))
+        except Exception as e:
+            print(f"Error queueing Home Assistant action: {e}")
         return
 
     # TODO: Execute non-PC actions here.
+
+# Modified gesture callback that puts results in queue
+latest_result = None
+def gesture_callback(result, output_image, timestamp_ms):
+    global latest_result
+    latest_result = result
+    if result.gestures:
+        for i, gesture_list in enumerate(result.gestures):
+            handedness = result.handedness[i][0].category_name if result.handedness else "Unknown"
+            # put tuple (gesture, handedness, timestamp) so we can check staleness later
+            gesture_queue.put((gesture_list[0], handedness, timestamp_ms))
+
+def take_action(gesture_name, detected_hand="Unknown"):
+    matched_config = _find_matched_config(gesture_name, detected_hand)
+
+    if matched_config is None:
+        return
+
+    _trigger_matched_config(matched_config, gesture_name, detected_hand)
 
 def process_gestures():
     while True:
         try:
             # This .get() blocks until data arrives, which is good (efficient)
             gesture, handedness, ts = gesture_queue.get()
+
+            # Keep only the newest gesture frame so we never process stale
+            # backlog after the fingers have already released.
+            while True:
+                try:
+                    gesture, handedness, ts = gesture_queue.get_nowait()
+                except Empty:
+                    break
 
             # 1. Staleness Check (Keep your existing logic)
             with latest_frame_lock:
@@ -238,9 +275,14 @@ def process_gestures():
             # 2. Process the gesture
             gesture_name = gesture.category_name
             confidence = gesture.score
+            matched_config = _find_matched_config(gesture_name, handedness)
+            if matched_config and _is_volume_action(matched_config):
+                continue
+
             if _can_log_detected_gesture():
                 print(f"Detected gesture: {gesture_name} ({handedness} Hand, confidence: {confidence:.2f})")
             main.send_msg(f"Gesture: {gesture_name} ({handedness})")
+
             take_action(gesture_name, handedness)
             
             # REMOVED: time.sleep(0.5) 
@@ -250,26 +292,21 @@ def process_gestures():
         except Exception as e:
             print(f"Error processing gesture: {e}")
 
+
+def process_homeassistant_actions():
+    while True:
+        try:
+            entity_id, action = ha_action_queue.get()
+            homeassistant.trigger_ha_action(entity_id, action)
+        except Exception as e:
+            print(f"Error processing Home Assistant action: {e}")
+
 # Start gesture processing thread
 gesture_thread = threading.Thread(target=process_gestures, daemon=True)
 gesture_thread.start()
 
-# Run Home Assistant actions on a separate worker so camera processing never
-# blocks on network delays/timeouts.
-smart_action_queue = Queue(maxsize=128)
-
-
-def _smart_action_worker():
-    while True:
-        try:
-            entity_id, action = smart_action_queue.get()
-            homeassistant.trigger_ha_action(entity_id, action)
-        except Exception as e:
-            print(f"Error in smart action worker: {e}")
-
-
-smart_action_thread = threading.Thread(target=_smart_action_worker, daemon=True)
-smart_action_thread.start()
+ha_action_thread = threading.Thread(target=process_homeassistant_actions, daemon=True)
+ha_action_thread.start()
 
 # Configure gesture recognizer
 options = GestureRecognizerOptions(
