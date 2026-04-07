@@ -186,11 +186,6 @@ def _find_matched_config(gesture_name, detected_hand="Unknown"):
     return None
 
 
-def _is_volume_action(config_item):
-    action = str(config_item.get("action", ""))
-    return "volume" in _normalize_name(action)
-
-
 def _trigger_matched_config(matched_config, gesture_name, detected_hand="Unknown"):
     if matched_config is None:
         return
@@ -275,9 +270,6 @@ def process_gestures():
             # 2. Process the gesture
             gesture_name = gesture.category_name
             confidence = gesture.score
-            matched_config = _find_matched_config(gesture_name, handedness)
-            if matched_config and _is_volume_action(matched_config):
-                continue
 
             if _can_log_detected_gesture():
                 print(f"Detected gesture: {gesture_name} ({handedness} Hand, confidence: {confidence:.2f})")
