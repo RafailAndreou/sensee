@@ -6,6 +6,13 @@ import 'package:path_provider/path_provider.dart';
 
 ValueNotifier<List<int>> connectionsList = ValueNotifier<List<int>>([]);
 int _nextConnectionId = 1;
+final Set<int> _pendingDeletedConnectionIds = <int>{};
+
+Set<int> get pendingDeletedConnectionIds => _pendingDeletedConnectionIds;
+
+void clearPendingConnectionDeletions() {
+  _pendingDeletedConnectionIds.clear();
+}
 
 // In mobile/surface_controller/lib/globals/connectionslist.dart
 
@@ -24,6 +31,7 @@ void addNewConnection() {
 }
 
 void removeConnection(int id) {
+  _pendingDeletedConnectionIds.add(id);
   connectionsList.value = List.from(connectionsList.value)
     ..removeWhere((connectionId) => connectionId == id);
 
@@ -190,6 +198,10 @@ void applyServerConfigurationsSnapshot(List<Map<String, dynamic>> incoming) {
   for (final configData in incoming) {
     final parsedId = int.tryParse('${configData["id"] ?? ''}');
     if (parsedId == null) {
+      continue;
+    }
+    if (_pendingDeletedConnectionIds.contains(parsedId)) {
+      // Ignore stale server echoes for IDs deleted locally but not yet acked.
       continue;
     }
 

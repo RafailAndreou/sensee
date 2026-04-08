@@ -40,6 +40,7 @@ Future<void> sendAllConfigurations() async {
 
     if (response.statusCode == 200) {
       connectionConfigs.forEach((id, config) => config.isSynced.value = true);
+      clearPendingConnectionDeletions();
     } else {
       connectionConfigs.forEach((id, config) => config.isSynced.value = false);
     }
