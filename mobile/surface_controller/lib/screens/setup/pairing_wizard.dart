@@ -24,6 +24,12 @@ class _PairingWizardState extends State<PairingWizard> {
     _startDiscovery();
   }
 
+  @override
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
+  }
+
   Future<void> _startDiscovery() async {
     setState(() {
       _isScanning = true;
@@ -151,14 +157,14 @@ class _PairingWizardState extends State<PairingWizard> {
         : Column(
             children: [
               if (_isScanning)
-                const Padding(
-                  padding: EdgeInsets.all(40.0),
+                Padding(
+                  padding: const EdgeInsets.all(40.0),
                   child: Center(
                     child: Column(
                       children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 20),
-                        Text("Scanning your network for TVs..."),
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 20),
+                        Text("Scanning your network for ${widget.deviceType}s..."),
                       ],
                     ),
                   ),
@@ -171,7 +177,7 @@ class _PairingWizardState extends State<PairingWizard> {
                       children: [
                         const Icon(Icons.search_off, size: 64, color: Colors.grey),
                         const SizedBox(height: 16),
-                        const Text("No new TVs found on your network."),
+                        Text("No new ${widget.deviceType}s found on your network."),
                         const SizedBox(height: 24),
                         ElevatedButton(
                           onPressed: _startDiscovery,

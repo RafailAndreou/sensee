@@ -29,16 +29,16 @@ void removeConnection(int id) {
 
   removeConnectionConfig(id);
 
-  if (connectionsList.value.isEmpty) {
-    _nextConnectionId = 0;
-  }
+  // Do not reset the counter to 0 when the list empties; doing so would risk
+  // ID collisions if locally-cached data (e.g. from a previous app session)
+  // still contains items with low IDs that haven't been flushed yet.
 }
 
 int countConnections() {
   return connectionsList.value.length;
 }
 
-void PrintDirectory() async {
+void printDocumentsDirectoryPath() async {
   final directory = await getApplicationDocumentsDirectory();
   print('App Documents Directory: ${directory.path}');
 }
@@ -86,25 +86,7 @@ void printAllConnections() {
   }
 }
 
-void configuesToJson() {
-  final Map<String, dynamic> allConfigs = {};
-
-  connectionConfigs.forEach((connectionId, config) {
-    allConfigs[connectionId.toString()] = {
-      "id": config.id.value,
-      "brand": config.brand.value,
-      "action": config.action.value,
-      "gesture": config.gesture.value,
-      "sound": config.sound.value,
-      "hand": config.hand.value,
-    };
-  });
-
-  final jsonString = jsonEncode(allConfigs);
-  debugPrint('All Connection Configs as JSON: $jsonString');
-}
-
-void saveConfigsToFile() async {
+Future<void> saveConfigsToFile() async {
   try {
     final Map<String, dynamic> allConfigs = {};
 
@@ -225,15 +207,25 @@ void applyServerConfigurationsSnapshot(List<Map<String, dynamic>> incoming) {
     config.isSynced.value = true;
   }
 
+  // Preserve local-only configs that have not yet been synced to the server
+  // (e.g. newly created cards). Remove configs that were previously synced but
+  // are no longer on the server (deleted from another device).
+  final localOnlyIds = <int>[];
   final existingIds = connectionConfigs.keys.toList(growable: false);
   for (final id in existingIds) {
     if (!incomingIds.contains(id)) {
-      removeConnectionConfig(id);
+      final config = connectionConfigs[id];
+      if (config != null && !config.isSynced.value) {
+        // Not yet sent to the server – keep it locally to avoid flickering.
+        localOnlyIds.add(id);
+      } else {
+        removeConnectionConfig(id);
+      }
     }
   }
 
-  final sortedIds = incomingIds.toList()..sort();
-  connectionsList.value = sortedIds;
-  _nextConnectionId = sortedIds.isEmpty ? 1 : (sortedIds.last + 1);
+  final allIds = [...incomingIds, ...localOnlyIds]..sort();
+  connectionsList.value = allIds;
+  _nextConnectionId = allIds.isEmpty ? 1 : (allIds.last + 1);
   saveConfigsToFile();
 }

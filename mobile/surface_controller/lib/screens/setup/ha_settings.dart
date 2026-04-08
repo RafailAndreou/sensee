@@ -14,6 +14,8 @@ class _HASettingsState extends State<HASettings> {
   bool _isLoading = true;
   bool _isSaving = false;
 
+  bool _tokenAlreadySaved = false;
+
   @override
   void initState() {
     super.initState();
@@ -25,7 +27,9 @@ class _HASettingsState extends State<HASettings> {
     if (mounted && config != null) {
       setState(() {
         _urlController.text = config['url'] ?? "";
-        // We don't fill the token for security, but we show a placeholder
+        // A non-empty masked token means a token is already stored on the server.
+        _tokenAlreadySaved =
+            (config['token'] as String? ?? '').isNotEmpty;
         _isLoading = false;
       });
     } else if (mounted) {
@@ -37,7 +41,9 @@ class _HASettingsState extends State<HASettings> {
     final url = _urlController.text.trim();
     final token = _tokenController.text.trim();
 
-    if (url.isEmpty || (token.isEmpty && _urlController.text.isNotEmpty)) {
+    // Require both fields unless the token was previously saved and the user
+    // chose to leave the field blank (meaning "keep the existing token").
+    if (url.isEmpty || (token.isEmpty && !_tokenAlreadySaved)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter a valid URL and Token")),
       );
@@ -98,10 +104,12 @@ class _HASettingsState extends State<HASettings> {
                 TextField(
                   controller: _tokenController,
                   obscureText: true,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: "Long-Lived Access Token",
-                    hintText: "Enter your HA Token here...",
-                    border: OutlineInputBorder(),
+                    hintText: _tokenAlreadySaved
+                        ? "Leave blank to keep existing token"
+                        : "Enter your HA Token here...",
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 40),

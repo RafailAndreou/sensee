@@ -197,6 +197,16 @@ class _ActionDetailsState extends State<ActionDetails> {
     final int connectionId;
     if (existingConnectionId != null) {
       connectionId = existingConnectionId;
+      // Preserve connection-level fields that may have been set during initial
+      // device selection; always keep them in sync with the widget values so
+      // that editing a smart-device connection doesn't lose its entity ID.
+      final existing = getConnectionConfig(connectionId);
+      if (widget.connectionType.isNotEmpty) {
+        existing.connectionType.value = widget.connectionType;
+      }
+      if (widget.entityId.isNotEmpty) {
+        existing.entityId.value = widget.entityId;
+      }
     } else {
       addNewConnection();
       connectionId = connectionsList.value.last;

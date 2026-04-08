@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
+from contextlib import asynccontextmanager
 import asyncio
 import os
 from typing import List
@@ -36,15 +37,12 @@ def send_msg(event: str):
 # ---------------- App Lifecycle ----------------
 mdns_task = None
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global mdns_task
     port = int(os.environ.get("SENSEE_PORT", 8000))
     mdns_task = asyncio.create_task(register_mdns_service(port))
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    global mdns_task
+    yield
     if mdns_task:
         print("Stopping mDNS service...")
         mdns_task.cancel()
@@ -53,6 +51,8 @@ async def shutdown_event():
         except asyncio.CancelledError:
             pass
         print("mDNS service stopped.")
+
+app = FastAPI(lifespan=lifespan)
 
 # ---------------- Routes ----------------
 @app.get("/")
@@ -105,10 +105,13 @@ def get_smart_devices():
 @app.get("/ha/config")
 def get_ha_config():
     config = file.load_ha_config()
-    # Mask the token for security
+    # Mask the token for security; only show prefix+suffix when the token is long
+    # enough that the masked portion is meaningfully hidden.
     masked_token = config.get("token", "")
-    if len(masked_token) > 10:
+    if len(masked_token) > 12:
         masked_token = masked_token[:5] + "..." + masked_token[-5:]
+    elif masked_token:
+        masked_token = "***"
     return {
         "url": config.get("url", ""),
         "token": masked_token
