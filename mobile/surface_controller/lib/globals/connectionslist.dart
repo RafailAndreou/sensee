@@ -38,7 +38,7 @@ int countConnections() {
   return connectionsList.value.length;
 }
 
-void printDirectory() async {
+void printDocumentsDirectoryPath() async {
   final directory = await getApplicationDocumentsDirectory();
   print('App Documents Directory: ${directory.path}');
 }

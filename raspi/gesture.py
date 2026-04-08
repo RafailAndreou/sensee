@@ -93,7 +93,7 @@ hand_thread = start_hand_movement_monitor(wrist_queue, main.send_msg)
 
 # Snapshot container for the latest async recognizer results. Defined once
 # outside the loop to avoid creating a new class object on every frame.
-class _HandResults:
+class HandResultsSnapshot:
     multi_hand_landmarks = None
 
 try:
@@ -113,7 +113,7 @@ try:
         with latest_result_lock:
             snapshot = latest_result
 
-        results = _HandResults()
+        results = HandResultsSnapshot()
         multi_hand_landmarks = []
         if snapshot and snapshot.hand_landmarks:
             for hand in snapshot.hand_landmarks:
