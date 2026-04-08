@@ -86,7 +86,7 @@ void printAllConnections() {
   }
 }
 
-void saveConfigsToFile() async {
+Future<void> saveConfigsToFile() async {
   try {
     final Map<String, dynamic> allConfigs = {};
 
