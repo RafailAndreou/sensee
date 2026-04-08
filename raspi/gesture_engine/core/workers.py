@@ -30,6 +30,10 @@ def process_gestures_loop(runtime, get_latest_frame_ts):
             gesture_name = gesture.category_name
             confidence = gesture.score
 
+            # Skip low-confidence detections to reduce false triggers.
+            if confidence < 0.70:
+                continue
+
             if can_log_detected_gesture(runtime):
                 print(
                     f"Detected gesture: {gesture_name} ({handedness} Hand, confidence: {confidence:.2f})"

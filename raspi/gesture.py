@@ -16,7 +16,6 @@ from gesture_engine.camera import (
     get_screen_metrics,
     start_hand_movement_monitor,
     touching,
-    translate_coords,
 )
 
 # Resolve the model path relative to this script's directory to avoid CWD issues
@@ -41,11 +40,14 @@ runtime = GestureRuntime(
 )
 gesture_queue = runtime.gesture_queue
 
-# Modified gesture callback that puts results in queue
+# Thread-safe storage for the latest async recognizer output.
 latest_result = None
+latest_result_lock = threading.Lock()
+
 def gesture_callback(result, output_image, timestamp_ms):
     global latest_result
-    latest_result = result
+    with latest_result_lock:
+        latest_result = result
     if result.gestures:
         for i, gesture_list in enumerate(result.gestures):
             handedness = result.handedness[i][0].category_name if result.handedness else "Unknown"
@@ -75,7 +77,7 @@ recognizer = GestureRecognizer.create_from_options(options)
 ip, server_thread = start_fastapi_server_in_background(main.get_local_ip)
 
 
-screen_w, screen_h, mouse_x, mouse_y = get_screen_metrics()
+screen_w, screen_h, _, _ = get_screen_metrics()
 
 print(screen_h, screen_w)
 
@@ -88,6 +90,11 @@ mp_drawing = mp.solutions.drawing_utils
 
 wrist_queue = Queue()
 hand_thread = start_hand_movement_monitor(wrist_queue, main.send_msg)
+
+# Snapshot container for the latest async recognizer results. Defined once
+# outside the loop to avoid creating a new class object on every frame.
+class _HandResults:
+    multi_hand_landmarks = None
 
 try:
     while cap.isOpened():
@@ -102,12 +109,14 @@ try:
         timestamp_ms = int(time.time() * 1000)
         recognizer.recognize_async(mp_image, timestamp_ms)
         
-        # Build mock results object from latest async recognizer output
-        class MockResults: pass
-        results = MockResults()
+        # Take a thread-safe snapshot of the latest recognizer output.
+        with latest_result_lock:
+            snapshot = latest_result
+
+        results = _HandResults()
         multi_hand_landmarks = []
-        if latest_result and latest_result.hand_landmarks:
-            for hand in latest_result.hand_landmarks:
+        if snapshot and snapshot.hand_landmarks:
+            for hand in snapshot.hand_landmarks:
                 proto = landmark_pb2.NormalizedLandmarkList()
                 proto.landmark.extend([
                     landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in hand
@@ -120,17 +129,6 @@ try:
             break
 
         if results.multi_hand_landmarks:
-            primary_hand_landmarks = results.multi_hand_landmarks[0]
-            
-            # move pointer with index tip
-            try:
-                index_x = primary_hand_landmarks.landmark[8].x
-                index_y = primary_hand_landmarks.landmark[8].y
-                mouse_x, mouse_y = translate_coords(index_x, index_y, screen_w, screen_h)
-                # pyautogui.moveTo(mouse_x, mouse_y, _pause=False)
-            except Exception:
-                pass
-
             for hand_idx, hand_landmarks in enumerate(results.multi_hand_landmarks):
                 try:
                     thumb = hand_landmarks.landmark[4]
@@ -139,12 +137,12 @@ try:
 
                     detected_hand = "Unknown"
                     if (
-                        latest_result
-                        and latest_result.handedness
-                        and hand_idx < len(latest_result.handedness)
-                        and latest_result.handedness[hand_idx]
+                        snapshot
+                        and snapshot.handedness
+                        and hand_idx < len(snapshot.handedness)
+                        and snapshot.handedness[hand_idx]
                     ):
-                        detected_hand = latest_result.handedness[hand_idx][0].category_name
+                        detected_hand = snapshot.handedness[hand_idx][0].category_name
 
                     if touching(thumb, middle):
                         take_action("Thumb+Middle", detected_hand)
@@ -154,8 +152,8 @@ try:
                     wrist = hand_landmarks.landmark[0]
                     if wrist:
                         wrist_queue.put(wrist)
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[warn] Hand processing error: {e}")
                 
             # draw landmarks (preview only)
             for draw_hand_landmarks in results.multi_hand_landmarks:

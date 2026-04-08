@@ -148,7 +148,7 @@ class _DashboardState extends State<Dashboard> {
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
                   removeConnection(connectionId);
-                  saveConfigsToFile();
+                  await saveConfigsToFile();
                   await server_sync.sendAllConfigurations();
                 },
               ),

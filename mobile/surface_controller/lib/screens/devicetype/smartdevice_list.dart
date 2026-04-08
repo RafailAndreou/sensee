@@ -31,28 +31,24 @@ class _SmartDeviceListState extends State<SmartDeviceList> {
     });
 
     try {
-      final discoveredUrl = await server_sync.discoverServerSmart();
-      if (discoveredUrl == null) {
+      final client = await server_sync.getServerClient();
+      if (client == null) {
         throw Exception("Could not discover server.");
       }
 
-      // Reconstruct URL to point to /smart-devices
-      final uri = Uri.parse(discoveredUrl);
-      final fetchUrl = Uri(
-        scheme: uri.scheme,
-        host: uri.host,
-        port: uri.port,
-        path: '/smart-devices',
-      );
-
-      final response = await http.get(fetchUrl).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(client.smartDevicesUri)
+          .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
-          // Filter devices by type (or keep all for now if type mapping fails)
           final allDevices = data['devices'] as List;
           setState(() {
-            _devices = allDevices.where((d) => d['type'].toString().toLowerCase() == widget.deviceType.toLowerCase()).toList();
+            _devices = allDevices
+                .where((d) =>
+                    d['type'].toString().toLowerCase() ==
+                    widget.deviceType.toLowerCase())
+                .toList();
             _isLoading = false;
           });
         } else {

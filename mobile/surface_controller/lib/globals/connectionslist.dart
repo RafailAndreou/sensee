@@ -29,16 +29,16 @@ void removeConnection(int id) {
 
   removeConnectionConfig(id);
 
-  if (connectionsList.value.isEmpty) {
-    _nextConnectionId = 0;
-  }
+  // Do not reset the counter to 0 when the list empties; doing so would risk
+  // ID collisions if locally-cached data (e.g. from a previous app session)
+  // still contains items with low IDs that haven't been flushed yet.
 }
 
 int countConnections() {
   return connectionsList.value.length;
 }
 
-void PrintDirectory() async {
+void printDirectory() async {
   final directory = await getApplicationDocumentsDirectory();
   print('App Documents Directory: ${directory.path}');
 }
@@ -84,24 +84,6 @@ void printAllConnections() {
     debugPrint('  Sound: ${getConnectionConfig(connectionId).sound.value}');
     debugPrint('  Hand: ${getConnectionConfig(connectionId).hand.value}');
   }
-}
-
-void configuesToJson() {
-  final Map<String, dynamic> allConfigs = {};
-
-  connectionConfigs.forEach((connectionId, config) {
-    allConfigs[connectionId.toString()] = {
-      "id": config.id.value,
-      "brand": config.brand.value,
-      "action": config.action.value,
-      "gesture": config.gesture.value,
-      "sound": config.sound.value,
-      "hand": config.hand.value,
-    };
-  });
-
-  final jsonString = jsonEncode(allConfigs);
-  debugPrint('All Connection Configs as JSON: $jsonString');
 }
 
 void saveConfigsToFile() async {
