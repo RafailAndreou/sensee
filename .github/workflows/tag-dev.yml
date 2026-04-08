@@ -1,0 +1,115 @@
+name: Create /dev tag for release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: 'Backfill /dev tags for all existing releases'
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  tag-release:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create dev tag
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tagName = context.payload.release.tag_name;
+            const devTag = `${tagName}/dev`;
+            const sha = context.payload.release.target_commitish;
+
+            // Resolve branch name to SHA if needed
+            let commitSha = sha;
+            if (!/^[0-9a-f]{40}$/i.test(sha)) {
+              const ref = await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `heads/${sha}`,
+              });
+              commitSha = ref.data.object.sha;
+            }
+
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${devTag}`,
+              sha: commitSha,
+            });
+
+            console.log(`Created tag: ${devTag} -> ${commitSha}`);
+
+  backfill-dev-tags:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Backfill /dev tags for all existing releases
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            for (const release of releases) {
+              const tagName = release.tag_name;
+              const devTag = `${tagName}/dev`;
+
+              // Check if the dev tag already exists
+              try {
+                await github.rest.git.getRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `tags/${devTag}`,
+                });
+                console.log(`Tag already exists: ${devTag}, skipping`);
+                continue;
+              } catch (e) {
+                // Tag doesn't exist, proceed to create it
+              }
+
+              // Get the SHA the release tag points to
+              let commitSha;
+              try {
+                const tagRef = await github.rest.git.getRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `tags/${tagName}`,
+                });
+                const tagObj = tagRef.data.object;
+
+                if (tagObj.type === 'tag') {
+                  // Annotated tag — dereference to commit
+                  const annotated = await github.rest.git.getTag({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    tag_sha: tagObj.sha,
+                  });
+                  commitSha = annotated.data.object.sha;
+                } else {
+                  commitSha = tagObj.sha;
+                }
+              } catch (e) {
+                console.log(`Could not resolve tag ${tagName}: ${e.message}`);
+                continue;
+              }
+
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `refs/tags/${devTag}`,
+                sha: commitSha,
+              });
+
+              console.log(`Created tag: ${devTag} -> ${commitSha}`);
+            }
