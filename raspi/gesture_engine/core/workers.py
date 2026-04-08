@@ -12,6 +12,16 @@ def can_log_detected_gesture(runtime):
         return True
 
 
+def minimum_confidence_for_gesture(gesture_name):
+    normalized = str(gesture_name).strip().lower().replace("_", " ")
+
+    # Palm/fist are prone to brief score dips; allow slightly lower threshold.
+    if "open palm" in normalized or "closed fist" in normalized or normalized == "fist":
+        return 0.60
+
+    return 0.70
+
+
 def process_gestures_loop(runtime, get_latest_frame_ts):
     while True:
         try:
@@ -31,7 +41,7 @@ def process_gestures_loop(runtime, get_latest_frame_ts):
             confidence = gesture.score
 
             # Skip low-confidence detections to reduce false triggers.
-            if confidence < 0.70:
+            if confidence < minimum_confidence_for_gesture(gesture_name):
                 continue
 
             if can_log_detected_gesture(runtime):

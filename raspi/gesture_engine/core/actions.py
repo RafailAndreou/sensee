@@ -124,6 +124,17 @@ def trigger_matched_config(runtime, matched_config, gesture_name, detected_hand=
             print(f"Error queueing Home Assistant action: {e}")
         return
 
+    # Handle IR devices (volume and non-volume actions)
+    try:
+        if runtime.ha_action_queue.full():
+            try:
+                runtime.ha_action_queue.get_nowait()
+            except Empty:
+                pass
+        runtime.ha_action_queue.put_nowait((entity_id, action))
+    except Exception as e:
+        print(f"Error queueing IR action: {e}")
+
 
 def take_action(runtime, gesture_name, detected_hand="Unknown"):
     active_configs = runtime.get_active_configs()

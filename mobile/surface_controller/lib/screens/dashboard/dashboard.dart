@@ -109,6 +109,8 @@ class _DashboardState extends State<Dashboard> {
                       deviceType: deviceType,
                       brand: config.brand.value,
                       editingConnectionId: connectionId,
+                      connectionType: config.connectionType.value,
+                      entityId: config.entityId.value,
                     ),
                   ),
                 );

@@ -3,6 +3,7 @@
 import cv2
 import mediapipe as mp
 from mediapipe.framework.formats import landmark_pb2
+from types import SimpleNamespace
 from server import main  # FastAPI app + helpers (set_frame_from_bgr, send_msg)
 from queue import Queue
 import threading
@@ -44,6 +45,12 @@ gesture_queue = runtime.gesture_queue
 latest_result = None
 latest_result_lock = threading.Lock()
 
+
+def enqueue_detected_gesture(gesture_name, handedness, timestamp_ms, score=1.0):
+    # Send synthetic and model gestures through the same queue path so
+    # filtering/timing behavior is consistent for all gesture types.
+    gesture_queue.put((SimpleNamespace(category_name=gesture_name, score=score), handedness, timestamp_ms))
+
 def gesture_callback(result, output_image, timestamp_ms):
     global latest_result
     with latest_result_lock:
@@ -51,11 +58,12 @@ def gesture_callback(result, output_image, timestamp_ms):
     if result.gestures:
         for i, gesture_list in enumerate(result.gestures):
             handedness = result.handedness[i][0].category_name if result.handedness else "Unknown"
-            # put tuple (gesture, handedness, timestamp) so we can check staleness later
-            gesture_queue.put((gesture_list[0], handedness, timestamp_ms))
-
-def take_action(gesture_name, detected_hand="Unknown"):
-    runtime.take_action(gesture_name, detected_hand)
+            enqueue_detected_gesture(
+                gesture_list[0].category_name,
+                handedness,
+                timestamp_ms,
+                gesture_list[0].score,
+            )
 
 
 def _get_latest_frame_ts():
@@ -145,9 +153,9 @@ try:
                         detected_hand = snapshot.handedness[hand_idx][0].category_name
 
                     if touching(thumb, middle):
-                        take_action("Thumb+Middle", detected_hand)
+                        enqueue_detected_gesture("Thumb+Middle", detected_hand, timestamp_ms)
                     elif touching(thumb, index):
-                        take_action("Thumb+Index", detected_hand)
+                        enqueue_detected_gesture("Thumb+Index", detected_hand, timestamp_ms)
 
                     wrist = hand_landmarks.landmark[0]
                     if wrist:
