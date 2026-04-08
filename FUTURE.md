@@ -95,7 +95,7 @@
 
 💡 **Suggestions**
 
-- **Important:** Real-time multi-phone configuration sync: if Phone X creates configs A and B, Phone Y should instantly show A and B in its dashboard cards; if Phone Y adds C, both phones should show A, B, and C without manual refresh or re-save.
+- **Important:** Reduce dashboard card flicker when adding/deleting configurations (currently visible after sync refresh). Updates should feel smooth with no visible jump/blink.
 - Add a configuration revision system (`version` or `updated_at`) so clients can detect and apply only new changes.
 - Add a live sync channel (WebSocket or Server-Sent Events) so all connected phones receive immediate dashboard updates.
 - Add conflict handling for concurrent edits with strict last-write-wins (no warning and no lock).
