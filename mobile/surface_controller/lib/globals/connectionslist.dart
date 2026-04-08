@@ -207,15 +207,25 @@ void applyServerConfigurationsSnapshot(List<Map<String, dynamic>> incoming) {
     config.isSynced.value = true;
   }
 
+  // Preserve local-only configs that have not yet been synced to the server
+  // (e.g. newly created cards). Remove configs that were previously synced but
+  // are no longer on the server (deleted from another device).
+  final localOnlyIds = <int>[];
   final existingIds = connectionConfigs.keys.toList(growable: false);
   for (final id in existingIds) {
     if (!incomingIds.contains(id)) {
-      removeConnectionConfig(id);
+      final config = connectionConfigs[id];
+      if (config != null && !config.isSynced.value) {
+        // Not yet sent to the server – keep it locally to avoid flickering.
+        localOnlyIds.add(id);
+      } else {
+        removeConnectionConfig(id);
+      }
     }
   }
 
-  final sortedIds = incomingIds.toList()..sort();
-  connectionsList.value = sortedIds;
-  _nextConnectionId = sortedIds.isEmpty ? 1 : (sortedIds.last + 1);
+  final allIds = [...incomingIds, ...localOnlyIds]..sort();
+  connectionsList.value = allIds;
+  _nextConnectionId = allIds.isEmpty ? 1 : (allIds.last + 1);
   saveConfigsToFile();
 }
