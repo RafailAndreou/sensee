@@ -2,6 +2,7 @@ from .runtime import GestureRuntime
 from .camera import (
     get_screen_metrics,
     start_hand_movement_monitor,
+    TouchConfirmation,
     touching,
     translate_coords,
 )

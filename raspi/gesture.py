@@ -17,6 +17,7 @@ from gesture_engine.camera import (
     get_screen_metrics,
     start_hand_movement_monitor,
     touching,
+    TouchConfirmation,
 )
 
 # Resolve the model path relative to this script's directory to avoid CWD issues
@@ -90,6 +91,9 @@ screen_w, screen_h, _, _ = get_screen_metrics()
 print(screen_h, screen_w)
 
 MIRROR_PREVIEW = True
+TOUCH_XY_THRESHOLD = 0.04
+TOUCH_Z_THRESHOLD = 0.02
+TOUCH_CONFIRM_FRAMES = 2
 
 cap = cv2.VideoCapture(0)
 
@@ -103,6 +107,9 @@ hand_thread = start_hand_movement_monitor(wrist_queue, main.send_msg)
 # outside the loop to avoid creating a new class object on every frame.
 class HandResultsSnapshot:
     multi_hand_landmarks = None
+
+
+touch_confirmation = TouchConfirmation(confirm_frames=TOUCH_CONFIRM_FRAMES)
 
 try:
     while cap.isOpened():
@@ -152,9 +159,23 @@ try:
                     ):
                         detected_hand = snapshot.handedness[hand_idx][0].category_name
 
-                    if touching(thumb, middle):
+                    middle_touching = touching(
+                        thumb,
+                        middle,
+                        threshold=TOUCH_XY_THRESHOLD,
+                        z_threshold=TOUCH_Z_THRESHOLD,
+                    )
+                    # Keep original precedence: Thumb+Middle wins if both look close.
+                    index_touching = False if middle_touching else touching(
+                        thumb,
+                        index,
+                        threshold=TOUCH_XY_THRESHOLD,
+                        z_threshold=TOUCH_Z_THRESHOLD,
+                    )
+
+                    if touch_confirmation.is_confirmed((hand_idx, "Thumb+Middle"), middle_touching):
                         enqueue_detected_gesture("Thumb+Middle", detected_hand, timestamp_ms)
-                    elif touching(thumb, index):
+                    elif touch_confirmation.is_confirmed((hand_idx, "Thumb+Index"), index_touching):
                         enqueue_detected_gesture("Thumb+Index", detected_hand, timestamp_ms)
 
                     wrist = hand_landmarks.landmark[0]
