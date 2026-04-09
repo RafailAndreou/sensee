@@ -4,13 +4,15 @@ import cv2
 import mediapipe as mp
 from mediapipe.framework.formats import landmark_pb2
 from types import SimpleNamespace
-from server import main  # FastAPI app + helpers (set_frame_from_bgr, send_msg)
 from queue import Queue
 import threading
 import time
 import os
 from server import file
 from server import homeassistant
+from server.discovery import get_local_ip
+from server.events import send_msg
+from server.streamer import set_frame_from_bgr
 from gesture_engine.runtime import GestureRuntime
 from gesture_engine.server_runner import start_fastapi_server_in_background
 from gesture_engine.camera import (
@@ -36,7 +38,7 @@ latest_frame_ts = 0
 latest_frame_lock = threading.Lock()
 
 runtime = GestureRuntime(
-    send_msg=main.send_msg,
+    send_msg=send_msg,
     get_active_configs=file.get_active_configs,
     trigger_ha_action=homeassistant.trigger_ha_action,
 )
@@ -83,7 +85,7 @@ options = GestureRecognizerOptions(
 
 recognizer = GestureRecognizer.create_from_options(options)
 
-ip, server_thread = start_fastapi_server_in_background(main.get_local_ip)
+ip, server_thread = start_fastapi_server_in_background(get_local_ip)
 
 
 screen_w, screen_h, _, _ = get_screen_metrics()
@@ -101,7 +103,7 @@ mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
 wrist_queue = Queue()
-hand_thread = start_hand_movement_monitor(wrist_queue, main.send_msg)
+hand_thread = start_hand_movement_monitor(wrist_queue, send_msg)
 
 # Snapshot container for the latest async recognizer results. Defined once
 # outside the loop to avoid creating a new class object on every frame.
@@ -196,7 +198,7 @@ try:
             frame = cv2.flip(frame, 1)
 
         # publish the frame to the FastAPI MJPEG stream
-        main.set_frame_from_bgr(frame)
+        set_frame_from_bgr(frame)
         # New: update latest frame timestamp
         with latest_frame_lock:
             latest_frame_ts = timestamp_ms

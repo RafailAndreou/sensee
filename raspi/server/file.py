@@ -1,13 +1,12 @@
 import json
 import os
-import copy
 
 HA_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "ha_config.json")
 CONFIG_FILE_PATH = os.path.join(os.path.dirname(__file__), "configure.json")
 
-def save_configure_json(configuration: dict):
+def save_configure_json(configuration: list):
     with open(CONFIG_FILE_PATH, "w+") as f:
-        f.write(json.dumps(configuration))
+        json.dump(configuration, f)
         print(f"✅ Configuration saved to {CONFIG_FILE_PATH}")
        
 def load_configure_json() -> list:
@@ -36,7 +35,22 @@ def load_ha_config() -> dict:
         print(f"⚠️ Error loading HA config: {e}")
         return {"url": "", "token": ""}
 
-loaded_config = load_configure_json()
+_loaded_config = load_configure_json()
+
+
+def get_loaded_config() -> list:
+    return list(_loaded_config)
+
+
+def set_loaded_config(configuration: list):
+    global _loaded_config
+    _loaded_config = list(configuration) if isinstance(configuration, list) else []
+
+
+def reload_config_cache() -> list:
+    global _loaded_config
+    _loaded_config = load_configure_json()
+    return list(_loaded_config)
 
 def _is_valid_config_item(item: dict) -> bool:
     if not isinstance(item, dict):
@@ -50,17 +64,5 @@ def _is_valid_config_item(item: dict) -> bool:
     return True
 
 def get_active_configs() -> list:
-    return [item for item in loaded_config if _is_valid_config_item(item)]
-    
-if __name__ == "__main__":
-    test_dictionary = {
-        "setting1": True,
-        "setting2": "value",
-        "setting3": 42
-    }
-    loaded_config = load_configure_json()
-    print(type(loaded_config))
-    for i in loaded_config:
-        if i["gesture"]=="Thumb+Index":
-            print(i["action"])
+    return [item for item in _loaded_config if _is_valid_config_item(item)]
             

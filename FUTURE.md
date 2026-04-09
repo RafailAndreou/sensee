@@ -141,3 +141,92 @@
 > Sensee merges **gesture AI**, **local privacy**, and **tactile minimalism** — creating a new way to interact with technology without screens or noise.
 
 ---
+
+## Engineering Issues Backlog
+
+This chapter tracks remaining architecture and organization work after the latest refactor pass.
+
+### Completed In This Pass
+
+- Removed duplicated FastAPI startup/port-retry logic by introducing shared startup logic in `raspi/server/startup.py` and using it from:
+  - `raspi/server/main.py`
+  - `raspi/gesture_engine/server_runner.py`
+- Removed dead/unused `raspi/sensee_api.py`.
+- Removed legacy `raspi/utils.py` after migrating debouncing to server-owned modules.
+- Decoupled gesture runtime from `server.main` by introducing dedicated imports in `raspi/gesture.py`:
+  - `server.events.send_msg`
+  - `server.streamer.set_frame_from_bgr`
+  - `server.discovery.get_local_ip`
+- Added explicit config cache APIs in `raspi/server/file.py`:
+  - `set_loaded_config(...)`
+  - `reload_config_cache()`
+- Split Home Assistant responsibilities (first phase):
+  - `raspi/server/ha_services.py` for action/domain mapping
+  - `raspi/server/ha_pairing.py` for pairing flow requests
+  - kept `raspi/server/homeassistant.py` as orchestrator entrypoint
+- Added dedicated Home Assistant HTTP client module:
+  - `raspi/server/ha_client.py` for session and timeout policy
+  - wired into `raspi/server/homeassistant.py`
+- Tightened config store internals in `raspi/server/file.py`:
+  - internal cache renamed to `_loaded_config`
+  - added `get_loaded_config()` read API
+  - kept `set_loaded_config(...)` and `reload_config_cache()`
+- Improved server package boundary metadata in `raspi/server/__init__.py`.
+
+### Remaining High Priority
+
+1. Finish Home Assistant split by isolating config/cache ownership.
+
+- `raspi/server/homeassistant.py` still owns HA config cache and entity cache state.
+- Target next modules:
+  - `raspi/server/ha_config.py` (load/cache/refresh of url+token)
+  - optional `raspi/server/ha_entities_cache.py` (entity cache policy)
+
+2. Complete config store encapsulation.
+
+- `raspi/server/file.py` now has explicit cache APIs and private internals, but still uses module-global mutable state.
+- Target: class-like store API (or module facade object) with controlled reads/writes and no module-level globals.
+
+3. Introduce one clear composition root (`app.py` or equivalent).
+
+- Startup responsibilities still span multiple files.
+- Target: one launcher that wires gesture loop + API and keeps modules import-safe.
+
+### Remaining Medium Priority
+
+1. Further split `raspi/gesture_engine/camera.py` into smaller focused modules.
+
+- Suggested boundaries:
+  - touch confirmation logic
+  - geometry/utilities
+  - hand movement monitor
+
+2. Move or retire legacy `raspi/utils.py`.
+
+- Done: `raspi/utils.py` removed.
+
+3. Move Home Assistant config/cache ownership into a dedicated module.
+
+- Keep `homeassistant.py` as thin orchestration with explicit dependencies.
+
+4. Improve package exports and module docs.
+
+- `raspi/server/__init__.py` can expose stable public imports and remove outdated wording.
+
+### Remaining Low Priority
+
+1. README cleanup and deduplication.
+
+- `README.md` contains repeated/generated draft sections and should be consolidated.
+
+2. Workspace hygiene for artifact-like directories.
+
+- Clarify status of `mobile/raspi/` (artifact workspace vs active source) and document or remove accordingly.
+
+### Suggested Next Refactor Order
+
+1. Home Assistant config/cache extraction (`ha_config.py` + optional entity cache module).
+2. Final config store encapsulation (replace module-global state in `server/file.py`).
+3. Single startup/composition module.
+4. Camera module split.
+5. Docs and workspace hygiene.

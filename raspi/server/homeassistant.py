@@ -1,8 +1,14 @@
 import requests
-import json
 import os
 import threading
 import time
+from server.ha_client import HAClient
+from server.ha_pairing import (
+    fetch_discovered_flows,
+    start_pairing_flow_request,
+    submit_pairing_step_request,
+)
+from server.ha_services import get_domain_from_entity, parse_action_to_service
 try:
     from server import file
 except ImportError:
@@ -24,7 +30,7 @@ TURN_ON_VERIFY_DELAY_SECONDS = float(os.getenv("SENSEE_TURN_ON_VERIFY_DELAY", "0
 
 _ha_config_cache = {"url": "", "token": ""}
 _ha_config_cache_lock = threading.Lock()
-_http_session = requests.Session()
+_http_client = HAClient(timeout=REQUEST_TIMEOUT)
 
 _volume_send_times = {}
 _volume_send_lock = threading.Lock()
@@ -67,55 +73,6 @@ def _get_runtime_config():
 def _has_valid_runtime_config(url_base: str, token: str) -> bool:
     return bool(url_base and token)
 
-def parse_action_to_service(action: str) -> str:
-    """Converts Sensee UI actions into Home Assistant service calls."""
-    action_lower = action.lower().strip()
-    if "turn on" in action_lower:
-        return "turn_on"
-    elif "turn off" in action_lower:
-        return "turn_off"
-    elif "increase volume" in action_lower or "volume up" in action_lower:
-        return "volume_up"
-    elif "decrease volume" in action_lower or "volume down" in action_lower:
-        return "volume_down"
-    elif "toggle" in action_lower:
-        return "toggle"
-    else:
-        return "turn_on" # default safe fallback
-
-def get_domain_from_entity(entity_id: str) -> str:
-    """Extracts the domain (e.g. 'light' from 'light.bedroom')"""
-    if "." in entity_id:
-        return entity_id.split(".")[0]
-    return "homeassistant"
-
-
-def _post_service(url_base: str, token: str, domain: str, service: str, data: dict):
-    url = f"{url_base}/api/services/{domain}/{service}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-    started = time.perf_counter()
-    response = _http_session.post(url, headers=headers, json=data, timeout=REQUEST_TIMEOUT)
-    elapsed_ms = (time.perf_counter() - started) * 1000.0
-    return response, elapsed_ms
-
-
-def _get_entity_state(url_base: str, token: str, entity_id: str):
-    headers = {"Authorization": f"Bearer {token}"}
-    try:
-        response = _http_session.get(
-            f"{url_base}/api/states/{entity_id}",
-            headers=headers,
-            timeout=REQUEST_TIMEOUT,
-        )
-        if response.status_code != 200:
-            return None
-        return response.json().get("state")
-    except requests.exceptions.RequestException:
-        return None
-
 
 def _entity_is_on(state: str) -> bool:
     return state in ("on", "playing", "idle", "paused")
@@ -127,7 +84,7 @@ def _try_tv_wake_fallback(url_base: str, token: str, target_entity_id: str) -> b
     if TV_WAKE_SCRIPT_ENTITY:
         attempted = True
         try:
-            response, _ = _post_service(
+            response, _ = _http_client.post_service(
                 url_base,
                 token,
                 "script",
@@ -143,7 +100,7 @@ def _try_tv_wake_fallback(url_base: str, token: str, target_entity_id: str) -> b
     if TV_WAKE_SWITCH_ENTITY:
         attempted = True
         try:
-            response, _ = _post_service(
+            response, _ = _http_client.post_service(
                 url_base,
                 token,
                 "switch",
@@ -159,7 +116,7 @@ def _try_tv_wake_fallback(url_base: str, token: str, target_entity_id: str) -> b
     if TV_WAKE_MAC:
         attempted = True
         try:
-            response, _ = _post_service(
+            response, _ = _http_client.post_service(
                 url_base,
                 token,
                 "wake_on_lan",
@@ -213,7 +170,7 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
         return True
 
     try:
-        response, elapsed_ms = _post_service(url_base, token, domain, service, data)
+        response, elapsed_ms = _http_client.post_service(url_base, token, domain, service, data)
         if response.status_code == 200:
             if DEBUG_HA_TIMING:
                 print(f"✅ Home Assistant accepted {entity_id} -> {service} in {elapsed_ms:.1f}ms")
@@ -223,7 +180,10 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
             # If TV remains unavailable/off after turn_on, fall back to a wake path.
             if domain == "media_player" and service == "turn_on":
                 time.sleep(TURN_ON_VERIFY_DELAY_SECONDS)
-                state = _get_entity_state(url_base, token, entity_id)
+                try:
+                    state = _http_client.get_entity_state(url_base, token, entity_id)
+                except requests.exceptions.RequestException:
+                    state = None
                 if state is None or not _entity_is_on(state):
                     print(f"⚠️ TV state after turn_on is '{state}'. Trying wake fallback...")
                     wake_ok = _try_tv_wake_fallback(url_base, token, entity_id)
@@ -271,14 +231,8 @@ def get_ha_entities(device_type_filter: str = None):
         print("❌ Home Assistant config missing. Cannot fetch entities.")
         return []
 
-    url = f"{url_base}/api/states"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-
     try:
-        response = _http_session.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = _http_client.get_all_states(url_base, token)
         if response.status_code != 200:
             print(f"❌ HA Fetch Error {response.status_code}: {response.text}")
             with _entities_cache_lock:
@@ -339,15 +293,8 @@ def get_discovered_flows():
     if not _has_valid_runtime_config(url, token):
         print("❌ Home Assistant config missing. Cannot fetch discovered flows.")
         return []
-
-    api_url = f"{url}/api/config/config_entries/flow"
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
     try:
-        response = _http_session.get(api_url, headers=headers, timeout=REQUEST_TIMEOUT)
-        if response.status_code == 200:
-            return response.json()
-        return []
+        return fetch_discovered_flows(url, token, _http_client.session, _http_client.timeout)
     except Exception as e:
         print(f"❌ Error fetching discovered flows: {e}")
         return []
@@ -357,14 +304,8 @@ def start_pairing_flow(handler: str):
     url, token = _get_runtime_config()
     if not _has_valid_runtime_config(url, token):
         return {"error": "Home Assistant config missing"}
-
-    api_url = f"{url}/api/config/config_entries/flow"
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    data = {"handler": handler}
-
     try:
-        response = _http_session.post(api_url, headers=headers, json=data, timeout=REQUEST_TIMEOUT)
-        return response.json()
+        return start_pairing_flow_request(url, token, handler, _http_client.session, _http_client.timeout)
     except Exception as e:
         print(f"❌ Error starting pairing flow: {e}")
         return {"error": str(e)}
@@ -374,13 +315,15 @@ def submit_pairing_step(flow_id: str, user_input: dict):
     url, token = _get_runtime_config()
     if not _has_valid_runtime_config(url, token):
         return {"error": "Home Assistant config missing"}
-
-    api_url = f"{url}/api/config/config_entries/flow/{flow_id}"
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
     try:
-        response = _http_session.post(api_url, headers=headers, json=user_input, timeout=REQUEST_TIMEOUT)
-        return response.json()
+        return submit_pairing_step_request(
+            url,
+            token,
+            flow_id,
+            user_input,
+            _http_client.session,
+            _http_client.timeout,
+        )
     except Exception as e:
         print(f"❌ Error submitting pairing step: {e}")
         return {"error": str(e)}

@@ -4,18 +4,18 @@ from contextlib import asynccontextmanager
 import asyncio
 import os
 from typing import List
-from collections import defaultdict
 
 from server import file
-import utils
 from server import homeassistant
 from server.config_validation import validate_configuration_payload
+from server.events import send_msg
 from server.models import (
     Configuration,
     HAConfigRequest,
     HAPairStartRequest,
     HAPairSubmitRequest,
 )
+from server.startup import run_uvicorn_with_port_retry
 from server.streamer import frame_hub, set_frame_from_bgr
 from server.discovery import register_mdns_service, get_local_ip
 
@@ -23,16 +23,6 @@ app = FastAPI()
 
 # ---------------- Config store ----------------
 current_config: dict = {}
-
-# ---------------- Events from gestures ----------------
-_last_events: dict[str, float] = {}
-_event_debouncers = defaultdict(lambda: utils.Debouncer(0.18))
-
-def send_msg(event: str):
-    """Called by gesture loop; here you could map to IR/BLE/whatever."""
-    if not _event_debouncers[event].can_trigger():
-        return
-    print(f"[gesture] {event}")
 
 # ---------------- App Lifecycle ----------------
 mdns_task = None
@@ -82,7 +72,7 @@ def configure(settings: List[Configuration]):
     for conf in current_config:
         print(f"  - ID {conf['id']}: {conf['brand']} {conf['action']} ({conf['gesture']})")
     file.save_configure_json(current_config)
-    file.loaded_config = file.load_configure_json()
+    file.set_loaded_config(current_config)
     return {"status": "configured", "count": len(current_config)}
 
 @app.get("/configuration")
@@ -152,35 +142,10 @@ def post_event(name: str):
 
 # -------------- Main --------------
 if __name__ == "__main__":
-    import uvicorn
     ip, _ = get_local_ip()
-    
-    ports_to_try = [8000, 8001, 8002, 8003, 8004]
-    started = False
-    
-    for attempt_port in ports_to_try:
-        try:
-            print(f"\n🌐 Server running at http://{ip}:{attempt_port}\n")
-            os.environ["SENSEE_PORT"] = str(attempt_port)
-            uvicorn.run("server.main:app", host="0.0.0.0", port=attempt_port)
-            started = True
-            break
-        except OSError as e:
-            error_str = str(e)
-            if "10048" in error_str or "Address already in use" in error_str:
-                if attempt_port == ports_to_try[-1]:
-                    print(f"❌ All ports {ports_to_try} are already in use!")
-                    print("   Please kill the background process or restart your system.")
-                    exit(1)
-                else:
-                    print(f"⚠️  Port {attempt_port} in use, trying {attempt_port + 1}...")
-            else:
-                raise
-        except Exception as e:
-            print(f"❌ Unexpected error: {e}")
-            raise
-    
-    if not started:
-        print("❌ Failed to start server")
-        exit(1)
+    run_uvicorn_with_port_retry(
+        app_import_path="server.main:app",
+        ip=ip,
+        context_label="Server running at",
+    )
 
