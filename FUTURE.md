@@ -176,6 +176,9 @@ This chapter tracks remaining architecture and organization work after the lates
   - `raspi/gesture_engine/core/movement.py`
   - `raspi/gesture_engine/geometry.py`
   - `raspi/gesture_engine/camera.py` now acts as a compatibility facade
+- Removed duplicate `mobile/raspi/` tree.
+- Removed release binary artifacts from `release/` and temporary mobile bugreport zip.
+- Collapsed duplicated README content into a single canonical `README.md`.
 - Improved server package boundary metadata in `raspi/server/__init__.py`.
 
 ### Remaining High Priority
@@ -223,15 +226,19 @@ This chapter tracks remaining architecture and organization work after the lates
 
 1. README cleanup and deduplication.
 
-- `README.md` contains repeated/generated draft sections and should be consolidated.
+- Done: `README.md` consolidated.
 
 2. Workspace hygiene for artifact-like directories.
 
-- Clarify status of `mobile/raspi/` (artifact workspace vs active source) and document or remove accordingly.
+- Done: duplicate `mobile/raspi/` removed.
+
+3. Decide long-term policy for release artifacts.
+
+- Done: release version folders were removed after binaries were cleaned up.
 
 ### Suggested Next Refactor Order
 
 1. Final config store encapsulation (replace module-global state in `server/file.py`).
 2. Single startup/composition module.
-3. Docs and workspace hygiene.
-4. Home Assistant config/cache extraction (`ha_config.py` + optional entity cache module) when testing is available.
+3. Home Assistant config/cache extraction (`ha_config.py` + optional entity cache module) when testing is available.
+4. Final docs pass after architecture stabilizes.
