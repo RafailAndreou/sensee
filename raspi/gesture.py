@@ -135,9 +135,9 @@ try:
         if snapshot and snapshot.hand_landmarks:
             for hand in snapshot.hand_landmarks:
                 proto = landmark_pb2.NormalizedLandmarkList()
-                proto.landmark.extend([
-                    landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in hand
-                ])
+                proto.landmark.extend(
+                    [landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in hand]
+                )
                 multi_hand_landmarks.append(proto)
         results.multi_hand_landmarks = multi_hand_landmarks if multi_hand_landmarks else None
 
