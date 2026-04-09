@@ -171,6 +171,11 @@ This chapter tracks remaining architecture and organization work after the lates
   - internal cache renamed to `_loaded_config`
   - added `get_loaded_config()` read API
   - kept `set_loaded_config(...)` and `reload_config_cache()`
+- Split camera-related gesture utilities into focused modules while preserving compatibility imports:
+  - `raspi/gesture_engine/core/confirmation.py`
+  - `raspi/gesture_engine/core/movement.py`
+  - `raspi/gesture_engine/geometry.py`
+  - `raspi/gesture_engine/camera.py` now acts as a compatibility facade
 - Improved server package boundary metadata in `raspi/server/__init__.py`.
 
 ### Remaining High Priority
@@ -200,6 +205,7 @@ This chapter tracks remaining architecture and organization work after the lates
   - touch confirmation logic
   - geometry/utilities
   - hand movement monitor
+- Done in current refactor pass; keep facade for backward compatibility.
 
 2. Move or retire legacy `raspi/utils.py`.
 
@@ -225,8 +231,7 @@ This chapter tracks remaining architecture and organization work after the lates
 
 ### Suggested Next Refactor Order
 
-1. Home Assistant config/cache extraction (`ha_config.py` + optional entity cache module).
-2. Final config store encapsulation (replace module-global state in `server/file.py`).
-3. Single startup/composition module.
-4. Camera module split.
-5. Docs and workspace hygiene.
+1. Final config store encapsulation (replace module-global state in `server/file.py`).
+2. Single startup/composition module.
+3. Docs and workspace hygiene.
+4. Home Assistant config/cache extraction (`ha_config.py` + optional entity cache module) when testing is available.
