@@ -15,6 +15,7 @@ from server.events import send_msg
 from server.streamer import set_frame_from_bgr
 from gesture_engine.runtime import GestureRuntime
 from gesture_engine.server_runner import start_fastapi_server_in_background
+from gesture_engine.core.matching import normalize_name, find_matched_config
 from gesture_engine.camera import (
     get_screen_metrics,
     start_hand_movement_monitor,
@@ -96,6 +97,13 @@ MIRROR_PREVIEW = True
 TOUCH_XY_THRESHOLD = 0.04
 TOUCH_Z_THRESHOLD = 0.02
 TOUCH_CONFIRM_FRAMES = 2
+CONFIRMATION_ACTION_KEYWORDS = (
+    "turn on",
+    "turn off",
+    "open",
+    "close",
+    "toggle",
+)
 
 cap = cv2.VideoCapture(0)
 
@@ -112,6 +120,13 @@ class HandResultsSnapshot:
 
 
 touch_confirmation = TouchConfirmation(confirm_frames=TOUCH_CONFIRM_FRAMES)
+
+
+def action_requires_confirmation(action_name):
+    normalized_action = normalize_name(action_name)
+    if "volume" in normalized_action:
+        return False
+    return any(keyword in normalized_action for keyword in CONFIRMATION_ACTION_KEYWORDS)
 
 try:
     while cap.isOpened():
@@ -175,10 +190,28 @@ try:
                         z_threshold=TOUCH_Z_THRESHOLD,
                     )
 
-                    if touch_confirmation.is_confirmed((hand_idx, "Thumb+Middle"), middle_touching):
-                        enqueue_detected_gesture("Thumb+Middle", detected_hand, timestamp_ms)
-                    elif touch_confirmation.is_confirmed((hand_idx, "Thumb+Index"), index_touching):
-                        enqueue_detected_gesture("Thumb+Index", detected_hand, timestamp_ms)
+                    gesture_candidates = (
+                        ("Thumb+Middle", middle_touching),
+                        ("Thumb+Index", index_touching),
+                    )
+                    for gesture_name, is_touching in gesture_candidates:
+                        if not is_touching:
+                            continue
+
+                        matched_config = find_matched_config(
+                            runtime.get_active_configs(),
+                            gesture_name,
+                            detected_hand,
+                        )
+                        if matched_config is None:
+                            continue
+
+                        action_name = str(matched_config.get("action", ""))
+                        if action_requires_confirmation(action_name):
+                            if not touch_confirmation.is_confirmed((hand_idx, gesture_name), True):
+                                continue
+
+                        enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
 
                     wrist = hand_landmarks.landmark[0]
                     if wrist:
