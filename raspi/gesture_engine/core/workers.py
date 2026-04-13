@@ -1,10 +1,28 @@
 import threading
 import time
 from queue import Empty
+from types import SimpleNamespace
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from gesture_engine.runtime import GestureRuntime
+
+MAX_LATENCY_MS = 100
+MIN_CONFIDENCE_DEFAULT = 0.70
+MIN_CONFIDENCE_PALM_FIST = 0.60
 
 
-def drain_gesture_queue_to_latest(runtime):
-    """Keep only the most recent queued gesture to avoid stale backlog effects."""
+def drain_gesture_queue_to_latest(
+    runtime: "GestureRuntime",
+) -> tuple[SimpleNamespace, str, int]:
+    """Return the newest gesture event so workers act on current intent.
+
+    Args:
+        runtime: Shared runtime that owns the gesture queue.
+
+    Returns:
+        The latest queued `(gesture, handedness, event_ts_ms)` tuple.
+    """
     gesture, handedness, event_ts_ms = runtime.gesture_queue.get()
 
     while True:
@@ -14,11 +32,34 @@ def drain_gesture_queue_to_latest(runtime):
             return gesture, handedness, event_ts_ms
 
 
-def is_stale_gesture(runtime, event_ts_ms, latest_frame_ts_ms):
-    return event_ts_ms < latest_frame_ts_ms - runtime.policy.stale_gesture_ms
+def is_stale_gesture(
+    runtime: "GestureRuntime",
+    event_ts_ms: int,
+    latest_frame_ts_ms: int,
+) -> bool:
+    """Drop events that are too old to represent the current frame state.
+
+    Args:
+        runtime: Shared runtime with policy values.
+        event_ts_ms: Timestamp associated with the queued gesture event.
+        latest_frame_ts_ms: Timestamp of the latest frame shown/processed.
+
+    Returns:
+        `True` when the gesture event should be skipped as stale.
+    """
+    stale_after_ms = getattr(runtime.policy, "stale_gesture_ms", MAX_LATENCY_MS)
+    return event_ts_ms < latest_frame_ts_ms - stale_after_ms
 
 
-def can_log_detected_gesture(runtime):
+def can_log_detected_gesture(runtime: "GestureRuntime") -> bool:
+    """Throttle logs so high frame-rate detection does not flood stdout.
+
+    Args:
+        runtime: Shared runtime holding log throttle state.
+
+    Returns:
+        `True` when logging is allowed for the current event.
+    """
     now = time.monotonic()
     with runtime.gesture_log_lock:
         if now - runtime.last_gesture_log_time < runtime.policy.gesture_log_interval_seconds:
@@ -27,18 +68,31 @@ def can_log_detected_gesture(runtime):
         return True
 
 
-def minimum_confidence_for_gesture(gesture_name):
+def minimum_confidence_for_gesture(gesture_name: str) -> float:
+    """Use gesture-specific confidence thresholds to reduce false triggers.
+
+    Args:
+        gesture_name: Recognized gesture label.
+
+    Returns:
+        Minimum accepted confidence for that gesture family.
+    """
     normalized = str(gesture_name).strip().lower().replace("_", " ")
 
     # Palm/fist are prone to brief score dips; allow slightly lower threshold.
     if "open palm" in normalized or "closed fist" in normalized or normalized == "fist":
-        return 0.60
+        return MIN_CONFIDENCE_PALM_FIST
 
-    return 0.70
+    return MIN_CONFIDENCE_DEFAULT
 
 
-def process_gestures_loop(runtime, get_latest_frame_ts):
-    """Process gestures in real-time, dropping stale or low-confidence detections."""
+def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> None:
+    """Consume gesture events and dispatch only fresh, confident detections.
+
+    Args:
+        runtime: Shared runtime with queues and callbacks.
+        get_latest_frame_ts: Callback returning the latest frame timestamp.
+    """
     while True:
         try:
             gesture, handedness, event_ts_ms = drain_gesture_queue_to_latest(runtime)
@@ -65,7 +119,12 @@ def process_gestures_loop(runtime, get_latest_frame_ts):
             print(f"Error processing gesture: {e}")
 
 
-def process_homeassistant_actions_loop(runtime):
+def process_homeassistant_actions_loop(runtime: "GestureRuntime") -> None:
+    """Serialize Home Assistant actions through a single worker thread.
+
+    Args:
+        runtime: Shared runtime that owns the HA action queue.
+    """
     while True:
         try:
             entity_id, action = runtime.ha_action_queue.get()
@@ -74,7 +133,19 @@ def process_homeassistant_actions_loop(runtime):
             print(f"Error processing Home Assistant action: {e}")
 
 
-def start_workers(runtime, get_latest_frame_ts):
+def start_workers(
+    runtime: "GestureRuntime",
+    get_latest_frame_ts,
+) -> tuple[threading.Thread, threading.Thread]:
+    """Start background worker threads for gesture and HA action processing.
+
+    Args:
+        runtime: Shared runtime used by both workers.
+        get_latest_frame_ts: Callback returning the latest camera frame timestamp.
+
+    Returns:
+        Pair of started worker threads `(gesture_thread, ha_action_thread)`.
+    """
     gesture_thread = threading.Thread(
         target=process_gestures_loop,
         args=(runtime, get_latest_frame_ts),
