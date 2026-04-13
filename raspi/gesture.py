@@ -174,7 +174,7 @@ class GestureApp:
         options = mp.tasks.vision.GestureRecognizerOptions(
             base_options=base_options,
             running_mode=mp.tasks.vision.RunningMode.LIVE_STREAM,
-            num_hands=2,
+            num_hands=1,
             result_callback=self.gesture_callback
         )
 
