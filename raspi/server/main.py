@@ -3,7 +3,8 @@ from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
 from contextlib import asynccontextmanager
 import asyncio
 import os
-from typing import List
+from dataclasses import dataclass, field
+from typing import Any, List
 
 from server import file
 from server import homeassistant
@@ -16,23 +17,49 @@ from server.models import (
     HAPairSubmitRequest,
 )
 from server.startup import run_uvicorn_with_port_retry
-from server.streamer import frame_hub, set_frame_from_bgr
+from server.streamer import frame_hub
 from server.discovery import register_mdns_service, get_local_ip
 
-app = FastAPI()
 
-# ---------------- Config store ----------------
-current_config: dict = {}
+@dataclass
+class AppState:
+    """Lightweight in-memory app state shared by route handlers."""
 
-# ---------------- App Lifecycle ----------------
-mdns_task = None
+    current_config: list[dict[str, Any]] = field(default_factory=list)
+
+
+def _validate_configuration_or_raise(configs: list[dict[str, Any]]) -> None:
+    validation_error = validate_configuration_payload(configs)
+    if validation_error:
+        raise HTTPException(status_code=400, detail=validation_error)
+
+
+def _persist_configuration(configs: list[dict[str, Any]]) -> None:
+    file.save_configure_json(configs)
+    file.set_loaded_config(configs)
+
+
+def _log_received_configurations(configs: list[dict[str, Any]]) -> None:
+    print(f"\nReceived {len(configs)} configurations:")
+    for conf in configs:
+        print(f"  - ID {conf['id']}: {conf['brand']} {conf['action']} ({conf['gesture']})")
+
+
+def _mask_token(token: str) -> str:
+    """Mask sensitive token values while still exposing enough for verification."""
+    if len(token) > 12:
+        return token[:5] + "..." + token[-5:]
+    if token:
+        return "***"
+    return ""
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global mdns_task
+    app.state.sensee = AppState()
     port = int(os.environ.get("SENSEE_PORT", 8000))
-    mdns_task = asyncio.create_task(register_mdns_service(port))
+    app.state.mdns_task = asyncio.create_task(register_mdns_service(port))
     yield
+    mdns_task = getattr(app.state, "mdns_task", None)
     if mdns_task:
         print("Stopping mDNS service...")
         mdns_task.cancel()
@@ -62,23 +89,13 @@ def ping():
 
 @app.post("/configuration")
 def configure(settings: List[Configuration]):
-    global current_config
     incoming_config = [s.model_dump() for s in settings]
+    _validate_configuration_or_raise(incoming_config)
 
-    validation_error = validate_configuration_payload(incoming_config)
-    if validation_error:
-        raise HTTPException(
-            status_code=400,
-            detail=validation_error,
-        )
-
-    current_config = incoming_config
-    print(f"\n✅ Received {len(current_config)} configurations:")
-    for conf in current_config:
-        print(f"  - ID {conf['id']}: {conf['brand']} {conf['action']} ({conf['gesture']})")
-    file.save_configure_json(current_config)
-    file.set_loaded_config(current_config)
-    return {"status": "configured", "count": len(current_config)}
+    app.state.sensee.current_config = incoming_config
+    _log_received_configurations(incoming_config)
+    _persist_configuration(incoming_config)
+    return {"status": "configured", "count": len(incoming_config)}
 
 @app.get("/configuration")
 def get_configuration():
@@ -86,7 +103,7 @@ def get_configuration():
 
 @app.get("/current")
 def get_current_config():
-    return current_config
+    return app.state.sensee.current_config
 
 @app.get("/smart-devices")
 def get_smart_devices():
@@ -100,16 +117,9 @@ def get_smart_devices():
 @app.get("/ha/config")
 def get_ha_config():
     config = file.load_ha_config()
-    # Mask the token for security; only show prefix+suffix when the token is long
-    # enough that the masked portion is meaningfully hidden.
-    masked_token = config.get("token", "")
-    if len(masked_token) > 12:
-        masked_token = masked_token[:5] + "..." + masked_token[-5:]
-    elif masked_token:
-        masked_token = "***"
     return {
         "url": config.get("url", ""),
-        "token": masked_token
+        "token": _mask_token(config.get("token", "")),
     }
 
 @app.post("/ha/config")

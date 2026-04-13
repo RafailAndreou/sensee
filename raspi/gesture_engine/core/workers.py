@@ -3,10 +3,25 @@ import time
 from queue import Empty
 
 
+def drain_gesture_queue_to_latest(runtime):
+    """Keep only the most recent queued gesture to avoid stale backlog effects."""
+    gesture, handedness, event_ts_ms = runtime.gesture_queue.get()
+
+    while True:
+        try:
+            gesture, handedness, event_ts_ms = runtime.gesture_queue.get_nowait()
+        except Empty:
+            return gesture, handedness, event_ts_ms
+
+
+def is_stale_gesture(runtime, event_ts_ms, latest_frame_ts_ms):
+    return event_ts_ms < latest_frame_ts_ms - runtime.policy.stale_gesture_ms
+
+
 def can_log_detected_gesture(runtime):
     now = time.monotonic()
     with runtime.gesture_log_lock:
-        if now - runtime.last_gesture_log_time < runtime.gesture_log_interval_seconds:
+        if now - runtime.last_gesture_log_time < runtime.policy.gesture_log_interval_seconds:
             return False
         runtime.last_gesture_log_time = now
         return True
@@ -23,18 +38,13 @@ def minimum_confidence_for_gesture(gesture_name):
 
 
 def process_gestures_loop(runtime, get_latest_frame_ts):
+    """Process gestures in real-time, dropping stale or low-confidence detections."""
     while True:
         try:
-            gesture, handedness, ts = runtime.gesture_queue.get()
+            gesture, handedness, event_ts_ms = drain_gesture_queue_to_latest(runtime)
 
-            while True:
-                try:
-                    gesture, handedness, ts = runtime.gesture_queue.get_nowait()
-                except Empty:
-                    break
-
-            current_ts = get_latest_frame_ts()
-            if ts < current_ts - 100:
+            latest_frame_ts_ms = get_latest_frame_ts()
+            if is_stale_gesture(runtime, event_ts_ms, latest_frame_ts_ms):
                 continue
 
             gesture_name = gesture.category_name

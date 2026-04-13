@@ -8,38 +8,40 @@ import pyautogui
 from .matching import normalize_name, normalized_parts, find_matched_config
 
 
-def device_key(value):
+def get_device_family(value):
     parts = normalized_parts(value)
     if not parts:
         return ""
     return parts[0]
 
 
-def action_key(action_name, device_name):
+def build_action_cooldown_key(action_name, device_name):
     return f"{normalize_name(device_name)}:{normalize_name(action_name)}"
 
 
 def action_cooldown_seconds(runtime, action_name, device_name):
+    """Throttle repeated actions from sustained gestures while allowing volume passthrough."""
     action_normalized = normalize_name(action_name)
     if "volume" in action_normalized:
         return 0.0
 
-    if device_key(device_name) == "pc":
-        return runtime.action_cooldowns["pc"]
+    device_family = get_device_family(device_name)
+    if device_family == "pc":
+        return runtime.policy.action_cooldowns["pc"]
 
-    for keyword in runtime.control_action_keywords:
+    for keyword in runtime.policy.control_action_keywords:
         if keyword in action_normalized:
             return 1.5
 
-    return runtime.action_cooldowns.get(device_key(device_name), 0.0)
+    return runtime.policy.action_cooldowns.get(device_family, 0.0)
 
 
-def can_run_action(runtime, action_name, device_name):
+def should_execute_action(runtime, action_name, device_name):
     cooldown_seconds = action_cooldown_seconds(runtime, action_name, device_name)
     if cooldown_seconds <= 0:
         return True
 
-    key = action_key(action_name, device_name)
+    key = build_action_cooldown_key(action_name, device_name)
     now = time.monotonic()
 
     with runtime.action_trigger_lock:
@@ -84,23 +86,30 @@ def execute_pc_action(action_name):
     return False
 
 
-def trigger_matched_config(runtime, matched_config, gesture_name, detected_hand="Unknown"):
-    if matched_config is None:
-        return
+def queue_latest_homeassistant_action(runtime, entity_id, action):
+    """Keep only the latest queued HA action so UI responsiveness is prioritized."""
+    if runtime.ha_action_queue.full():
+        try:
+            runtime.ha_action_queue.get_nowait()
+        except Empty:
+            pass
+    runtime.ha_action_queue.put_nowait((entity_id, action))
 
+
+def execute_configured_action(runtime, matched_config, gesture_name):
     action = str(matched_config.get("action", ""))
     device_name = str(matched_config.get("sound", ""))
     connection_type = str(matched_config.get("connectionType", "ir")).strip().lower()
     entity_id = str(matched_config.get("entityId", ""))
     is_volume = "volume" in normalize_name(action)
 
-    if not can_run_action(runtime, action, device_name):
+    if not should_execute_action(runtime, action, device_name):
         return
 
     runtime.send_msg(f"{gesture_name} touch detected")
     print(f"Executing action: {device_name} {action}")
 
-    if device_key(device_name) == "pc":
+    if get_device_family(device_name) == "pc":
         execute_pc_action(action)
         return
 
@@ -114,33 +123,24 @@ def trigger_matched_config(runtime, matched_config, gesture_name, detected_hand=
             return
 
         try:
-            if runtime.ha_action_queue.full():
-                try:
-                    runtime.ha_action_queue.get_nowait()
-                except Empty:
-                    pass
-            runtime.ha_action_queue.put_nowait((entity_id, action))
+            queue_latest_homeassistant_action(runtime, entity_id, action)
         except Exception as e:
             print(f"Error queueing Home Assistant action: {e}")
         return
 
     # Handle IR devices (volume and non-volume actions)
     try:
-        if runtime.ha_action_queue.full():
-            try:
-                runtime.ha_action_queue.get_nowait()
-            except Empty:
-                pass
-        runtime.ha_action_queue.put_nowait((entity_id, action))
+        queue_latest_homeassistant_action(runtime, entity_id, action)
     except Exception as e:
         print(f"Error queueing IR action: {e}")
 
 
 def take_action(runtime, gesture_name, detected_hand="Unknown"):
+    """Resolve config for a gesture-hand pair and execute the mapped action."""
     active_configs = runtime.get_active_configs()
     matched_config = find_matched_config(active_configs, gesture_name, detected_hand)
 
     if matched_config is None:
         return
 
-    trigger_matched_config(runtime, matched_config, gesture_name, detected_hand)
+    execute_configured_action(runtime, matched_config, gesture_name)

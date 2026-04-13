@@ -183,7 +183,6 @@ class _DashboardState extends State<Dashboard> {
         Navigator.of(
           context,
         ).push(MaterialPageRoute(builder: (_) => const DeviceType()));
-        // TODO: Hook up settings action.
       },
       icon: const Icon(Icons.add),
       style: IconButton.styleFrom(

@@ -76,7 +76,7 @@ def resolve_detected_hand(snapshot, hand_idx):
 class GestureApp:
     def __init__(self):
         # Preserve startup config-load side effects/logging from pre-refactor flow.
-        self.configuration = file.load_configure_json()
+        self.loaded_configuration = file.load_configure_json()
 
         self.latest_frame_ts = 0
         self.latest_frame_lock = threading.Lock()
@@ -95,9 +95,9 @@ class GestureApp:
         with self.latest_frame_lock:
             return self.latest_frame_ts
 
-    def _update_latest_frame_ts(self, ts):
+    def _update_latest_frame_ts(self, timestamp_ms):
         with self.latest_frame_lock:
-            self.latest_frame_ts = ts
+            self.latest_frame_ts = timestamp_ms
 
     def _get_latest_snapshot(self):
         with self.latest_result_lock:
@@ -112,8 +112,8 @@ class GestureApp:
         with self.latest_result_lock:
             self.latest_result = result
         if result.gestures:
-            for i, gesture_list in enumerate(result.gestures):
-                handedness = result.handedness[i][0].category_name if result.handedness else "Unknown"
+            for hand_idx, gesture_list in enumerate(result.gestures):
+                handedness = result.handedness[hand_idx][0].category_name if result.handedness else "Unknown"
                 self.enqueue_detected_gesture(
                     gesture_list[0].category_name,
                     handedness,
@@ -165,7 +165,7 @@ class GestureApp:
             self.enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
 
     def run(self):
-        gesture_thread, ha_action_thread = self.runtime.start_workers(self._get_latest_frame_ts)
+        _gesture_thread, _ha_action_thread = self.runtime.start_workers(self._get_latest_frame_ts)
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         model_path = os.path.join(script_dir, "assets", "gesture_recognizer.task")
@@ -179,12 +179,12 @@ class GestureApp:
         )
 
         recognizer = mp.tasks.vision.GestureRecognizer.create_from_options(options)
-        ip, server_thread = start_fastapi_server_in_background(get_local_ip)
+        _server_ip, _server_thread = start_fastapi_server_in_background(get_local_ip)
 
         screen_w, screen_h, _, _ = get_screen_metrics()
         print(screen_h, screen_w)
 
-        hand_thread = start_hand_movement_monitor(self.wrist_queue, send_msg)
+        _hand_thread = start_hand_movement_monitor(self.wrist_queue, send_msg)
 
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
@@ -208,13 +208,13 @@ class GestureApp:
                 recognizer.recognize_async(mp_image, timestamp_ms)
 
                 snapshot = self._get_latest_snapshot()
-                results = HandResultsSnapshot(snapshot_to_multi_hand_landmarks(snapshot))
+                hand_snapshot = HandResultsSnapshot(snapshot_to_multi_hand_landmarks(snapshot))
 
                 if cv2.waitKey(1) & 0xFF in (ord('q'), ord('Q')):
                     break
 
-                if results.multi_hand_landmarks:
-                    for hand_idx, hand_landmarks in enumerate(results.multi_hand_landmarks):
+                if hand_snapshot.multi_hand_landmarks:
+                    for hand_idx, hand_landmarks in enumerate(hand_snapshot.multi_hand_landmarks):
                         try:
                             detected_hand = resolve_detected_hand(snapshot, hand_idx)
                             self.process_touch_gestures_for_hand(
@@ -230,7 +230,7 @@ class GestureApp:
                         except Exception as e:
                             print(f"[warn] Hand processing error: {e}")
                         
-                    for draw_hand_landmarks in results.multi_hand_landmarks:
+                    for draw_hand_landmarks in hand_snapshot.multi_hand_landmarks:
                         mp_drawing.draw_landmarks(
                             frame,
                             draw_hand_landmarks,
