@@ -34,7 +34,7 @@ def process_gestures_loop(runtime, get_latest_frame_ts):
                     break
 
             current_ts = get_latest_frame_ts()
-            if ts < current_ts - 300:
+            if ts < current_ts - 100:
                 continue
 
             gesture_name = gesture.category_name
