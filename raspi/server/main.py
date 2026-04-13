@@ -55,6 +55,11 @@ def index():
     </html>
     """)
 
+
+@app.get("/ping")
+def ping():
+    return {"status": "ok"}
+
 @app.post("/configuration")
 def configure(settings: List[Configuration]):
     global current_config

@@ -6,6 +6,10 @@ def _check_hand_movement(wrist_queue, send_msg, movement_threshold=0.02):
     while True:
         try:
             wrist = wrist_queue.get()
+            
+            if wrist is None:  # Sentinel value to gracefully exit the thread
+                break
+
             current_pos = (wrist.x, wrist.y)
 
             if prev_pos is not None:
@@ -18,8 +22,8 @@ def _check_hand_movement(wrist_queue, send_msg, movement_threshold=0.02):
                     send_msg("Hand moved right")
 
             prev_pos = current_pos
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error in hand movement monitor: {e}")
 
 
 def start_hand_movement_monitor(wrist_queue, send_msg, movement_threshold=0.02):

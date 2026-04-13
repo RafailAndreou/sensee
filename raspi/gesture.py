@@ -187,6 +187,12 @@ class GestureApp:
         hand_thread = start_hand_movement_monitor(self.wrist_queue, send_msg)
 
         cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            print("❌ Failed to open camera (device unavailable or permission denied).")
+            cap.release()
+            recognizer.close()
+            return
+
         mp_hands = mp.solutions.hands
         mp_drawing = mp.solutions.drawing_utils
 
