@@ -129,6 +129,82 @@ def action_requires_confirmation(action_name):
         return False
     return any(keyword in normalized_action for keyword in CONFIRMATION_ACTION_KEYWORDS)
 
+
+def get_latest_snapshot():
+    with latest_result_lock:
+        return latest_result
+
+
+def snapshot_to_multi_hand_landmarks(snapshot):
+    if not snapshot or not snapshot.hand_landmarks:
+        return None
+
+    multi_hand_landmarks = []
+    for hand in snapshot.hand_landmarks:
+        proto = landmark_pb2.NormalizedLandmarkList()
+        proto.landmark.extend(
+            [landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in hand]
+        )
+        multi_hand_landmarks.append(proto)
+
+    return multi_hand_landmarks if multi_hand_landmarks else None
+
+
+def resolve_detected_hand(snapshot, hand_idx):
+    if (
+        snapshot
+        and snapshot.handedness
+        and hand_idx < len(snapshot.handedness)
+        and snapshot.handedness[hand_idx]
+    ):
+        return snapshot.handedness[hand_idx][0].category_name
+    return "Unknown"
+
+
+def process_touch_gestures_for_hand(hand_idx, hand_landmarks, detected_hand, timestamp_ms):
+    thumb = hand_landmarks.landmark[4]
+    index = hand_landmarks.landmark[8]
+    middle = hand_landmarks.landmark[12]
+
+    middle_touching = touching(
+        thumb,
+        middle,
+        threshold=TOUCH_XY_THRESHOLD,
+        z_threshold=TOUCH_Z_THRESHOLD,
+    )
+    # Keep original precedence: Thumb+Middle wins if both look close.
+    index_touching = False if middle_touching else touching(
+        thumb,
+        index,
+        threshold=TOUCH_XY_THRESHOLD,
+        z_threshold=TOUCH_Z_THRESHOLD,
+    )
+
+    gesture_candidates = (
+        ("Thumb+Middle", middle_touching),
+        ("Thumb+Index", index_touching),
+    )
+
+    for gesture_name, is_touching in gesture_candidates:
+        matched_config = find_matched_config(
+            runtime.get_active_configs(),
+            gesture_name,
+            detected_hand,
+        )
+        if matched_config is None:
+            if not is_touching:
+                touch_confirmation.is_confirmed((hand_idx, gesture_name), False)
+            continue
+
+        action_name = str(matched_config.get("action", ""))
+        if action_requires_confirmation(action_name):
+            if not touch_confirmation.is_confirmed((hand_idx, gesture_name), is_touching):
+                continue
+        elif not is_touching:
+            continue
+
+        enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
+
 try:
     while cap.isOpened():
         ret, frame = cap.read()
@@ -141,21 +217,12 @@ try:
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
         timestamp_ms = int(time.time() * 1000)
         recognizer.recognize_async(mp_image, timestamp_ms)
-        
+
         # Take a thread-safe snapshot of the latest recognizer output.
-        with latest_result_lock:
-            snapshot = latest_result
+        snapshot = get_latest_snapshot()
 
         results = HandResultsSnapshot()
-        multi_hand_landmarks = []
-        if snapshot and snapshot.hand_landmarks:
-            for hand in snapshot.hand_landmarks:
-                proto = landmark_pb2.NormalizedLandmarkList()
-                proto.landmark.extend(
-                    [landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in hand]
-                )
-                multi_hand_landmarks.append(proto)
-        results.multi_hand_landmarks = multi_hand_landmarks if multi_hand_landmarks else None
+        results.multi_hand_landmarks = snapshot_to_multi_hand_landmarks(snapshot)
 
         # quit hotkey
         if cv2.waitKey(1) & 0xFF in (ord('q'), ord('Q')):
@@ -164,56 +231,13 @@ try:
         if results.multi_hand_landmarks:
             for hand_idx, hand_landmarks in enumerate(results.multi_hand_landmarks):
                 try:
-                    thumb = hand_landmarks.landmark[4]
-                    index = hand_landmarks.landmark[8]
-                    middle = hand_landmarks.landmark[12]
-
-                    detected_hand = "Unknown"
-                    if (
-                        snapshot
-                        and snapshot.handedness
-                        and hand_idx < len(snapshot.handedness)
-                        and snapshot.handedness[hand_idx]
-                    ):
-                        detected_hand = snapshot.handedness[hand_idx][0].category_name
-
-                    middle_touching = touching(
-                        thumb,
-                        middle,
-                        threshold=TOUCH_XY_THRESHOLD,
-                        z_threshold=TOUCH_Z_THRESHOLD,
+                    detected_hand = resolve_detected_hand(snapshot, hand_idx)
+                    process_touch_gestures_for_hand(
+                        hand_idx,
+                        hand_landmarks,
+                        detected_hand,
+                        timestamp_ms,
                     )
-                    # Keep original precedence: Thumb+Middle wins if both look close.
-                    index_touching = False if middle_touching else touching(
-                        thumb,
-                        index,
-                        threshold=TOUCH_XY_THRESHOLD,
-                        z_threshold=TOUCH_Z_THRESHOLD,
-                    )
-
-                    gesture_candidates = (
-                        ("Thumb+Middle", middle_touching),
-                        ("Thumb+Index", index_touching),
-                    )
-                    for gesture_name, is_touching in gesture_candidates:
-                        matched_config = find_matched_config(
-                            runtime.get_active_configs(),
-                            gesture_name,
-                            detected_hand,
-                        )
-                        if matched_config is None:
-                            if not is_touching:
-                                touch_confirmation.is_confirmed((hand_idx, gesture_name), False)
-                            continue
-
-                        action_name = str(matched_config.get("action", ""))
-                        if action_requires_confirmation(action_name):
-                            if not touch_confirmation.is_confirmed((hand_idx, gesture_name), is_touching):
-                                continue
-                        elif not is_touching:
-                            continue
-
-                        enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
 
                     wrist = hand_landmarks.landmark[0]
                     if wrist:
