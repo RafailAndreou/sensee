@@ -81,6 +81,7 @@ gesture_thread, ha_action_thread = runtime.start_workers(_get_latest_frame_ts)
 options = GestureRecognizerOptions(
     base_options=base_options,
     running_mode=VisionRunningMode.LIVE_STREAM,
+    num_hands=2,
     result_callback=gesture_callback
 )
 
@@ -195,21 +196,22 @@ try:
                         ("Thumb+Index", index_touching),
                     )
                     for gesture_name, is_touching in gesture_candidates:
-                        if not is_touching:
-                            continue
-
                         matched_config = find_matched_config(
                             runtime.get_active_configs(),
                             gesture_name,
                             detected_hand,
                         )
                         if matched_config is None:
+                            if not is_touching:
+                                touch_confirmation.is_confirmed((hand_idx, gesture_name), False)
                             continue
 
                         action_name = str(matched_config.get("action", ""))
                         if action_requires_confirmation(action_name):
-                            if not touch_confirmation.is_confirmed((hand_idx, gesture_name), True):
+                            if not touch_confirmation.is_confirmed((hand_idx, gesture_name), is_touching):
                                 continue
+                        elif not is_touching:
+                            continue
 
                         enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
 

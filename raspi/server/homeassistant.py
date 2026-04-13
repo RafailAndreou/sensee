@@ -40,6 +40,59 @@ _entities_cache_time = 0.0
 _entities_cache_lock = threading.Lock()
 _ENTITIES_CACHE_TTL_SECONDS = 2.0
 
+_DOMAIN_TO_SENSEE_TYPE = {
+    "media_player": "Tv",
+    "light": "Light",
+    "switch": "Light",
+    "climate": "Ac",
+    "fan": "Fan",
+}
+
+
+def _filter_entities_by_type(devices, device_type_filter=None):
+    if not device_type_filter:
+        return list(devices)
+    wanted = device_type_filter.lower()
+    return [d for d in devices if d.get("type", "").lower() == wanted]
+
+
+def _read_entities_cache(device_type_filter=None):
+    with _entities_cache_lock:
+        cached = list(_entities_cache)
+    return _filter_entities_by_type(cached, device_type_filter)
+
+
+def _write_entities_cache(devices, cache_time):
+    global _entities_cache_time
+    with _entities_cache_lock:
+        _entities_cache[:] = list(devices)
+        _entities_cache_time = cache_time
+
+
+def _format_states_to_devices(all_states, device_type_filter=None):
+    formatted_devices = []
+
+    for state in all_states:
+        entity_id = state.get("entity_id", "")
+        domain = get_domain_from_entity(entity_id)
+        sensee_type = _DOMAIN_TO_SENSEE_TYPE.get(domain)
+        if not sensee_type:
+            continue
+
+        if device_type_filter and sensee_type.lower() != device_type_filter.lower():
+            continue
+
+        friendly_name = state.get("attributes", {}).get("friendly_name", entity_id)
+        formatted_devices.append(
+            {
+                "entity_id": entity_id,
+                "friendly_name": friendly_name,
+                "type": sensee_type,
+            }
+        )
+
+    return formatted_devices
+
 def get_ha_config():
     """Load Home Assistant URL/token from saved config, with env fallback only."""
     with _ha_config_cache_lock:
@@ -222,9 +275,7 @@ def get_ha_entities(device_type_filter: str = None):
     now = time.monotonic()
     with _entities_cache_lock:
         if now - _entities_cache_time < _ENTITIES_CACHE_TTL_SECONDS:
-            if device_type_filter:
-                return [d for d in _entities_cache if d.get("type", "").lower() == device_type_filter.lower()]
-            return list(_entities_cache)
+            return _filter_entities_by_type(_entities_cache, device_type_filter)
 
     url_base, token = _get_runtime_config()
     if not _has_valid_runtime_config(url_base, token):
@@ -235,57 +286,17 @@ def get_ha_entities(device_type_filter: str = None):
         response = _http_client.get_all_states(url_base, token)
         if response.status_code != 200:
             print(f"❌ HA Fetch Error {response.status_code}: {response.text}")
-            with _entities_cache_lock:
-                cached = list(_entities_cache)
-            if device_type_filter:
-                return [d for d in cached if d.get("type", "").lower() == device_type_filter.lower()]
-            return cached
+            return _read_entities_cache(device_type_filter)
 
         all_states = response.json()
-        formatted_devices = []
+        formatted_devices = _format_states_to_devices(all_states, device_type_filter)
 
-        # Map HA domains to Sensee Device Types
-        domain_map = {
-            "media_player": "Tv",
-            "light": "Light",
-            "switch": "Light",
-            "climate": "Ac",
-            "fan": "Fan"
-        }
-
-        for state in all_states:
-            entity_id = state["entity_id"]
-            domain = get_domain_from_entity(entity_id)
-            
-            if domain in domain_map:
-                friendly_name = state.get("attributes", {}).get("friendly_name", entity_id)
-                sensee_type = domain_map[domain]
-                
-                # Check if it matches the filter (e.g. if we only want 'Tv')
-                if device_type_filter and sensee_type.lower() != device_type_filter.lower():
-                    continue
-
-                formatted_devices.append({
-                    "entity_id": entity_id,
-                    "friendly_name": friendly_name,
-                    "type": sensee_type
-                })
-        
-        with _entities_cache_lock:
-            _entities_cache[:] = formatted_devices
-            _entities_cache_time = now
-
-        if device_type_filter:
-            return [d for d in formatted_devices if d.get("type", "").lower() == device_type_filter.lower()]
-        return formatted_devices
+        _write_entities_cache(formatted_devices, now)
+        return list(formatted_devices)
 
     except Exception as e:
         print(f"❌ Exception fetching entities from Home Assistant: {e}")
-        with _entities_cache_lock:
-            cached = list(_entities_cache)
-        if device_type_filter:
-            return [d for d in cached if d.get("type", "").lower() == device_type_filter.lower()]
-        return cached
+        return _read_entities_cache(device_type_filter)
 
 def get_discovered_flows():
     """Fetches discovered devices from Home Assistant that haven't been added yet."""
