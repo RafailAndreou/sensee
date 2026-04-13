@@ -75,6 +75,9 @@ def resolve_detected_hand(snapshot, hand_idx):
 
 class GestureApp:
     def __init__(self):
+        # Preserve startup config-load side effects/logging from pre-refactor flow.
+        self.configuration = file.load_configure_json()
+
         self.latest_frame_ts = 0
         self.latest_frame_lock = threading.Lock()
         self.latest_result = None
@@ -177,6 +180,9 @@ class GestureApp:
 
         recognizer = mp.tasks.vision.GestureRecognizer.create_from_options(options)
         ip, server_thread = start_fastapi_server_in_background(get_local_ip)
+
+        screen_w, screen_h, _, _ = get_screen_metrics()
+        print(screen_h, screen_w)
 
         hand_thread = start_hand_movement_monitor(self.wrist_queue, send_msg)
 
