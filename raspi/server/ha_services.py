@@ -1,5 +1,10 @@
+"""Home Assistant service and domain mapping helpers."""
+
+from __future__ import annotations
+
+
 def parse_action_to_service(action: str) -> str:
-    """Convert Sensee UI actions into Home Assistant service names."""
+    """Map a Sensee action label to a Home Assistant service name."""
     action_lower = action.lower().strip()
     if "turn on" in action_lower:
         return "turn_on"
@@ -15,7 +20,7 @@ def parse_action_to_service(action: str) -> str:
 
 
 def get_domain_from_entity(entity_id: str) -> str:
-    """Extract domain (for example, 'light' from 'light.bedroom')."""
+    """Return the Home Assistant domain for an entity id."""
     if "." in entity_id:
         return entity_id.split(".")[0]
     return "homeassistant"
