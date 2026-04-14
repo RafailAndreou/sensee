@@ -67,7 +67,8 @@ class GestureRuntime:
         self.policy = policy or RuntimePolicy()
 
         self.gesture_queue: Queue[tuple[SimpleNamespace, str, int]] = Queue()
-        self.ha_action_queue: Queue[tuple[str, str]] = Queue(maxsize=1)
+        self.action_queue: Queue[tuple[str, str]] = Queue(maxsize=1)
+        self.ha_action_queue = self.action_queue
 
         self.action_trigger_times: dict[str, float] = {}
         self.action_trigger_lock = threading.Lock()
@@ -88,7 +89,7 @@ class GestureRuntime:
         self,
         get_latest_frame_ts: Callable[[], int],
     ) -> tuple[threading.Thread, threading.Thread]:
-        """Start background workers that consume gesture and HA action queues.
+        """Start background workers that consume gesture and action queues.
 
         Args:
             get_latest_frame_ts: Callback returning the most recent frame time.

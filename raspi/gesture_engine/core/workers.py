@@ -119,32 +119,37 @@ def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> Non
             print(f"Error processing gesture: {e}")
 
 
-def process_homeassistant_actions_loop(runtime: "GestureRuntime") -> None:
-    """Serialize Home Assistant actions through a single worker thread.
+def process_action_queue_loop(runtime: "GestureRuntime") -> None:
+    """Serialize queued actions through a single worker thread.
 
     Args:
-        runtime: Shared runtime that owns the HA action queue.
+        runtime: Shared runtime that owns the action queue.
     """
     while True:
         try:
-            entity_id, action = runtime.ha_action_queue.get()
+            entity_id, action = runtime.action_queue.get()
             runtime.trigger_ha_action(entity_id, action)
         except Exception as e:
-            print(f"Error processing Home Assistant action: {e}")
+            print(f"Error processing action queue item: {e}")
+
+
+def process_homeassistant_actions_loop(runtime: "GestureRuntime") -> None:
+    """Backward-compatible wrapper for the action queue worker."""
+    process_action_queue_loop(runtime)
 
 
 def start_workers(
     runtime: "GestureRuntime",
     get_latest_frame_ts,
 ) -> tuple[threading.Thread, threading.Thread]:
-    """Start background worker threads for gesture and HA action processing.
+    """Start background worker threads for gesture and action processing.
 
     Args:
         runtime: Shared runtime used by both workers.
         get_latest_frame_ts: Callback returning the latest camera frame timestamp.
 
     Returns:
-        Pair of started worker threads `(gesture_thread, ha_action_thread)`.
+        Pair of started worker threads `(gesture_thread, action_thread)`.
     """
     gesture_thread = threading.Thread(
         target=process_gestures_loop,
@@ -153,11 +158,11 @@ def start_workers(
     )
     gesture_thread.start()
 
-    ha_action_thread = threading.Thread(
-        target=process_homeassistant_actions_loop,
+    action_thread = threading.Thread(
+        target=process_action_queue_loop,
         args=(runtime,),
         daemon=True,
     )
-    ha_action_thread.start()
+    action_thread.start()
 
-    return gesture_thread, ha_action_thread
+    return gesture_thread, action_thread

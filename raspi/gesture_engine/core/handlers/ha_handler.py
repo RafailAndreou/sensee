@@ -1,26 +1,10 @@
 import threading
-from queue import Empty
 from typing import TYPE_CHECKING
+
+from .action_queue import queue_latest_action
 
 if TYPE_CHECKING:
     from gesture_engine.runtime import GestureRuntime
-
-
-def queue_latest_ha_action(runtime: "GestureRuntime", entity_id: str, action: str) -> None:
-    """Keep only the latest HA queue item to avoid stale backlog execution.
-
-    Args:
-        runtime: Runtime that owns the Home Assistant action queue.
-        entity_id: Home Assistant entity id.
-        action: Home Assistant action/service value.
-    """
-    if runtime.ha_action_queue.full():
-        try:
-            runtime.ha_action_queue.get_nowait()
-        except Empty:
-            pass
-
-    runtime.ha_action_queue.put_nowait((entity_id, action))
 
 
 def handle_smart_device_action(
@@ -45,4 +29,4 @@ def handle_smart_device_action(
         ).start()
         return
 
-    queue_latest_ha_action(runtime, entity_id, action)
+    queue_latest_action(runtime, entity_id, action)
