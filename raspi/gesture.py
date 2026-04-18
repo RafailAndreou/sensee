@@ -104,7 +104,7 @@ class GestureApp:
             return self.latest_result
 
     def enqueue_detected_gesture(self, gesture_name, handedness, timestamp_ms, score=1.0):
-        self.runtime.gesture_queue.put(
+        self.runtime.gesture_queue.append(
             (SimpleNamespace(category_name=gesture_name, score=score), handedness, timestamp_ms)
         )
 

@@ -87,15 +87,16 @@ def minimum_confidence_for_gesture(gesture_name: str) -> float:
 
 
 def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> None:
-    """Consume gesture events and dispatch only fresh, confident detections.
-
-    Args:
-        runtime: Shared runtime with queues and callbacks.
-        get_latest_frame_ts: Callback returning the latest frame timestamp.
-    """
+    """Consume gesture events and dispatch only fresh, confident detections."""
     while True:
         try:
-            gesture, handedness, event_ts_ms = drain_gesture_queue_to_latest(runtime)
+            # 1. Wait for a gesture safely without burning CPU
+            if not runtime.gesture_queue:
+                time.sleep(0.01) # 10ms sleep
+                continue
+
+            # 2. Use .pop() instead of the old .get()
+            gesture, handedness, event_ts_ms = runtime.gesture_queue.pop()
 
             latest_frame_ts_ms = get_latest_frame_ts()
             if is_stale_gesture(runtime, event_ts_ms, latest_frame_ts_ms):
@@ -104,21 +105,20 @@ def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> Non
             gesture_name = gesture.category_name
             confidence = gesture.score
 
-            # Skip low-confidence detections to reduce false triggers.
             if confidence < minimum_confidence_for_gesture(gesture_name):
                 continue
 
             if can_log_detected_gesture(runtime):
-                print(
-                    f"Detected gesture: {gesture_name} ({handedness} Hand, confidence: {confidence:.2f})"
-                )
+                print(f"Detected gesture: {gesture_name} ({handedness} Hand, conf: {confidence:.2f})")
+            
             runtime.send_msg(f"Gesture: {gesture_name} ({handedness})")
-
             runtime.take_action(gesture_name, handedness)
+            
+        except IndexError:
+            # deque is empty (handled safely)
+            continue
         except Exception as e:
             print(f"Error processing gesture: {e}")
-
-
 def process_action_queue_loop(runtime: "GestureRuntime") -> None:
     """Serialize queued actions through a single worker thread.
 

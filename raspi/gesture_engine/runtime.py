@@ -4,6 +4,8 @@ from queue import Queue
 from types import SimpleNamespace
 from typing import Any, Callable, Mapping, Sequence, Tuple
 
+from collections import deque
+
 from gesture_engine.core.actions import take_action
 from gesture_engine.core.workers import start_workers
 
@@ -66,7 +68,8 @@ class GestureRuntime:
         self.trigger_ha_action = trigger_ha_action
         self.policy = policy or RuntimePolicy()
 
-        self.gesture_queue: Queue[tuple[SimpleNamespace, str, int]] = Queue()
+        self.gesture_queue: deque[tuple[SimpleNamespace, str, int]] = deque(maxlen=1)
+        
         self.action_queue: Queue[tuple[str, str]] = Queue(maxsize=1)
         self.ha_action_queue = self.action_queue
 
