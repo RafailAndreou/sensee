@@ -78,7 +78,62 @@ class _DashboardState extends State<Dashboard> {
         }).toList();
 
         if (savedIds.isEmpty) {
-          return const SizedBox.shrink();
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxWidth: 420),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color.fromARGB(24, 0, 0, 0),
+                      blurRadius: 16,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.dashboard_customize_outlined,
+                      size: 44,
+                      color: Colors.blue,
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      'Dashboard is empty',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Get started by adding your first device mapping.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 15, color: Colors.black87),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      '1. Tap the + button\n2. Choose a device type\n3. Select a brand or smart device\n4. Pick action, gesture, and hand\n5. Save to create your first card',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
         }
 
         return GridView.builder(
