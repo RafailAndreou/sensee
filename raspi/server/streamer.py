@@ -6,27 +6,33 @@ import numpy as np
 class FrameHub:
     """Thread-safe place to publish latest JPEG for MJPEG streaming."""
     def __init__(self):
-        self._lock = threading.Lock()
-        self._event = threading.Event()
+        self._cond = threading.Condition()
         self._latest_jpeg: bytes | None = None
+        self._frame_id = 0
 
     def set_bgr_frame(self, bgr: np.ndarray, jpeg_quality: int = 80):
         ok, jpg = cv2.imencode(".jpg", bgr, [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality])
         if not ok:
             return
-        with self._lock:
+        with self._cond:
             self._latest_jpeg = jpg.tobytes()
-            self._event.set()
+            self._frame_id += 1
+            self._cond.notify_all()
 
     def mjpeg_generator(self):
         boundary = b"--frame"
+        last_seen_frame_id = 0
         # Yield a frame whenever a new one arrives; send a keepalive if idle.
         while True:
             # Wait at most 1s for a new frame to avoid proxy timeouts.
-            self._event.wait(timeout=1.0)
-            with self._lock:
+            with self._cond:
+                got_new_frame = self._cond.wait_for(
+                    lambda: self._frame_id > last_seen_frame_id,
+                    timeout=1.0,
+                )
                 frame_bytes = self._latest_jpeg
-                self._event.clear()
+                if got_new_frame:
+                    last_seen_frame_id = self._frame_id
 
             if frame_bytes is None:
                 # Keep-alive empty JPEG if nothing yet
