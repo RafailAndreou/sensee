@@ -113,10 +113,6 @@ def process_action_queue_loop(runtime: "GestureRuntime") -> None:
             print(f"Error processing action queue item: {e}")
 
 
-def process_homeassistant_actions_loop(runtime: "GestureRuntime") -> None:
-    """Backward-compatible wrapper for the action queue worker."""
-    process_action_queue_loop(runtime)
-
 def process_volume_loop(runtime: "GestureRuntime") -> None:
     """Dedicated worker loop for high-frequency volume actions."""
     while True:
