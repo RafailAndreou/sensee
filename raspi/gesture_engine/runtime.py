@@ -69,6 +69,8 @@ class GestureRuntime:
         self.policy = policy or RuntimePolicy()
 
         self.gesture_queue: deque[tuple[SimpleNamespace, str, int]] = deque(maxlen=1)
+        self.gesture_queue_lock = threading.Lock()
+        self.gesture_event = threading.Event()
         
         self.action_queue: Queue[tuple[str, str]] = Queue(maxsize=1)
         self.volume_queue: Queue[tuple[str, str]] = Queue(maxsize=1)
@@ -80,6 +82,29 @@ class GestureRuntime:
 
         self.last_gesture_log_time: float = 0.0
         self.gesture_log_lock = threading.Lock()
+
+    def enqueue_gesture(
+        self,
+        gesture: SimpleNamespace,
+        handedness: str,
+        event_ts_ms: int,
+    ) -> None:
+        """Publish the latest gesture event and wake the worker thread."""
+        with self.gesture_queue_lock:
+            self.gesture_queue.append((gesture, handedness, event_ts_ms))
+            self.gesture_event.set()
+
+    def pop_latest_gesture(self) -> tuple[SimpleNamespace, str, int] | None:
+        """Return the most recent gesture event, or None when queue is empty."""
+        with self.gesture_queue_lock:
+            if not self.gesture_queue:
+                self.gesture_event.clear()
+                return None
+
+            gesture, handedness, event_ts_ms = self.gesture_queue.pop()
+            if not self.gesture_queue:
+                self.gesture_event.clear()
+            return gesture, handedness, event_ts_ms
 
     def take_action(self, gesture_name: str, detected_hand: str = "Unknown") -> None:
         """Dispatch a recognized gesture to the action execution layer.
@@ -93,13 +118,13 @@ class GestureRuntime:
     def start_workers(
         self,
         get_latest_frame_ts: Callable[[], int],
-    ) -> tuple[threading.Thread, threading.Thread]:
+    ) -> tuple[threading.Thread, threading.Thread, threading.Thread]:
         """Start background workers that consume gesture and action queues.
 
         Args:
             get_latest_frame_ts: Callback returning the most recent frame time.
 
         Returns:
-            Pair of started worker threads.
+            Tuple of started worker threads `(gesture_thread, action_thread, volume_thread)`.
         """
         return start_workers(self, get_latest_frame_ts)

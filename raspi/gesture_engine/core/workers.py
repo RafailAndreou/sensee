@@ -1,7 +1,5 @@
 import threading
 import time
-from queue import Empty
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -10,26 +8,6 @@ if TYPE_CHECKING:
 MAX_LATENCY_MS = 100
 MIN_CONFIDENCE_DEFAULT = 0.70
 MIN_CONFIDENCE_PALM_FIST = 0.60
-
-
-def drain_gesture_queue_to_latest(
-    runtime: "GestureRuntime",
-) -> tuple[SimpleNamespace, str, int]:
-    """Return the newest gesture event so workers act on current intent.
-
-    Args:
-        runtime: Shared runtime that owns the gesture queue.
-
-    Returns:
-        The latest queued `(gesture, handedness, event_ts_ms)` tuple.
-    """
-    gesture, handedness, event_ts_ms = runtime.gesture_queue.get()
-
-    while True:
-        try:
-            gesture, handedness, event_ts_ms = runtime.gesture_queue.get_nowait()
-        except Empty:
-            return gesture, handedness, event_ts_ms
 
 
 def is_stale_gesture(
@@ -90,13 +68,15 @@ def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> Non
     """Consume gesture events and dispatch only fresh, confident detections."""
     while True:
         try:
-            # 1. Wait for a gesture safely without burning CPU
-            if not runtime.gesture_queue:
-                time.sleep(0.01) # 10ms sleep
+            # Wait for incoming gesture events without polling.
+            if not runtime.gesture_event.wait(timeout=0.1):
                 continue
 
-            # 2. Use .pop() instead of the old .get()
-            gesture, handedness, event_ts_ms = runtime.gesture_queue.pop()
+            latest_gesture = runtime.pop_latest_gesture()
+            if latest_gesture is None:
+                continue
+
+            gesture, handedness, event_ts_ms = latest_gesture
 
             latest_frame_ts_ms = get_latest_frame_ts()
             if is_stale_gesture(runtime, event_ts_ms, latest_frame_ts_ms):
