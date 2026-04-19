@@ -137,11 +137,21 @@ def process_homeassistant_actions_loop(runtime: "GestureRuntime") -> None:
     """Backward-compatible wrapper for the action queue worker."""
     process_action_queue_loop(runtime)
 
-
+def process_volume_loop(runtime: "GestureRuntime") -> None:
+    """Dedicated worker loop for high-frequency volume actions."""
+    while True:
+        try:
+            # This will wait quietly without using CPU until a volume action arrives
+            entity_id, action = runtime.volume_queue.get()
+            runtime.trigger_ha_action(entity_id, action)
+        except Exception as e:
+            print(f"Error processing volume action: {e}")
+            
+            
 def start_workers(
     runtime: "GestureRuntime",
     get_latest_frame_ts,
-) -> tuple[threading.Thread, threading.Thread]:
+) -> tuple[threading.Thread, threading.Thread, threading.Thread]:
     """Start background worker threads for gesture and action processing.
 
     Args:
@@ -151,6 +161,7 @@ def start_workers(
     Returns:
         Pair of started worker threads `(gesture_thread, action_thread)`.
     """
+    
     gesture_thread = threading.Thread(
         target=process_gestures_loop,
         args=(runtime, get_latest_frame_ts),
@@ -165,4 +176,12 @@ def start_workers(
     )
     action_thread.start()
 
-    return gesture_thread, action_thread
+    # ADD THE NEW VOLUME THREAD:
+    volume_thread = threading.Thread(
+        target=process_volume_loop,
+        args=(runtime,),
+        daemon=True,
+    )
+    volume_thread.start()
+
+    return gesture_thread, action_thread, volume_thread

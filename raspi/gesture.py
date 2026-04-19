@@ -165,8 +165,7 @@ class GestureApp:
             self.enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
 
     def run(self):
-        _gesture_thread, _ha_action_thread = self.runtime.start_workers(self._get_latest_frame_ts)
-
+        _gesture_thread, _ha_action_thread, _volume_thread = self.runtime.start_workers(self._get_latest_frame_ts)
         script_dir = os.path.dirname(os.path.abspath(__file__))
         model_path = os.path.join(script_dir, "assets", "gesture_recognizer.task")
         base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
