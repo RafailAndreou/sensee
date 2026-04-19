@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:multicast_dns/multicast_dns.dart';
 
@@ -159,22 +160,52 @@ Future<String?> discoverServerSmart() async {
 }
 
 Future<String?> _discoverServerSmartInternal() async {
+  // 1. Check cached client first
   if (_cachedClient != null && await _probeClient(_cachedClient!)) {
     return _cachedClient!.configUri.toString();
   }
   _cachedClient = null;
 
+  // 2. The "Smart" part: Try mDNS first (Fast & Reliable)
+  debugPrint("Attempting mDNS discovery...");
+  final mdnsResult = await discoverServerMDNS(timeoutMs: 1500);
+  if (mdnsResult != null) {
+    _cachedClient = ServerClient.fromConfigurationUri(Uri.parse(mdnsResult));
+    debugPrint("Found via mDNS: $mdnsResult");
+    return mdnsResult;
+  }
+
+  // 3. The Fallback: Concurrent port scanning (Fixes the 13.5s freeze)
+  debugPrint("mDNS failed, falling back to concurrent pinging...");
+
+  // Create a list of all possible combinations
+  final List<ServerClient> candidates = [];
   for (final host in _commonServerHosts) {
     for (final port in _commonServerPorts) {
-      final candidate = ServerClient('http://$host:$port');
-      if (await _probeClient(candidate)) {
-        _cachedClient = candidate;
-        return candidate.configUri.toString();
-      }
+      candidates.add(ServerClient('http://$host:$port'));
     }
   }
 
-  return null;
+  // Fire them all concurrently and catch the first one that responds
+  try {
+    final winningClient = await Future.any(
+      candidates.map((candidate) async {
+        if (await _probeClient(candidate)) {
+          return candidate;
+        }
+        // Throwing an error removes this failed future from Future.any()
+        throw Exception('Probe failed');
+      }),
+    );
+
+    _cachedClient = winningClient;
+    debugPrint("Found via fallback: ${winningClient.configUri}");
+    return winningClient.configUri.toString();
+  } catch (_) {
+    // All probes failed
+    debugPrint("All discovery methods failed.");
+    return null;
+  }
 }
 
 Future<bool> isServerReachable({
