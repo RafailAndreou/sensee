@@ -175,7 +175,16 @@ Future<String?> _discoverServerSmartInternal() async {
     return mdnsResult;
   }
 
-  // 3. The Fallback: Concurrent port scanning (Fixes the 13.5s freeze)
+  // 3. Try UDP broadcast discovery before falling back to port scanning.
+  debugPrint("mDNS failed, trying UDP discovery...");
+  final udpResult = await discoverServer(timeoutMs: 1200);
+  if (udpResult != null) {
+    _cachedClient = ServerClient.fromConfigurationUri(Uri.parse(udpResult));
+    debugPrint("Found via UDP discovery: $udpResult");
+    return udpResult;
+  }
+
+  // 4. The Fallback: Concurrent port scanning (Fixes the 13.5s freeze)
   debugPrint("mDNS failed, falling back to concurrent pinging...");
 
   // Create a list of all possible combinations

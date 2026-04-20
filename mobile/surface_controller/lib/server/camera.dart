@@ -24,9 +24,14 @@ class _VideoPageState extends State<VideoPage> {
     // Try mDNS first, fallback to UDP, then fallback to static IP
     String? discovered = await server_discovery.discoverServerSmart();
 
-    final pageUrl = discovered == null
-        ? 'http://sensee.local:8000'
-        : discovered.replaceFirst('/configuration', '');
+    if (discovered == null) {
+      setState(() {
+        _loadingMessage = 'Could not discover the Sensee server.';
+      });
+      return;
+    }
+
+    final pageUrl = discovered.replaceFirst('/configuration', '');
 
     setState(() {
       _loadingMessage = 'Loading video from $pageUrl';

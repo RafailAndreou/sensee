@@ -1,12 +1,33 @@
-import socket
-import json
 import asyncio
-import os
+import json
+import socket
 from zeroconf.asyncio import AsyncZeroconf, AsyncServiceBrowser, AsyncServiceInfo
 
 SERVICE_TYPE = "_sensee._tcp.local."
 _DISCOVERY_PORT = 54321
 _DISCOVERY_TOKEN = "SENSEE_DISCOVER"
+
+
+class _DiscoveryResponder(asyncio.DatagramProtocol):
+    def __init__(self, port: int):
+        self.port = port
+        self.transport = None
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def datagram_received(self, data, addr):
+        try:
+            message = data.decode("utf-8").strip()
+        except Exception:
+            return
+
+        if message != _DISCOVERY_TOKEN or self.transport is None:
+            return
+
+        ip_str, _ = get_local_ip()
+        payload = json.dumps({"ip": ip_str, "port": self.port, "path": "/configuration"}).encode("utf-8")
+        self.transport.sendto(payload, addr)
 
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -44,3 +65,17 @@ async def register_mdns_service(port: int):
     finally:
         await zc.async_unregister_service(info)
         await zc.async_close()
+
+
+async def start_udp_discovery_service(port: int):
+    loop = asyncio.get_running_loop()
+    transport, _ = await loop.create_datagram_endpoint(
+        lambda: _DiscoveryResponder(port),
+        local_addr=("0.0.0.0", _DISCOVERY_PORT),
+        allow_broadcast=True,
+    )
+    print(f"✅ UDP discovery listening on port {_DISCOVERY_PORT}")
+    try:
+        await asyncio.Event().wait()
+    finally:
+        transport.close()
