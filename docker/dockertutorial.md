@@ -8,22 +8,23 @@ cd to docker(current folder)
 
 # Step 3
 
-build docker using:
+build Docker using:
 
 ```bash
-docker compose up-d
+docker compose up -d
 ```
 
 # Step 4
 
-visit localhost:8123
-Create an account
-go to profile(down left) -> security and create a long term long lived access token name the token sensee
+Visit `http://localhost:8123`
 
-# Step 6
+- Create an account
+- Go to **Profile** (bottom left) → **Security**
+- Create a long-lived access token and name it `sensee`
 
-copy your token
-create a ha_config.json inside raspi/server
+# Step 5
+
+Copy your token and create `ha_config.json` inside `raspi/server/`:
 
 ```json
 {
