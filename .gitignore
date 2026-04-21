@@ -39,3 +39,9 @@ release/*/android/
 raspi/server/configure.json
 raspi/server/ha_config.json
 raspi/oauth.json
+
+
+# docker
+docker/*
+!docker-compose.yml
+!dockertutorial.md
