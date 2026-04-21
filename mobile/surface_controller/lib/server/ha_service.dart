@@ -41,7 +41,7 @@ Future<List<dynamic>> getHADiscovered() async {
     final response = await http.get(client.haDiscoveredUri);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      return decoded['flows'] ?? [];
+      return decoded is List ? decoded : [];
     }
   } catch (_) {}
   return [];
