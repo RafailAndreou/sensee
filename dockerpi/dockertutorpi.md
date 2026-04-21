@@ -1,12 +1,10 @@
-This tutorial is for setting up home assistant docker on windows. If you want to check for raspberry pi check dockertutorpi.md(dockerpi folder)
-
 # Step 1
 
 Install Docker on your pc/raspberry pi/device
 
 # Step 2
 
-cd to docker(current folder)
+cd to dockerpi(current folder)
 
 # Step 3
 
@@ -36,10 +34,5 @@ Copy your token and create `ha_config.json` inside `raspi/server/`:
 ```
 
 # Step 6
-
-In the browser(localhost:8123) press + sign -> add device, select your device
-Your device won't be autommatically find through homeassistant on windows so you have to manually put the ip
-for example:
-+-> add device -> android tv remote -> host = tv_ip and submit
 
 then run your gesture.py and your app and it will work fine
