@@ -41,6 +41,7 @@ class ConnectionMethod extends StatelessWidget {
                 );
               },
             ),
+            const SizedBox(height: 20),
             _buildOptionCard(
               context,
               title: "Pair New TV",
@@ -126,10 +127,7 @@ class ConnectionMethod extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ],
               ),
