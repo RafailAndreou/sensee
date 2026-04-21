@@ -28,130 +28,125 @@ class DashboardCard extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          height: getProportionalHeight(context, 166),
-          width: getProportionalHeight(context, 155),
-          decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 255, 255, 255),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: const Color.fromARGB(100, 0, 0, 0),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(2, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: _deviceColor(deviceType).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        _deviceIcon(deviceType),
-                        size: 22,
-                        color: _deviceColor(deviceType),
-                      ),
+      child: Container(
+        height: getProportionalHeight(context, 166),
+        width: getProportionalHeight(context, 155),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 255, 255, 255),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color.fromARGB(100, 0, 0, 0),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(2, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: _deviceColor(deviceType).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    ValueListenableBuilder<bool>(
-                      valueListenable: isSynced,
-                      builder: (context, synced, _) {
-                        return Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: synced
-                                ? Colors.greenAccent
-                                : Colors.redAccent,
-                            boxShadow: [
-                              BoxShadow(
-                                color: synced
-                                    ? Colors.greenAccent.withValues(alpha: 0.5)
-                                    : Colors.redAccent.withValues(alpha: 0.5),
-                                blurRadius: 4,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                    child: Icon(
+                      _deviceIcon(deviceType),
+                      size: 22,
+                      color: _deviceColor(deviceType),
                     ),
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: onMoreTap,
-                      child: const SizedBox(
+                  ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: isSynced,
+                    builder: (context, synced, _) {
+                      return Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: synced ? Colors.greenAccent : Colors.redAccent,
+                          boxShadow: [
+                            BoxShadow(
+                              color: synced
+                                  ? Colors.greenAccent.withValues(alpha: 0.5)
+                                  : Colors.redAccent.withValues(alpha: 0.5),
+                              blurRadius: 4,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onMoreTap,
+                    child: const SizedBox(
+                      width: 33,
+                      height: 28,
+                      child: Image(
+                        image: AssetImage('assets/redesign/more.png'),
                         width: 33,
                         height: 28,
-                        child: Image(
-                          image: AssetImage('assets/redesign/more.png'),
-                          width: 33,
-                          height: 28,
-                        ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.left,
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.left,
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  '$deviceType $actionName',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.left,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                '$deviceType $actionName',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.left,
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Image(
-                      image: AssetImage('assets/redesign/hand.png'),
-                      width: 44,
-                      height: 44,
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Image(
+                    image: AssetImage('assets/redesign/hand.png'),
+                    width: 44,
+                    height: 44,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      gestureName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.left,
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        gestureName,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.left,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
