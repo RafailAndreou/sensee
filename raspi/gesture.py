@@ -110,7 +110,7 @@ class GestureApp:
             timestamp_ms,
         )
 
-    def gesture_callback(self, result, output_image, timestamp_ms):
+    def gesture_callback(self, result, _output_image, timestamp_ms):
         with self.latest_result_lock:
             self.latest_result = result
         if result.gestures:
