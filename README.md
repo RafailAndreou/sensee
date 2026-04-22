@@ -74,6 +74,7 @@ The long-term direction is a seamless hardware + software experience where setup
 5. Open the settings and put your home assistant url and token(homeassistant url is localhost:8123 as the default)
 **If you don't know how to setup homeassistant check raspi/docker/dockertutorial.md or https://www.home-assistant.io/docs/** 
 
+**Important: The app and the engine must be on the same network(no need for internet access tho)**
 
 ## Technical Setup (Developer Section)
 
