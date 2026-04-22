@@ -67,8 +67,8 @@ The long-term direction is a seamless hardware + software experience where setup
 
 ## Setup For Non Developers
 
-1. Install the app on your phone from the release version(app-release.apk)
-2. Install the zip on your windows from the release version(sensee-windows-x64.zip)
+1. Install the app on your phone from the release page [app-release.apk](https://github.com/RafailAndreou/sensee/releases/tag/v0.6.9v)
+2. Install the zip on your windows from the release page [sensee-windows-x64.zip](https://github.com/RafailAndreou/sensee/releases/tag/v0.6.9v)
 3. Extract the zip 
 4. Run the executable(sensee.exe)
 5. Open the settings and put your home assistant url and token(homeassistant url is localhost:8123 as the default)
