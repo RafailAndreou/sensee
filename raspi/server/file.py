@@ -1,8 +1,17 @@
 import json
 import os
+import sys
 
-HA_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "ha_config.json")
-CONFIG_FILE_PATH = os.path.join(os.path.dirname(__file__), "configure.json")
+# When running as a PyInstaller EXE the bundle root is read-only.
+# The runtime hook sets SENSEE_DATA_DIR to the writable folder next to the EXE.
+# In normal dev mode we fall back to the directory that contains this file.
+def _data_dir() -> str:
+    if getattr(sys, "frozen", False):
+        return os.environ.get("SENSEE_DATA_DIR", os.path.dirname(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+HA_CONFIG_PATH = os.path.join(_data_dir(), "ha_config.json")
+CONFIG_FILE_PATH = os.path.join(_data_dir(), "configure.json")
 
 def save_configure_json(configuration: list):
     with open(CONFIG_FILE_PATH, "w+") as f:

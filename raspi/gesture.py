@@ -8,6 +8,7 @@ from queue import Queue
 import threading
 import time
 import os
+import sys
 from server import file
 from server import homeassistant
 from server.discovery import get_local_ip
@@ -168,7 +169,8 @@ class GestureApp:
 
     def run(self):
         _gesture_thread, _ha_action_thread, _volume_thread = self.runtime.start_workers(self._get_latest_frame_ts)
-        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # sys._MEIPASS is set by PyInstaller; fall back to __file__ in dev mode.
+        script_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
         model_path = os.path.join(script_dir, "assets", "gesture_recognizer.task")
         base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
 
