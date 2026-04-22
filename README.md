@@ -15,6 +15,8 @@ Watch the project showcase video:
 
 ![Showcase Demo](showcase/showcase.gif)
 
+![Showcase Demo2](showcase/showcasegh.gif)
+
 ## The Experience
 
 Think of Sensee like this:
