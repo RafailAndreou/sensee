@@ -33,7 +33,16 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
     super.dispose();
   }
 
-  Future<void> _refreshConnectivity({bool discoverIfUnknown = false}) async {
+  Future<void> _refreshConnectivity({
+    bool discoverIfUnknown = false,
+    bool showChecking = false,
+  }) async {
+    if (showChecking && mounted) {
+      setState(() {
+        _isConnected = null;
+      });
+    }
+
     if (_refreshInFlight) {
       return;
     }
@@ -88,10 +97,10 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
         : Icons.cloud_off;
 
     final String text = isChecking
-        ? 'Checking Python server connection...'
+        ? 'Checking Sensee connection...'
         : isOnline
-        ? 'Connected to Python server'
-        : 'Disconnected from Python server';
+        ? 'Connected to Sensee'
+        : 'Disconnected from Sensee';
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
@@ -117,7 +126,10 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
           ),
           if (!isOnline)
             TextButton(
-              onPressed: () => _refreshConnectivity(discoverIfUnknown: true),
+              onPressed: () => _refreshConnectivity(
+                discoverIfUnknown: true,
+                showChecking: true,
+              ),
               child: const Text('Retry'),
             ),
         ],
