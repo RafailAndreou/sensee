@@ -11,7 +11,9 @@ The goal is a plug-and-play experience: power the device, open the app, map gest
 
 ## Demo Showcase
 
-Coming soon.
+Watch the project showcase video:
+
+[Showcase Demo](showcase/showcase.mp4)
 
 ## The Experience
 
