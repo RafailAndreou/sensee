@@ -1,3 +1,5 @@
+
+
 # Sensee
 
 Gesture-powered control for your space.
@@ -63,6 +65,14 @@ Sensee is designed as a consumer flow:
 
 The long-term direction is a seamless hardware + software experience where setup feels as simple as onboarding a smart speaker.
 
+## Setup For Non Developers
+
+1. Install the app on your phone from the release version(app-release.apk)
+2. Install the zip on your windows from the release version(sensee-windows-x64.zip)
+3. Extract the zip 
+4. Run the executable(sensee.exe) 
+
+
 ## Technical Setup (Developer Section)
 
 This section keeps the implementation details separate from the user experience narrative.
@@ -91,7 +101,19 @@ flutter pub get
 flutter run
 ```
 
+### Home Assistant Connect
+Create a ha_config.json file in the server folder with the following format(check raspi/docker/dockertutorial.md for more details on how to setup your homeassistant):
+
+```json
+{
+    "host": "http://localhost:8123",
+    "token": "YOUR_LONG_LIVED_ACCESS_TOKEN"
+}
+```
+
 ### Optional: Home Assistant Container
+
+
 
 ```powershell
 cd docker
