@@ -11,6 +11,11 @@ The goal is a plug-and-play experience: power the device, open the app, map gest
 
 ## Demo Showcase
 
+
+https://github.com/user-attachments/assets/64bbf61c-e38d-4bf4-9064-bd26c9c91c62
+
+
+
 Watch the project showcase video:
 
 ![Showcase Demo](showcase/showcase.gif)
