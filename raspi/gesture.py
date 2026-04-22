@@ -1,4 +1,7 @@
 # gesture.py
+# Copyright (c) 2026 Rafail Andreou. Licensed under the MIT License.
+
+
 
 import cv2
 import mediapipe as mp
