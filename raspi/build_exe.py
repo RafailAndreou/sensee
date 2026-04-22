@@ -30,7 +30,7 @@ def build():
     spec_path = os.path.join(HERE, "sensee.spec")
     print("\n[BUILD] Building EXE from: {}\n".format(spec_path))
     subprocess.check_call(
-        [sys.executable, "-m", "PyInstaller", "--clean", spec_path],
+        [sys.executable, "-m", "PyInstaller", "--clean", "-y", spec_path],
         cwd=HERE,
     )
     exe_path = os.path.join(HERE, "dist", "sensee", "sensee.exe")
