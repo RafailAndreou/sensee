@@ -5,7 +5,7 @@ Gesture-powered control for your space.
 Sensee is a two-part ecosystem:
 
 - A mobile app where you configure what each gesture should do.
-- A local engine device (laptop or Raspberry Pi) that watches your camera and executes those actions in real time.
+- A local engine device ( Pc or Raspberry Pi) that watches your camera and executes those actions in real time.
 
 The goal is a plug-and-play experience: power the device, open the app, map gestures to actions, and control your environment naturally.
 
@@ -19,12 +19,12 @@ Think of Sensee like this:
 
 1. You open the app and add a mapping.
 2. You choose a target device (for example TV), a gesture (for example Open Palm), and an action (for example Volume Up).
-3. The app syncs that mapping to your Sensee engine device.
+3. The app syncs that mapping to your device.
 4. The camera sees your gesture and the action runs.
 
 You are not juggling two separate products. The app handles setup and control rules, while the engine handles real-time detection and execution.
 
-## The Sensee Loop
+## The Loop
 
 ### 1. Configure
 
@@ -48,14 +48,14 @@ The engine continuously processes camera frames and recognizes hand gestures in 
 When a mapping is matched, Sensee routes the action to the right target:
 
 - Smart Home / Home Assistant actions
-- IR-style device actions
+- IR-style device actions(future implementation, not ready yet)
 - PC actions
 
 ## Product Vision
 
-Sensee is designed as a consumer flow:
+The product is designed as a consumer flow:
 
-- Plug in your Sensee device
+- Plug in your Sensee device(raspberry pi or pc)
 - Open the phone app
 - Configure gestures in a guided UI
 - Start controlling devices instantly
@@ -83,7 +83,7 @@ This section keeps the implementation details separate from the user experience 
 - Webcam
 - Flutter SDK
 
-### Run the Sensee Engine (Python)
+### Run the Engine (Python)
 
 ```powershell
 cd raspi
