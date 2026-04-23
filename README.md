@@ -1,5 +1,3 @@
-
-
 # Sensee
 
 Gesture-powered control for your space.
@@ -12,7 +10,6 @@ Sensee is a two-part ecosystem:
 The goal is a plug-and-play experience: power the device, open the app, map gestures to actions, and control your environment naturally.
 
 ## Demo Showcase
-
 
 https://github.com/user-attachments/assets/64bbf61c-e38d-4bf4-9064-bd26c9c91c62
 
@@ -69,10 +66,10 @@ The long-term direction is a seamless hardware + software experience where setup
 
 1. Install the app on your phone from the release page [app-release.apk](https://github.com/RafailAndreou/sensee/releases/tag/v0.6.9v)
 2. Install the zip on your windows from the release page [sensee-windows-x64.zip](https://github.com/RafailAndreou/sensee/releases/tag/v0.6.9v)
-3. Extract the zip 
+3. Extract the zip
 4. Run the executable(sensee.exe)
 5. Open the settings and put your home assistant url and token(homeassistant url is localhost:8123 as the default)
-**If you don't know how to setup homeassistant check raspi/docker/dockertutorial.md or https://www.home-assistant.io/docs/** 
+   **If you don't know how to setup homeassistant check raspi/docker/dockertutorial.md or https://www.home-assistant.io/docs/**
 
 **Important: The app and the engine must be on the same network(no need for internet access tho)**
 
@@ -105,18 +102,17 @@ flutter run
 ```
 
 ### Home Assistant Connect
+
 Create a ha_config.json file in the server folder with the following format(check raspi/docker/dockertutorial.md for more details on how to setup your homeassistant):
 
 ```json
 {
-    "host": "http://localhost:8123",
-    "token": "YOUR_LONG_LIVED_ACCESS_TOKEN"
+  "host": "http://localhost:8123",
+  "token": "YOUR_LONG_LIVED_ACCESS_TOKEN"
 }
 ```
 
 ### Optional: Home Assistant Container
-
-
 
 ```powershell
 cd docker
@@ -145,3 +141,7 @@ sensee/
 - Engine & API: Python, FastAPI
 - Vision: MediaPipe, OpenCV
 - Smart Home Integration: Home Assistant
+
+# Community Testing
+
+This section is to list the hardware people have succesfully run it on so if you run it on your raspberry pi or another sbc please share the exact hardware so I can update this section.
