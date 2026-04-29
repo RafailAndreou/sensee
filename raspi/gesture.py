@@ -2,30 +2,29 @@
 # Copyright (c) 2026 Rafail Andreou. Licensed under the MIT License.
 
 
+import os
+import sys
+import threading
+import time
+from queue import Queue
+from types import SimpleNamespace
 
 import cv2
 import mediapipe as mp
-from mediapipe.framework.formats import landmark_pb2
-from types import SimpleNamespace
-from queue import Queue
-import threading
-import time
-import os
-import sys
-from server import file
-from server import homeassistant
-from server.discovery import get_local_ip
-from server.events import send_msg
-from server.streamer import set_frame_from_bgr
-from gesture_engine.runtime import GestureRuntime
-from gesture_engine.server_runner import start_fastapi_server_in_background
-from gesture_engine.core.matching import normalize_name, find_matched_config
 from gesture_engine.camera import (
+    TouchConfirmation,
     get_screen_metrics,
     start_hand_movement_monitor,
     touching,
-    TouchConfirmation,
 )
+from gesture_engine.core.matching import find_matched_config, normalize_name
+from gesture_engine.runtime import GestureRuntime
+from gesture_engine.server_runner import start_fastapi_server_in_background
+from mediapipe.framework.formats import landmark_pb2
+from server import file, homeassistant
+from server.discovery import get_local_ip
+from server.events import send_msg
+from server.streamer import set_frame_from_bgr
 
 MIRROR_PREVIEW = True
 TOUCH_XY_THRESHOLD = 0.05
@@ -38,6 +37,7 @@ CONFIRMATION_ACTION_KEYWORDS = (
     "close",
     "toggle",
 )
+
 
 class HandResultsSnapshot:
     def __init__(self, multi_hand_landmarks=None):
@@ -107,7 +107,9 @@ class GestureApp:
         with self.latest_result_lock:
             return self.latest_result
 
-    def enqueue_detected_gesture(self, gesture_name, handedness, timestamp_ms, score=1.0):
+    def enqueue_detected_gesture(
+        self, gesture_name, handedness, timestamp_ms, score=1.0
+    ):
         self.runtime.enqueue_gesture(
             SimpleNamespace(category_name=gesture_name, score=score),
             handedness,
@@ -119,7 +121,11 @@ class GestureApp:
             self.latest_result = result
         if result.gestures:
             for hand_idx, gesture_list in enumerate(result.gestures):
-                handedness = result.handedness[hand_idx][0].category_name if result.handedness else "Unknown"
+                handedness = (
+                    result.handedness[hand_idx][0].category_name
+                    if result.handedness
+                    else "Unknown"
+                )
                 self.enqueue_detected_gesture(
                     gesture_list[0].category_name,
                     handedness,
@@ -127,7 +133,9 @@ class GestureApp:
                     gesture_list[0].score,
                 )
 
-    def process_touch_gestures_for_hand(self, hand_idx, hand_landmarks, detected_hand, timestamp_ms):
+    def process_touch_gestures_for_hand(
+        self, hand_idx, hand_landmarks, detected_hand, timestamp_ms
+    ):
         thumb = hand_landmarks.landmark[4]
         index = hand_landmarks.landmark[8]
         middle = hand_landmarks.landmark[12]
@@ -138,11 +146,15 @@ class GestureApp:
             threshold=TOUCH_XY_THRESHOLD,
             z_threshold=TOUCH_Z_THRESHOLD,
         )
-        index_touching = False if middle_touching else touching(
-            thumb,
-            index,
-            threshold=TOUCH_XY_THRESHOLD,
-            z_threshold=TOUCH_Z_THRESHOLD,
+        index_touching = (
+            False
+            if middle_touching
+            else touching(
+                thumb,
+                index,
+                threshold=TOUCH_XY_THRESHOLD,
+                z_threshold=TOUCH_Z_THRESHOLD,
+            )
         )
 
         gesture_candidates = (
@@ -158,12 +170,16 @@ class GestureApp:
             )
             if matched_config is None:
                 if not is_touching:
-                    self.touch_confirmation.is_confirmed((hand_idx, gesture_name), False)
+                    self.touch_confirmation.is_confirmed(
+                        (hand_idx, gesture_name), False
+                    )
                 continue
 
             action_name = str(matched_config.get("action", ""))
             if action_requires_confirmation(action_name):
-                if not self.touch_confirmation.is_confirmed((hand_idx, gesture_name), is_touching):
+                if not self.touch_confirmation.is_confirmed(
+                    (hand_idx, gesture_name), is_touching
+                ):
                     continue
             elif not is_touching:
                 continue
@@ -171,9 +187,13 @@ class GestureApp:
             self.enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
 
     def run(self):
-        _gesture_thread, _ha_action_thread, _volume_thread = self.runtime.start_workers(self._get_latest_frame_ts)
+        _gesture_thread, _ha_action_thread, _volume_thread = self.runtime.start_workers(
+            self._get_latest_frame_ts
+        )
         # sys._MEIPASS is set by PyInstaller; fall back to __file__ in dev mode.
-        script_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+        script_dir = getattr(
+            sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))
+        )
         model_path = os.path.join(script_dir, "assets", "gesture_recognizer.task")
         base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
 
@@ -181,7 +201,7 @@ class GestureApp:
             base_options=base_options,
             running_mode=mp.tasks.vision.RunningMode.LIVE_STREAM,
             num_hands=1,
-            result_callback=self.gesture_callback
+            result_callback=self.gesture_callback,
         )
 
         recognizer = mp.tasks.vision.GestureRecognizer.create_from_options(options)
@@ -214,13 +234,17 @@ class GestureApp:
                 recognizer.recognize_async(mp_image, timestamp_ms)
 
                 snapshot = self._get_latest_snapshot()
-                hand_snapshot = HandResultsSnapshot(snapshot_to_multi_hand_landmarks(snapshot))
+                hand_snapshot = HandResultsSnapshot(
+                    snapshot_to_multi_hand_landmarks(snapshot)
+                )
 
-                if cv2.waitKey(1) & 0xFF in (ord('q'), ord('Q')):
+                if cv2.waitKey(1) & 0xFF in (ord("q"), ord("Q")):
                     break
 
                 if hand_snapshot.multi_hand_landmarks:
-                    for hand_idx, hand_landmarks in enumerate(hand_snapshot.multi_hand_landmarks):
+                    for hand_idx, hand_landmarks in enumerate(
+                        hand_snapshot.multi_hand_landmarks
+                    ):
                         try:
                             detected_hand = resolve_detected_hand(snapshot, hand_idx)
                             self.process_touch_gestures_for_hand(
@@ -235,12 +259,10 @@ class GestureApp:
                                 self.wrist_queue.put(wrist)
                         except Exception as e:
                             print(f"[warn] Hand processing error: {e}")
-                        
+
                     for draw_hand_landmarks in hand_snapshot.multi_hand_landmarks:
                         mp_drawing.draw_landmarks(
-                            frame,
-                            draw_hand_landmarks,
-                            mp_hands.HAND_CONNECTIONS
+                            frame, draw_hand_landmarks, mp_hands.HAND_CONNECTIONS
                         )
 
                 if MIRROR_PREVIEW:
@@ -248,7 +270,7 @@ class GestureApp:
 
                 set_frame_from_bgr(frame)
                 self._update_latest_frame_ts(timestamp_ms)
-                cv2.imshow('MediaPipe Hands', frame)
+                cv2.imshow("MediaPipe Hands", frame)
 
         finally:
             print("Shutting down gracefully...")
