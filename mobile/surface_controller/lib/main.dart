@@ -22,8 +22,8 @@ class MyApp extends StatelessWidget {
         backgroundColor: const Color(0xFFEAEDF4),
         appBar: AppBar(
           title: const Text(
-            'Sensee  Gesture dashboard',
-            style: TextStyle(fontWeight: FontWeight.w900),
+            'Sensee Gesture dashboard',
+            style: TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
         body: Column(

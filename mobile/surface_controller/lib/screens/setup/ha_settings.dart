@@ -28,8 +28,7 @@ class _HASettingsState extends State<HASettings> {
       setState(() {
         _urlController.text = config['url'] ?? "";
         // A non-empty masked token means a token is already stored on the server.
-        _tokenAlreadySaved =
-            (config['token'] as String? ?? '').isNotEmpty;
+        _tokenAlreadySaved = (config['token'] as String? ?? '').isNotEmpty;
         _isLoading = false;
       });
     } else if (mounted) {
@@ -62,7 +61,9 @@ class _HASettingsState extends State<HASettings> {
         Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to save settings. Check your connection.")),
+          const SnackBar(
+            content: Text("Failed to save settings. Check your connection."),
+          ),
         );
       }
     }
@@ -73,64 +74,72 @@ class _HASettingsState extends State<HASettings> {
     return Scaffold(
       backgroundColor: const Color(0xFFEAEDF4),
       appBar: AppBar(
-        title: const Text("Server Settings"),
+        title: const Text(
+          "Settings",
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
       body: _isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Home Assistant Connection",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Set the URL and Access Token for your Home Assistant server.",
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 32),
-                TextField(
-                  controller: _urlController,
-                  decoration: const InputDecoration(
-                    labelText: "Home Assistant URL",
-                    hintText: "http://192.168.1.50:8123",
-                    border: OutlineInputBorder(),
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Home Assistant Connection",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: _tokenController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: "Long-Lived Access Token",
-                    hintText: _tokenAlreadySaved
-                        ? "Leave blank to keep existing token"
-                        : "Enter your HA Token here...",
-                    border: const OutlineInputBorder(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Set the URL and Access Token for your Home Assistant server.",
+                    style: TextStyle(color: Colors.grey),
                   ),
-                ),
-                const SizedBox(height: 40),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isSaving ? null : _saveConfig,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  const SizedBox(height: 32),
+                  TextField(
+                    controller: _urlController,
+                    decoration: const InputDecoration(
+                      labelText: "Home Assistant URL",
+                      hintText: "http://192.168.1.50:8123",
+                      border: OutlineInputBorder(),
                     ),
-                    child: _isSaving
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("Save Settings", style: TextStyle(fontSize: 18)),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _tokenController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: "Long-Lived Access Token",
+                      hintText: _tokenAlreadySaved
+                          ? "Leave blank to keep existing token"
+                          : "Enter your HA Token here...",
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _saveConfig,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      child: _isSaving
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              "Save Settings",
+                              style: TextStyle(fontSize: 18),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
     );
   }
 }
