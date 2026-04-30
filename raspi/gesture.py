@@ -57,7 +57,7 @@ def snapshot_to_multi_hand_landmarks(snapshot):
 
     multi_hand_landmarks = []
     for hand in snapshot.hand_landmarks:
-        proto = landmark_pb2.NormalizedLandmarkList()
+        proto = landmark_pb2.NormalizedLandmarkList()  # type: ignore
         proto.landmark.extend(
             [landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in hand]
         )
