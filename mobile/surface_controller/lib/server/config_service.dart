@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:surface_controller/globals/connectionslist.dart';
 import 'package:surface_controller/globals/global.dart';
 import 'package:surface_controller/server/discovery_service.dart';
@@ -135,5 +136,41 @@ Future<Map<String, dynamic>?> loadGestureSettings() async {
     return null;
   } catch (_) {
     return null;
+  }
+}
+
+Future<void> saveGestureSettingsLocal({
+  required bool wakeEnabled,
+  required double holdDurationSeconds,
+  required double activeWindowSeconds,
+  required String selectedGesture,
+}) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('gesture_wake_enabled', wakeEnabled);
+    await prefs.setDouble('gesture_hold_duration', holdDurationSeconds);
+    await prefs.setDouble('gesture_active_window', activeWindowSeconds);
+    await prefs.setString('gesture_selected', selectedGesture);
+  } catch (_) {
+    // Silently fail if local storage unavailable
+  }
+}
+
+Future<Map<String, dynamic>> loadGestureSettingsLocal() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'wakeEnabled': prefs.getBool('gesture_wake_enabled') ?? false,
+      'holdDurationSeconds': prefs.getDouble('gesture_hold_duration') ?? 2.0,
+      'activeWindowSeconds': prefs.getDouble('gesture_active_window') ?? 5.0,
+      'selectedGesture': prefs.getString('gesture_selected') ?? 'Open Hand',
+    };
+  } catch (_) {
+    return {
+      'wakeEnabled': false,
+      'holdDurationSeconds': 2.0,
+      'activeWindowSeconds': 5.0,
+      'selectedGesture': 'Open Hand',
+    };
   }
 }

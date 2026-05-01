@@ -22,16 +22,37 @@ class _GesturesettingsState extends State<Gesturesettings> {
   }
 
   Future<void> _loadGestureSettings() async {
-    final settings = await loadGestureSettings();
-    if (settings != null && mounted) {
+    // Load from local storage immediately
+    final localSettings = await loadGestureSettingsLocal();
+    if (mounted) {
       setState(() {
-        _wakeEnabled = settings['wakeEnabled'] ?? false;
-        _selectedGesture = settings['selectedGesture'] ?? 'Open Hand';
-        _holdDurationSeconds = (settings['holdDurationSeconds'] ?? 2)
+        _wakeEnabled = localSettings['wakeEnabled'] ?? false;
+        _selectedGesture = localSettings['selectedGesture'] ?? 'Open Hand';
+        _holdDurationSeconds = (localSettings['holdDurationSeconds'] ?? 2)
             .toDouble();
-        _activeWindowSeconds = (settings['activeWindowSeconds'] ?? 5)
+        _activeWindowSeconds = (localSettings['activeWindowSeconds'] ?? 5)
             .toDouble();
       });
+    }
+
+    // Sync with server in the background
+    final serverSettings = await loadGestureSettings();
+    if (serverSettings != null && mounted) {
+      setState(() {
+        _wakeEnabled = serverSettings['wakeEnabled'] ?? false;
+        _selectedGesture = serverSettings['selectedGesture'] ?? 'Open Hand';
+        _holdDurationSeconds = (serverSettings['holdDurationSeconds'] ?? 2)
+            .toDouble();
+        _activeWindowSeconds = (serverSettings['activeWindowSeconds'] ?? 5)
+            .toDouble();
+      });
+      // Update local cache with server data
+      await saveGestureSettingsLocal(
+        wakeEnabled: _wakeEnabled,
+        holdDurationSeconds: _holdDurationSeconds,
+        activeWindowSeconds: _activeWindowSeconds,
+        selectedGesture: _selectedGesture,
+      );
     }
   }
 
@@ -212,6 +233,14 @@ class _GesturesettingsState extends State<Gesturesettings> {
               ),
             ),
             onPressed: () async {
+              // Save to local storage immediately
+              await saveGestureSettingsLocal(
+                wakeEnabled: _wakeEnabled,
+                holdDurationSeconds: _holdDurationSeconds,
+                activeWindowSeconds: _activeWindowSeconds,
+                selectedGesture: _selectedGesture,
+              );
+              // Send to server
               await sendGestureSettings(
                 wakeEnabled: _wakeEnabled,
                 holdDurationSeconds: _holdDurationSeconds,
