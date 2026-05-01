@@ -74,8 +74,6 @@ class GestureRuntime:
         
         self.action_queue: Queue[tuple[str, str]] = Queue(maxsize=1)
         self.volume_queue: Queue[tuple[str, str]] = Queue(maxsize=1)
-        
-        self.ha_action_queue = self.action_queue
 
         self.action_trigger_times: dict[str, float] = {}
         self.action_trigger_lock = threading.Lock()

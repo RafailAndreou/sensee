@@ -13,7 +13,6 @@ import cv2
 import mediapipe as mp
 from gesture_engine.camera import (
     TouchConfirmation,
-    get_screen_metrics,
     start_hand_movement_monitor,
     touching,
 )
@@ -38,11 +37,6 @@ CONFIRMATION_ACTION_KEYWORDS = (
     "close",
     "toggle",
 )
-
-
-class HandResultsSnapshot:
-    def __init__(self, multi_hand_landmarks=None):
-        self.multi_hand_landmarks = multi_hand_landmarks
 
 
 def action_requires_confirmation(action_name):
@@ -212,9 +206,6 @@ class GestureApp:
         recognizer = mp.tasks.vision.GestureRecognizer.create_from_options(options)
         _server_ip, _server_thread = start_fastapi_server_in_background(get_local_ip)
 
-        screen_w, screen_h, _, _ = get_screen_metrics()
-        print(screen_h, screen_w)
-
         _hand_thread = start_hand_movement_monitor(self.wrist_queue, send_msg)
 
         cap = cv2.VideoCapture(0)
@@ -239,17 +230,13 @@ class GestureApp:
                 recognizer.recognize_async(mp_image, timestamp_ms)
 
                 snapshot = self._get_latest_snapshot()
-                hand_snapshot = HandResultsSnapshot(
-                    snapshot_to_multi_hand_landmarks(snapshot)
-                )
+                multi_hand_landmarks = snapshot_to_multi_hand_landmarks(snapshot)
 
                 if cv2.waitKey(1) & 0xFF in (ord("q"), ord("Q")):
                     break
 
-                if hand_snapshot.multi_hand_landmarks:
-                    for hand_idx, hand_landmarks in enumerate(
-                        hand_snapshot.multi_hand_landmarks
-                    ):
+                if multi_hand_landmarks:
+                    for hand_idx, hand_landmarks in enumerate(multi_hand_landmarks):
                         try:
                             detected_hand = resolve_detected_hand(snapshot, hand_idx)
                             self.process_touch_gestures_for_hand(
@@ -260,12 +247,11 @@ class GestureApp:
                             )
 
                             wrist = hand_landmarks.landmark[0]
-                            if wrist:
-                                self.wrist_queue.put(wrist)
+                            self.wrist_queue.put(wrist)
                         except Exception as e:
                             print(f"[warn] Hand processing error: {e}")
 
-                    for draw_hand_landmarks in hand_snapshot.multi_hand_landmarks:
+                    for draw_hand_landmarks in multi_hand_landmarks:
                         mp_drawing.draw_landmarks(
                             frame, draw_hand_landmarks, mp_hands.HAND_CONNECTIONS
                         )

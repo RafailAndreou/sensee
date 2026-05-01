@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 def queue_latest_action(runtime: "GestureRuntime", entity_id: str, action: str) -> None:
     """Keep only the newest queued action to avoid stale backlog execution."""
-    action_queue = getattr(runtime, "action_queue", runtime.ha_action_queue)
+    action_queue = runtime.action_queue
 
     if action_queue.full():
         try:

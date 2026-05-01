@@ -155,10 +155,6 @@ def execute_configured_action(
         return
 
     if connection_type == "smart":
-        if is_volume:
-            handle_smart_device_action(runtime, entity_id, action, is_volume)
-            return
-
         try:
             handle_smart_device_action(runtime, entity_id, action, is_volume)
         except Exception as e:
