@@ -210,7 +210,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
                   _buildLabeledSlider(
                     title: 'Active Window',
                     value: _activeWindowSeconds,
-                    min: 1,
+                    min: 5,
                     max: 20,
                     divisions: 4,
                     onChanged: (value) {
