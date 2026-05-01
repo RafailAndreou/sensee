@@ -38,6 +38,7 @@ release/*/windows/
 release/*/android/
 raspi/server/configure.json
 raspi/server/ha_config.json
+raspi/server/gesture_settings.json
 raspi/oauth.json
 
 
