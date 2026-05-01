@@ -27,6 +27,7 @@ class HAPairSubmitRequest(BaseModel):
 
 
 class GestureSettings(BaseModel):
+    wakeEnabled: bool
     holdDurationSeconds: float
     activeWindowSeconds: float
     selectedGesture: str

@@ -87,6 +87,7 @@ def load_gesture_settings() -> dict:
     try:
         if not os.path.exists(GESTURE_SETTINGS_PATH):
             return {
+                "wakeEnabled": False,
                 "holdDurationSeconds": 2,
                 "activeWindowSeconds": 5,
                 "selectedGesture": "Open Hand",
@@ -96,7 +97,17 @@ def load_gesture_settings() -> dict:
     except Exception as e:
         print(f"⚠️ Error loading gesture settings: {e}")
         return {
+            "wakeEnabled": False,
             "holdDurationSeconds": 2,
             "activeWindowSeconds": 5,
             "selectedGesture": "Open Hand",
         }
+
+
+def delete_gesture_settings() -> None:
+    try:
+        if os.path.exists(GESTURE_SETTINGS_PATH):
+            os.remove(GESTURE_SETTINGS_PATH)
+            print(f"✅ Gesture settings deleted from {GESTURE_SETTINGS_PATH}")
+    except Exception as e:
+        print(f"⚠️ Error deleting gesture settings: {e}")

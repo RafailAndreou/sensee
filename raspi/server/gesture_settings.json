@@ -1,0 +1,5 @@
+{
+    "holdDurationSeconds": 2.0,
+    "activeWindowSeconds": 5.0,
+    "selectedGesture": "Open Hand"
+}

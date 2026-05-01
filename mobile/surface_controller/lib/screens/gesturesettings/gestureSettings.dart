@@ -193,10 +193,14 @@ class _GesturesettingsState extends State<Gesturesettings> {
             ),
             onPressed: () async {
               await sendGestureSettings(
+                wakeEnabled: _wakeEnabled,
                 holdDurationSeconds: _holdDurationSeconds,
                 activeWindowSeconds: _activeWindowSeconds,
                 selectedGesture: _selectedGesture,
               );
+              if (mounted) {
+                Navigator.pop(context);
+              }
             },
             child: Text("Save Settings", style: TextStyle(color: Colors.white)),
           ),

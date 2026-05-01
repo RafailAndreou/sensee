@@ -90,6 +90,7 @@ Future<bool> pullLatestConfigurationsFromServer() async {
 }
 
 Future<bool> sendGestureSettings({
+  required bool wakeEnabled,
   required double holdDurationSeconds,
   required double activeWindowSeconds,
   required String selectedGesture,
@@ -101,6 +102,7 @@ Future<bool> sendGestureSettings({
     }
 
     final payload = {
+      'wakeEnabled': wakeEnabled,
       'holdDurationSeconds': holdDurationSeconds,
       'activeWindowSeconds': activeWindowSeconds,
       'selectedGesture': selectedGesture,

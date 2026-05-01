@@ -161,6 +161,11 @@ def post_event(name: str):
 def post_gesture_settings(settings: GestureSettings):
     print(f"\nReceived gesture settings: {settings.model_dump()}")
     app.state.sensee.gesture_settings = settings.model_dump()
+    
+    if not settings.wakeEnabled:
+        file.delete_gesture_settings()
+        return {"status": "disabled"}
+    
     file.save_gesture_settings(settings.model_dump())
     return {"status": "saved"}
 
