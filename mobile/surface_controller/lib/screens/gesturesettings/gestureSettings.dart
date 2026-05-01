@@ -15,6 +15,10 @@ class _GesturesettingsState extends State<Gesturesettings> {
   double _holdDurationSeconds = 2;
   double _activeWindowSeconds = 5;
 
+  double _clampValue(double value, double min, double max) {
+    return value.clamp(min, max).toDouble();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -28,10 +32,16 @@ class _GesturesettingsState extends State<Gesturesettings> {
       setState(() {
         _wakeEnabled = localSettings['wakeEnabled'] ?? false;
         _selectedGesture = localSettings['selectedGesture'] ?? 'Open Hand';
-        _holdDurationSeconds = (localSettings['holdDurationSeconds'] ?? 2)
-            .toDouble();
-        _activeWindowSeconds = (localSettings['activeWindowSeconds'] ?? 5)
-            .toDouble();
+        _holdDurationSeconds = _clampValue(
+          (localSettings['holdDurationSeconds'] ?? 2).toDouble(),
+          0,
+          5,
+        );
+        _activeWindowSeconds = _clampValue(
+          (localSettings['activeWindowSeconds'] ?? 5).toDouble(),
+          5,
+          20,
+        );
       });
     }
 
@@ -41,10 +51,16 @@ class _GesturesettingsState extends State<Gesturesettings> {
       setState(() {
         _wakeEnabled = serverSettings['wakeEnabled'] ?? false;
         _selectedGesture = serverSettings['selectedGesture'] ?? 'Open Hand';
-        _holdDurationSeconds = (serverSettings['holdDurationSeconds'] ?? 2)
-            .toDouble();
-        _activeWindowSeconds = (serverSettings['activeWindowSeconds'] ?? 5)
-            .toDouble();
+        _holdDurationSeconds = _clampValue(
+          (serverSettings['holdDurationSeconds'] ?? 2).toDouble(),
+          0,
+          5,
+        );
+        _activeWindowSeconds = _clampValue(
+          (serverSettings['activeWindowSeconds'] ?? 5).toDouble(),
+          5,
+          20,
+        );
       });
       // Update local cache with server data
       await saveGestureSettingsLocal(
@@ -68,6 +84,9 @@ class _GesturesettingsState extends State<Gesturesettings> {
     required double max,
     required int divisions,
   }) {
+    final clampedValue = _clampValue(value, min, max);
+    final stepSize = (max - min) / divisions;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -91,11 +110,11 @@ class _GesturesettingsState extends State<Gesturesettings> {
             valueIndicatorColor: Colors.blue,
           ),
           child: Slider(
-            value: value,
+            value: clampedValue,
             min: min,
             max: max,
             divisions: divisions,
-            label: _formatSeconds(value),
+            label: _formatSeconds(clampedValue),
             onChanged: onChanged,
           ),
         ),
@@ -103,9 +122,9 @@ class _GesturesettingsState extends State<Gesturesettings> {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
             children: List.generate(divisions + 1, (index) {
-              final tickValue = min + ((max - min) / divisions) * index;
+              final tickValue = min + stepSize * index;
               final isActive =
-                  index <= ((value - min) / ((max - min) / divisions)).round();
+                  index <= ((clampedValue - min) / stepSize).round();
 
               return Expanded(
                 child: Column(
