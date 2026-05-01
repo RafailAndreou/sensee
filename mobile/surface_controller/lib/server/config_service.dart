@@ -119,3 +119,21 @@ Future<bool> sendGestureSettings({
     return false;
   }
 }
+
+Future<Map<String, dynamic>?> loadGestureSettings() async {
+  try {
+    final client = await getServerClient();
+    if (client == null) {
+      return null;
+    }
+
+    final response = await http.get(client.gestureSettingsUri);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}

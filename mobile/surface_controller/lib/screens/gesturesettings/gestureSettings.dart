@@ -15,6 +15,26 @@ class _GesturesettingsState extends State<Gesturesettings> {
   double _holdDurationSeconds = 2;
   double _activeWindowSeconds = 5;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadGestureSettings();
+  }
+
+  Future<void> _loadGestureSettings() async {
+    final settings = await loadGestureSettings();
+    if (settings != null && mounted) {
+      setState(() {
+        _wakeEnabled = settings['wakeEnabled'] ?? false;
+        _selectedGesture = settings['selectedGesture'] ?? 'Open Hand';
+        _holdDurationSeconds = (settings['holdDurationSeconds'] ?? 2)
+            .toDouble();
+        _activeWindowSeconds = (settings['activeWindowSeconds'] ?? 5)
+            .toDouble();
+      });
+    }
+  }
+
   String _formatSeconds(double value) {
     return '${value.toInt()} seconds';
   }
