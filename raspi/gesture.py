@@ -18,6 +18,7 @@ from gesture_engine.camera import (
     touching,
 )
 from gesture_engine.core.matching import find_matched_config, normalize_name
+from gesture_engine.core.wake_gate import WakeGate
 from gesture_engine.runtime import GestureRuntime
 from gesture_engine.server_runner import start_fastapi_server_in_background
 from mediapipe.framework.formats import landmark_pb2
@@ -94,6 +95,7 @@ class GestureApp:
         )
         self.touch_confirmation = TouchConfirmation(confirm_frames=TOUCH_CONFIRM_FRAMES)
         self.wrist_queue = Queue()
+        self.wake_gate = WakeGate(file.load_gesture_settings)
 
     def _get_latest_frame_ts(self):
         with self.latest_frame_lock:
@@ -110,6 +112,8 @@ class GestureApp:
     def enqueue_detected_gesture(
         self, gesture_name, handedness, timestamp_ms, score=1.0
     ):
+        if not self.wake_gate.allows(gesture_name):
+            return
         self.runtime.enqueue_gesture(
             SimpleNamespace(category_name=gesture_name, score=score),
             handedness,
@@ -187,6 +191,7 @@ class GestureApp:
             self.enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
 
     def run(self):
+        self.wake_gate.prime()
         _gesture_thread, _ha_action_thread, _volume_thread = self.runtime.start_workers(
             self._get_latest_frame_ts
         )
