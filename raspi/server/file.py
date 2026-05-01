@@ -12,6 +12,7 @@ def _data_dir() -> str:
 
 HA_CONFIG_PATH = os.path.join(_data_dir(), "ha_config.json")
 CONFIG_FILE_PATH = os.path.join(_data_dir(), "configure.json")
+GESTURE_SETTINGS_PATH = os.path.join(_data_dir(), "gesture_settings.json")
 
 def save_configure_json(configuration: list):
     with open(CONFIG_FILE_PATH, "w+") as f:
@@ -74,4 +75,28 @@ def _is_valid_config_item(item: dict) -> bool:
 
 def get_active_configs() -> list:
     return [item for item in _loaded_config if _is_valid_config_item(item)]
-            
+
+
+def save_gesture_settings(settings: dict) -> None:
+    with open(GESTURE_SETTINGS_PATH, "w+") as f:
+        json.dump(settings, f, indent=4)
+        print(f"✅ Gesture settings saved to {GESTURE_SETTINGS_PATH}")
+
+
+def load_gesture_settings() -> dict:
+    try:
+        if not os.path.exists(GESTURE_SETTINGS_PATH):
+            return {
+                "holdDurationSeconds": 2,
+                "activeWindowSeconds": 5,
+                "selectedGesture": "Open Hand",
+            }
+        with open(GESTURE_SETTINGS_PATH, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"⚠️ Error loading gesture settings: {e}")
+        return {
+            "holdDurationSeconds": 2,
+            "activeWindowSeconds": 5,
+            "selectedGesture": "Open Hand",
+        }

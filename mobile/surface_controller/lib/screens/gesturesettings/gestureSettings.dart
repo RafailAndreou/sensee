@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/sizes.dart';
+import 'package:surface_controller/server/config_service.dart';
 
 class Gesturesettings extends StatefulWidget {
   const Gesturesettings({super.key});
@@ -190,8 +191,12 @@ class _GesturesettingsState extends State<Gesturesettings> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            onPressed: () {
-              // Handle button press
+            onPressed: () async {
+              await sendGestureSettings(
+                holdDurationSeconds: _holdDurationSeconds,
+                activeWindowSeconds: _activeWindowSeconds,
+                selectedGesture: _selectedGesture,
+              );
             },
             child: Text("Save Settings", style: TextStyle(color: Colors.white)),
           ),

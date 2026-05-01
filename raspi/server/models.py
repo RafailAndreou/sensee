@@ -24,3 +24,9 @@ class HAPairStartRequest(BaseModel):
 class HAPairSubmitRequest(BaseModel):
     flow_id: str
     user_input: dict
+
+
+class GestureSettings(BaseModel):
+    holdDurationSeconds: float
+    activeWindowSeconds: float
+    selectedGesture: str

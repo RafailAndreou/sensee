@@ -88,3 +88,32 @@ Future<bool> pullLatestConfigurationsFromServer() async {
     return false;
   }
 }
+
+Future<bool> sendGestureSettings({
+  required double holdDurationSeconds,
+  required double activeWindowSeconds,
+  required String selectedGesture,
+}) async {
+  try {
+    final client = await getServerClient();
+    if (client == null) {
+      return false;
+    }
+
+    final payload = {
+      'holdDurationSeconds': holdDurationSeconds,
+      'activeWindowSeconds': activeWindowSeconds,
+      'selectedGesture': selectedGesture,
+    };
+
+    final response = await http.post(
+      client.gestureSettingsUri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+
+    return response.statusCode == 200;
+  } catch (_) {
+    return false;
+  }
+}

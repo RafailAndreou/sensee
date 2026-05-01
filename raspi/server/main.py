@@ -15,6 +15,7 @@ from server.models import (
     HAConfigRequest,
     HAPairStartRequest,
     HAPairSubmitRequest,
+    GestureSettings,
 )
 from server.startup import run_uvicorn_with_port_retry
 from server.streamer import frame_hub
@@ -26,6 +27,7 @@ class AppState:
     """Lightweight in-memory app state shared by route handlers."""
 
     current_config: list[dict[str, Any]] = field(default_factory=list)
+    gesture_settings: dict[str, Any] = field(default_factory=dict)
 
 
 def _validate_configuration_or_raise(configs: list[dict[str, Any]]) -> None:
@@ -154,6 +156,17 @@ def video():
 def post_event(name: str):
     send_msg(name)
     return JSONResponse({"ok": True, "event": name})
+
+@app.post("/gesture-settings")
+def post_gesture_settings(settings: GestureSettings):
+    print(f"\nReceived gesture settings: {settings.model_dump()}")
+    app.state.sensee.gesture_settings = settings.model_dump()
+    file.save_gesture_settings(settings.model_dump())
+    return {"status": "saved"}
+
+@app.get("/gesture-settings")
+def get_gesture_settings():
+    return file.load_gesture_settings()
 
 # -------------- Main --------------
 if __name__ == "__main__":
