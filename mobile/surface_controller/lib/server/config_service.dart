@@ -174,3 +174,60 @@ Future<Map<String, dynamic>> loadGestureSettingsLocal() async {
     };
   }
 }
+
+Future<bool> sendCameraSettings({
+  required bool useNetwork,
+  required String streamUrl,
+}) async {
+  try {
+    final client = await getServerClient();
+    if (client == null) return false;
+
+    final response = await http.post(
+      client.cameraSettingsUri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'useNetwork': useNetwork, 'streamUrl': streamUrl}),
+    );
+    return response.statusCode == 200;
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<Map<String, dynamic>?> loadCameraSettings() async {
+  try {
+    final client = await getServerClient();
+    if (client == null) return null;
+
+    final response = await http.get(client.cameraSettingsUri);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<void> saveCameraSettingsLocal({
+  required bool useNetwork,
+  required String streamUrl,
+}) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('camera_use_network', useNetwork);
+    await prefs.setString('camera_stream_url', streamUrl);
+  } catch (_) {}
+}
+
+Future<Map<String, dynamic>> loadCameraSettingsLocal() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'useNetwork': prefs.getBool('camera_use_network') ?? false,
+      'streamUrl': prefs.getString('camera_stream_url') ?? '',
+    };
+  } catch (_) {
+    return {'useNetwork': false, 'streamUrl': ''};
+  }
+}

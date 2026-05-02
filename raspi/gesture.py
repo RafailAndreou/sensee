@@ -16,8 +16,10 @@ from gesture_engine.camera import (
     start_hand_movement_monitor,
     touching,
 )
+from gesture_engine.capture import open_camera_capture
 from gesture_engine.core.matching import find_matched_config, normalize_name
 from gesture_engine.core.wake_gate import WakeGate
+from gesture_engine.overlay import OVERLAY_DURATION_SECONDS, draw_action_overlay
 from gesture_engine.runtime import GestureRuntime
 from gesture_engine.server_runner import start_fastapi_server_in_background
 from mediapipe.framework.formats import landmark_pb2
@@ -30,7 +32,6 @@ MIRROR_PREVIEW = True
 TOUCH_XY_THRESHOLD = 0.05
 TOUCH_Z_THRESHOLD = 0.02
 TOUCH_CONFIRM_FRAMES = 2
-OVERLAY_DURATION_SECONDS = 1.5
 CONFIRMATION_ACTION_KEYWORDS = (
     "turn on",
     "turn off",
@@ -38,15 +39,6 @@ CONFIRMATION_ACTION_KEYWORDS = (
     "close",
     "toggle",
 )
-
-
-def _draw_action_overlay(frame, label):
-    h, w = frame.shape[:2]
-    cv2.rectangle(frame, (0, h - 50), (w, h), (20, 20, 20), -1)
-    cv2.putText(
-        frame, label, (12, h - 16),
-        cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 230, 110), 2, cv2.LINE_AA,
-    )
 
 
 def action_requires_confirmation(action_name):
@@ -218,9 +210,9 @@ class GestureApp:
 
         _hand_thread = start_hand_movement_monitor(self.wrist_queue, send_msg)
 
-        cap = cv2.VideoCapture(0)
+        cap, source_label = open_camera_capture(file.load_camera_settings())
         if not cap.isOpened():
-            print("❌ Failed to open camera (device unavailable or permission denied).")
+            print(f"❌ Failed to open camera ({source_label}).")
             cap.release()
             recognizer.close()
             return
@@ -273,7 +265,7 @@ class GestureApp:
                     overlay_label = self.runtime.overlay_label
                     overlay_ts = self.runtime.overlay_ts
                 if overlay_label and time.monotonic() - overlay_ts < OVERLAY_DURATION_SECONDS:
-                    _draw_action_overlay(frame, overlay_label)
+                    draw_action_overlay(frame, overlay_label)
 
                 set_frame_from_bgr(frame)
                 self._update_latest_frame_ts(timestamp_ms)

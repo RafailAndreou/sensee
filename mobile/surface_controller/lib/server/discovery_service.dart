@@ -27,6 +27,7 @@ class ServerClient {
   Uri get configUri => _uriForPath('/configuration');
   Uri get currentConfigUri => _uriForPath('/current');
   Uri get gestureSettingsUri => _uriForPath('/gesture-settings');
+  Uri get cameraSettingsUri => _uriForPath('/camera-settings');
   Uri get haConfigUri => _uriForPath('/ha/config');
   Uri get haDiscoveredUri => _uriForPath('/ha/discovered');
   Uri get haPairStartUri => _uriForPath('/ha/pair/start');

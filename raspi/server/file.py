@@ -13,6 +13,7 @@ def _data_dir() -> str:
 HA_CONFIG_PATH = os.path.join(_data_dir(), "ha_config.json")
 CONFIG_FILE_PATH = os.path.join(_data_dir(), "configure.json")
 GESTURE_SETTINGS_PATH = os.path.join(_data_dir(), "gesture_settings.json")
+CAMERA_SETTINGS_PATH = os.path.join(_data_dir(), "camera_settings.json")
 
 def save_configure_json(configuration: list):
     with open(CONFIG_FILE_PATH, "w+") as f:
@@ -111,3 +112,20 @@ def delete_gesture_settings() -> None:
             print(f"✅ Gesture settings deleted from {GESTURE_SETTINGS_PATH}")
     except Exception as e:
         print(f"⚠️ Error deleting gesture settings: {e}")
+
+
+def save_camera_settings(settings: dict) -> None:
+    with open(CAMERA_SETTINGS_PATH, "w+") as f:
+        json.dump(settings, f, indent=4)
+        print(f"✅ Camera settings saved to {CAMERA_SETTINGS_PATH}")
+
+
+def load_camera_settings() -> dict:
+    try:
+        if not os.path.exists(CAMERA_SETTINGS_PATH):
+            return {"useNetwork": False, "streamUrl": ""}
+        with open(CAMERA_SETTINGS_PATH, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"⚠️ Error loading camera settings: {e}")
+        return {"useNetwork": False, "streamUrl": ""}

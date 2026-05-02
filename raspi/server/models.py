@@ -31,3 +31,8 @@ class GestureSettings(BaseModel):
     holdDurationSeconds: float
     activeWindowSeconds: float
     selectedGesture: str
+
+
+class CameraSettings(BaseModel):
+    useNetwork: bool = False
+    streamUrl: str = ""

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'widgets/settingsbutton.dart';
 import '../setup/ha_settings.dart';
 import '../gestureSettings/gesture_settings.dart';
+import '../cameraSettings/camera_settings.dart';
 
 class Settings extends StatelessWidget {
   const Settings({super.key});
@@ -43,6 +44,20 @@ class Settings extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const Gesturesettings(),
+                  ),
+                );
+              },
+            ),
+            SizedBox(height: 24),
+            Settingsbutton(
+              image: Icon(Icons.videocam, size: 32),
+              title: 'Camera Settings',
+              description: 'Local or network (RTSP/HTTP) camera source',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CameraSettingsScreen(),
                   ),
                 );
               },

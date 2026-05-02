@@ -11,6 +11,7 @@ from server import homeassistant
 from server.config_validation import validate_configuration_payload
 from server.events import send_msg
 from server.models import (
+    CameraSettings,
     Configuration,
     HAConfigRequest,
     HAPairStartRequest,
@@ -172,6 +173,15 @@ def post_gesture_settings(settings: GestureSettings):
 @app.get("/gesture-settings")
 def get_gesture_settings():
     return file.load_gesture_settings()
+
+@app.post("/camera-settings")
+def post_camera_settings(settings: CameraSettings):
+    file.save_camera_settings(settings.model_dump())
+    return {"status": "saved"}
+
+@app.get("/camera-settings")
+def get_camera_settings():
+    return file.load_camera_settings()
 
 # -------------- Main --------------
 if __name__ == "__main__":
