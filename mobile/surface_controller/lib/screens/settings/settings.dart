@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'widgets/settingsbutton.dart';
 import '../setup/ha_settings.dart';
-import '../gestureSettings/gestureSettings.dart';
+import '../gestureSettings/gesture_settings.dart';
 
 class Settings extends StatelessWidget {
   const Settings({super.key});

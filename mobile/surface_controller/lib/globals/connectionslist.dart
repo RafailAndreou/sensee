@@ -3,6 +3,7 @@ import 'global.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 
 ValueNotifier<List<int>> connectionsList = ValueNotifier<List<int>>([]);
 int _nextConnectionId = 1;
@@ -48,7 +49,7 @@ int countConnections() {
 
 void printDocumentsDirectoryPath() async {
   final directory = await getApplicationDocumentsDirectory();
-  print('App Documents Directory: ${directory.path}');
+  debugPrint('App Documents Directory: ${directory.path}');
 }
 
 // ···

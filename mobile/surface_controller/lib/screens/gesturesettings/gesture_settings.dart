@@ -106,7 +106,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
             activeTrackColor: Colors.blue,
             inactiveTrackColor: Colors.grey[300],
             thumbColor: Colors.blue,
-            overlayColor: Colors.blue.withOpacity(0.2),
+            overlayColor: Colors.blue.withValues(alpha: 0.2),
             valueIndicatorColor: Colors.blue,
           ),
           child: Slider(
