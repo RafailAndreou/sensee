@@ -82,6 +82,45 @@ def _has_valid_runtime_config(url_base: str, token: str) -> bool:
     return bool(url_base and token)
 
 
+def get_ha_cameras() -> list[dict[str, str]]:
+    """Return camera entities with their direct stream source URLs."""
+    if MOCK_MODE:
+        return [
+            {"entity_id": "camera.front_door", "friendly_name": "Front Door", "stream_url": "rtsp://192.168.1.100:554/stream1"},
+            {"entity_id": "camera.backyard", "friendly_name": "Backyard", "stream_url": ""},
+        ]
+
+    url_base, token = get_ha_config()
+    if not _has_valid_runtime_config(url_base, token):
+        print("❌ Home Assistant config missing. Cannot fetch cameras.")
+        return []
+
+    try:
+        http_client = get_http_client()
+        response = http_client.get_all_states(url_base, token)
+        if response.status_code != 200:
+            print(f"❌ HA Fetch Error {response.status_code}: {response.text}")
+            return []
+
+        cameras = []
+        for state in response.json():
+            entity_id = str(state.get("entity_id", ""))
+            if not entity_id.startswith("camera."):
+                continue
+            attributes = state.get("attributes", {})
+            friendly_name = str(attributes.get("friendly_name", entity_id))
+            stream_url = str(attributes.get("stream_source", ""))
+            cameras.append({
+                "entity_id": entity_id,
+                "friendly_name": friendly_name,
+                "stream_url": stream_url,
+            })
+        return cameras
+    except Exception as e:
+        print(f"❌ Exception fetching cameras from Home Assistant: {e}")
+        return []
+
+
 def get_ha_entities(device_type_filter: str | None = None) -> list[dict[str, str]]:
     """Fetch and format entities for the Sensee UI."""
     global _entities_cache_time

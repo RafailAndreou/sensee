@@ -110,12 +110,13 @@ def get_current_config():
 
 @app.get("/smart-devices")
 def get_smart_devices():
-    # Fetch REAL devices from your Home Assistant
     devices = homeassistant.get_ha_entities()
-    return {
-        "status": "success",
-        "devices": devices
-    }
+    return {"status": "success", "devices": devices}
+
+@app.get("/ha/cameras")
+def get_ha_cameras():
+    cameras = homeassistant.get_ha_cameras()
+    return {"status": "success", "cameras": cameras}
 
 @app.get("/ha/config")
 def get_ha_config():

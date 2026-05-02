@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .ha_config import get_ha_config, refresh_ha_config_cache
-from .ha_entities import get_ha_entities
+from .ha_entities import get_ha_cameras, get_ha_entities
 from .ha_pairing import (
     fetch_discovered_flows,
     start_pairing_flow_request,

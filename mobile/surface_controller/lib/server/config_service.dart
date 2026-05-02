@@ -220,6 +220,26 @@ Future<void> saveCameraSettingsLocal({
   } catch (_) {}
 }
 
+Future<List<Map<String, dynamic>>> loadHACameras() async {
+  try {
+    final client = await getServerClient();
+    if (client == null) return [];
+
+    final response = await http
+        .get(client.haCamerasUri)
+        .timeout(const Duration(seconds: 5));
+
+    if (response.statusCode != 200) return [];
+
+    final body = jsonDecode(response.body);
+    final list = body['cameras'];
+    if (list is! List) return [];
+    return list.whereType<Map<String, dynamic>>().toList();
+  } catch (_) {
+    return [];
+  }
+}
+
 Future<Map<String, dynamic>> loadCameraSettingsLocal() async {
   try {
     final prefs = await SharedPreferences.getInstance();
