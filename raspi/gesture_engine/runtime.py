@@ -81,6 +81,10 @@ class GestureRuntime:
         self.last_gesture_log_time: float = 0.0
         self.gesture_log_lock = threading.Lock()
 
+        self.overlay_label: str = ""
+        self.overlay_ts: float = 0.0
+        self.overlay_lock = threading.Lock()
+
     def enqueue_gesture(
         self,
         gesture: SimpleNamespace,

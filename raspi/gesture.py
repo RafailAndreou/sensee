@@ -30,6 +30,7 @@ MIRROR_PREVIEW = True
 TOUCH_XY_THRESHOLD = 0.05
 TOUCH_Z_THRESHOLD = 0.02
 TOUCH_CONFIRM_FRAMES = 2
+OVERLAY_DURATION_SECONDS = 1.5
 CONFIRMATION_ACTION_KEYWORDS = (
     "turn on",
     "turn off",
@@ -37,6 +38,15 @@ CONFIRMATION_ACTION_KEYWORDS = (
     "close",
     "toggle",
 )
+
+
+def _draw_action_overlay(frame, label):
+    h, w = frame.shape[:2]
+    cv2.rectangle(frame, (0, h - 50), (w, h), (20, 20, 20), -1)
+    cv2.putText(
+        frame, label, (12, h - 16),
+        cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 230, 110), 2, cv2.LINE_AA,
+    )
 
 
 def action_requires_confirmation(action_name):
@@ -258,6 +268,12 @@ class GestureApp:
 
                 if MIRROR_PREVIEW:
                     frame = cv2.flip(frame, 1)
+
+                with self.runtime.overlay_lock:
+                    overlay_label = self.runtime.overlay_label
+                    overlay_ts = self.runtime.overlay_ts
+                if overlay_label and time.monotonic() - overlay_ts < OVERLAY_DURATION_SECONDS:
+                    _draw_action_overlay(frame, overlay_label)
 
                 set_frame_from_bgr(frame)
                 self._update_latest_frame_ts(timestamp_ms)

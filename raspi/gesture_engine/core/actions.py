@@ -149,6 +149,9 @@ def execute_configured_action(
 
     runtime.send_msg(f"{gesture_name} touch detected")
     print(f"Executing action: {device_name} {action}")
+    with runtime.overlay_lock:
+        runtime.overlay_label = f"{device_name}  {action}" if device_name else action
+        runtime.overlay_ts = time.monotonic()
 
     if get_device_family(device_name) == "pc":
         execute_pc_action(action)
