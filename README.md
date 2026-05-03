@@ -145,3 +145,47 @@ sensee/
 # Community Testing
 
 This section is to list the hardware people have succesfully run it on so if you run it on your raspberry pi or another sbc please share the exact hardware so I can update this section.
+
+# Contribute
+
+### Getting Started
+
+1. Fork the repo and clone it locally:
+   ```powershell
+   git clone https://github.com/YOUR_USERNAME/sensee.git
+   cd sensee
+   ```
+2. Follow the **Technical Setup** section above to get both the engine and app running
+3. Create a branch for your changes:
+   ```powershell
+   git checkout -b feature/your-feature-name
+   # or: fix/issue-description, docs/update-readme, etc.
+   ```
+
+### Before Submitting
+
+Run the tests to make sure nothing is broken:
+
+**Engine (Python):**
+
+```powershell
+cd raspi
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+**App (Flutter):**
+
+```powershell
+cd mobile/surface_controller
+flutter analyze
+flutter test
+```
+
+### Submitting a Pull Request
+
+1. One feature or fix per PR (keep changes focused and reviewable)
+2. Write a clear PR title and description explaining **what** changed and **why**
+3. For larger changes, open an issue first to discuss the approach
+4. Make sure your code passes all tests and lint checks
+
+**AI-assisted contributions:** Upload `guidelines.md` to your AI assistant before generating changes.
