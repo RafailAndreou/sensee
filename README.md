@@ -68,7 +68,7 @@ The long-term direction is a seamless hardware + software experience where setup
 2. Install the zip on your windows from the release page [sensee-windows-x64.zip](https://github.com/RafailAndreou/sensee/releases/tag/v0.6.9v)
 3. Extract the zip
 4. Run the executable(sensee.exe)
-5. Open the settings and put your home assistant url and token(homeassistant url is localhost:8123 as the default)
+5. Open the settings and put your home assistant url and token(homeassistant url is http://localhost:8123 as the default)
    **If you don't know how to setup homeassistant check raspi/docker/dockertutorial.md or https://www.home-assistant.io/docs/**
 
 **Important: The app and the engine must be on the same network(no need for internet access tho)**
@@ -111,6 +111,8 @@ Create a ha_config.json file in the server folder with the following format(chec
   "token": "YOUR_LONG_LIVED_ACCESS_TOKEN"
 }
 ```
+
+**dont forget the http:// or you will get an error i will add normalization in the future**
 
 ### Optional: Home Assistant Container
 

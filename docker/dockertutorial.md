@@ -37,7 +37,7 @@ Copy your token and create `ha_config.json` inside `raspi/server/`:
 
 # Step 6
 
-In the browser(localhost:8123) press + sign -> add device, select your device
+In the browser(http://localhost:8123) press + sign -> add device, select your device
 Your device won't be autommatically find through homeassistant on windows so you have to manually put the ip
 for example:
 +-> add device -> android tv remote -> host = tv_ip and submit

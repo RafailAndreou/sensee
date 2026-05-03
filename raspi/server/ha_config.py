@@ -28,6 +28,9 @@ def get_ha_config() -> tuple[str, str]:
         if not token:
             token = DEFAULT_HA_TOKEN
 
+        if url and not url.startswith(("http://", "https://")):
+            url = "http://" + url
+
         _ha_config_cache["url"] = url
         _ha_config_cache["token"] = token
         return url, token
