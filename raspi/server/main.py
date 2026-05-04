@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import asyncio
 import os
@@ -74,9 +75,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Serve web dashboard
+_web_dir = os.path.join(os.path.dirname(__file__), "web")
+if os.path.isdir(_web_dir):
+    app.mount("/web", StaticFiles(directory=_web_dir), name="web")
+
 # ---------------- Routes ----------------
 @app.get("/")
 def index():
+    web_index = os.path.join(os.path.dirname(__file__), "web", "index.html")
+    if os.path.exists(web_index):
+        with open(web_index, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read())
     return HTMLResponse("""
     <html>
       <body style="margin:0;background:#111;display:flex;justify-content:center;align-items:center;height:100vh">

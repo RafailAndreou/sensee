@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sensee — Gesture Controller</title>
+  <link rel="stylesheet" href="/web/style.css" />
+</head>
+<body>
+  <div id="app">
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">👋</div>
+        <div>
+          <div class="sidebar-logo-text">Sensee</div>
+          <div class="sidebar-logo-sub">Gesture Controller</div>
+        </div>
+      </div>
+
+      <div class="nav-item active" data-view="dashboard">
+        <span class="nav-icon">⚡</span> Dashboard
+      </div>
+      <div class="nav-item" data-view="camera">
+        <span class="nav-icon">📷</span> Camera
+      </div>
+      <div class="nav-item" data-view="settings">
+        <span class="nav-icon">⚙️</span> Settings
+      </div>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="server-status" id="server-status-indicator">
+        <div class="status-dot checking" id="status-dot"></div>
+        <span id="status-text">Connecting…</span>
+      </div>
+    </nav>
+
+    <main class="main" id="main-content">
+      <!-- Views render here -->
+    </main>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+  <div id="ctx-menu-root"></div>
+
+  <script src="/web/app.js"></script>
+</body>
+</html>
