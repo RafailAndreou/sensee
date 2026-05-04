@@ -93,6 +93,8 @@ pip install -r requirements.txt
 python gesture.py
 ```
 
+Running `gesture.py` now also starts the FastAPI dashboard server automatically and opens the web UI in your browser (`/web`) on the first available port from `8000-8004`.
+
 ### Run the Surface Controller App (Flutter)
 
 ```powershell
