@@ -5,12 +5,16 @@ Usage (inside the activated venv):
     python build_exe.py
 
 The output will be in:
-    dist/sensee/sensee.exe
+    dist/sensee-x64/sensee-x64.exe
+A zip archive will also be created in:
+    dist/sensee-x64.zip
 """
 
 import subprocess
 import sys
 import os
+import zipfile
+import shutil
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -25,6 +29,19 @@ def ensure_pyinstaller():
         print("[OK] PyInstaller installed.")
 
 
+def zip_build():
+    build_dir = os.path.join(HERE, "dist", "sensee-x64")
+    zip_path = os.path.join(HERE, "dist", "sensee-x64.zip")
+    print("\n[ZIP] Creating: {}\n".format(zip_path))
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, _, files in os.walk(build_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, os.path.join(HERE, "dist"))
+                zf.write(file_path, arcname)
+    print("[DONE] Zip created at:\n    {}\n".format(zip_path))
+
+
 def build():
     ensure_pyinstaller()
     spec_path = os.path.join(HERE, "sensee.spec")
@@ -33,8 +50,9 @@ def build():
         [sys.executable, "-m", "PyInstaller", "--clean", "-y", spec_path],
         cwd=HERE,
     )
-    exe_path = os.path.join(HERE, "dist", "sensee", "sensee.exe")
+    exe_path = os.path.join(HERE, "dist", "sensee-x64", "sensee-x64.exe")
     print("\n[DONE] EXE is at:\n    {}\n".format(exe_path))
+    zip_build()
 
 
 if __name__ == "__main__":
