@@ -8,26 +8,33 @@
 </head>
 <body>
   <div id="app">
+    <button class="sidebar-open-btn" id="sidebar-open-btn" type="button" aria-label="Open sidebar">☰</button>
     <nav class="sidebar">
+      <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Collapse sidebar">‹</button>
       <div class="sidebar-logo">
         <div class="sidebar-logo-icon">👋</div>
         <div>
           <div class="sidebar-logo-text">Sensee</div>
-          <div class="sidebar-logo-sub">Gesture Controller</div>
+          <div class="sidebar-logo-sub" data-i18n="Gesture Controller">Gesture Controller</div>
         </div>
       </div>
 
       <div class="nav-item active" data-view="dashboard">
-        <span class="nav-icon">⚡</span> Dashboard
+        <span class="nav-icon">⚡</span> <span data-i18n="Dashboard">Dashboard</span>
       </div>
       <div class="nav-item" data-view="camera">
-        <span class="nav-icon">📷</span> Camera
+        <span class="nav-icon">📷</span> <span data-i18n="Camera">Camera</span>
       </div>
       <div class="nav-item" data-view="settings">
-        <span class="nav-icon">⚙️</span> Settings
+        <span class="nav-icon">⚙️</span> <span data-i18n="Settings">Settings</span>
       </div>
 
       <div class="sidebar-spacer"></div>
+
+      <div class="lang-switcher" id="lang-switcher">
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+        <button class="lang-btn" data-lang="el" type="button">EL</button>
+      </div>
 
       <div class="server-status" id="server-status-indicator">
         <div class="status-dot checking" id="status-dot"></div>

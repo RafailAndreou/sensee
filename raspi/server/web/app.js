@@ -38,6 +38,159 @@ const BRANDS_BY_TYPE = {
   PC:    ['Custom'],
 };
 
+/* ─── i18n ──────────────────────────────────────────────────────────────── */
+const TRANSLATIONS_EL = {
+  // Sidebar
+  'Gesture Controller': 'Έλεγχος Χειρονομιών',
+  'Dashboard': 'Πίνακας',
+  'Camera': 'Κάμερα',
+  'Settings': 'Ρυθμίσεις',
+  'Connecting…': 'Σύνδεση…',
+  'Connected': 'Συνδεδεμένο',
+  'Disconnected': 'Αποσυνδεδεμένο',
+
+  // Dashboard
+  'Gesture Mappings': 'Αντιστοιχίσεις Χειρονομιών',
+  '↻ Sync': '↻ Συγχρονισμός',
+  'No gesture mappings yet': 'Δεν υπάρχουν αντιστοιχίσεις ακόμη',
+  'Tap the + button to connect a device and assign a gesture.': 'Πατήστε το κουμπί + για να συνδέσετε μια συσκευή και να αναθέσετε μια χειρονομία.',
+  'mapping configured': 'αντιστοίχιση διαμορφωμένη',
+  'mappings configured': 'αντιστοιχίσεις διαμορφωμένες',
+  'Synced': 'Συγχρονισμένο',
+  'Pending sync': 'Εκκρεμεί συγχρονισμός',
+  'Local PC': 'Τοπικός Υπολογιστής',
+
+  // Card menu / toasts
+  'Edit': 'Επεξεργασία',
+  'Delete': 'Διαγραφή',
+  'Mapping deleted': 'Η αντιστοίχιση διαγράφηκε',
+  'Mapping added': 'Η αντιστοίχιση προστέθηκε',
+  'Mapping updated': 'Η αντιστοίχιση ενημερώθηκε',
+  'Mappings synced': 'Οι αντιστοιχίσεις συγχρονίστηκαν',
+  'Sync failed': 'Ο συγχρονισμός απέτυχε',
+
+  // Camera view
+  'Live Camera': 'Ζωντανή Κάμερα',
+  'Gesture recognition feed': 'Ροή αναγνώρισης χειρονομιών',
+  '↻ Refresh': '↻ Ανανέωση',
+  'No feed available': 'Δεν υπάρχει διαθέσιμη ροή',
+  'Make sure the gesture engine is running': 'Βεβαιωθείτε ότι ο μηχανισμός χειρονομιών λειτουργεί',
+
+  // Settings hub
+  'Configure your Sensee hub': 'Διαμορφώστε το Sensee',
+  'Home Assistant': 'Home Assistant',
+  'URL and access token': 'URL και διακριτικό πρόσβασης',
+  'Gesture Settings': 'Ρυθμίσεις Χειρονομιών',
+  'Wake gesture, hold duration, active window': 'Χειρονομία αφύπνισης, διάρκεια κράτησης, ενεργό παράθυρο',
+  'Camera Settings': 'Ρυθμίσεις Κάμερας',
+  'Network camera and stream URL': 'Δικτυακή κάμερα και URL ροής',
+
+  // HA Settings
+  '‹ Settings': '‹ Ρυθμίσεις',
+  'Loading…': 'Φόρτωση…',
+  'Server URL': 'URL Διακομιστή',
+  'Long-Lived Access Token': 'Διακριτικό Μακροπρόθεσμης Πρόσβασης',
+  'Token saved — enter new to replace': 'Διακριτικό αποθηκεύτηκε — εισάγετε νέο για αντικατάσταση',
+  'Paste token here': 'Επικολλήστε το διακριτικό εδώ',
+  'Current': 'Τρέχον',
+  'Save Configuration': 'Αποθήκευση Διαμόρφωσης',
+  'URL is required': 'Απαιτείται URL',
+  'Saving…': 'Αποθήκευση…',
+  'Home Assistant configured': 'Το Home Assistant διαμορφώθηκε',
+  'Failed': 'Απέτυχε',
+
+  // Gesture Settings
+  'Wake Gesture': 'Χειρονομία Αφύπνισης',
+  'Require a wake gesture before commands': 'Απαιτείται χειρονομία αφύπνισης πριν τις εντολές',
+  'Hold Duration': 'Διάρκεια Κράτησης',
+  'Active Window': 'Ενεργό Παράθυρο',
+  'Save Settings': 'Αποθήκευση Ρυθμίσεων',
+  'Gesture settings saved': 'Οι ρυθμίσεις χειρονομιών αποθηκεύτηκαν',
+
+  // Camera Settings
+  'Use Network Camera': 'Χρήση Δικτυακής Κάμερας',
+  'Stream from RTSP/HTTP instead of local camera': 'Ροή από RTSP/HTTP αντί τοπικής κάμερας',
+  'Stream URL': 'URL Ροής',
+  '📷 Browse HA Cameras': '📷 Αναζήτηση Καμερών HA',
+  'Camera settings saved': 'Οι ρυθμίσεις κάμερας αποθηκεύτηκαν',
+  'Could not load HA cameras': 'Δεν ήταν δυνατή η φόρτωση καμερών HA',
+
+  // Camera picker modal
+  'Select Camera': 'Επιλογή Κάμερας',
+  'No cameras found': 'Δεν βρέθηκαν κάμερες',
+  'Camera selected': 'Η κάμερα επιλέχθηκε',
+
+  // Wizard
+  'Select Device Type': 'Επιλογή Τύπου Συσκευής',
+  'Connection Method': 'Μέθοδος Σύνδεσης',
+  'Smart Home Device': 'Έξυπνη Συσκευή',
+  'Connect via Home Assistant': 'Σύνδεση μέσω Home Assistant',
+  'Classic / IR Device': 'Κλασική / IR Συσκευή',
+  'Select brand from library': 'Επιλογή μάρκας από τη βιβλιοθήκη',
+  'Pair New TV': 'Σύζευξη νέας TV',
+  'Discover and pair via Home Assistant': 'Ανακάλυψη και σύζευξη μέσω Home Assistant',
+
+  'Select HA Device': 'Επιλογή Συσκευής HA',
+  'Loading devices…': 'Φόρτωση συσκευών…',
+  'devices found': 'συσκευές βρέθηκαν',
+  'Make sure Home Assistant is configured and devices are added.': 'Βεβαιωθείτε ότι το Home Assistant έχει ρυθμιστεί και έχουν προστεθεί συσκευές.',
+  'Search devices…': 'Αναζήτηση συσκευών…',
+  'Failed to load devices': 'Αποτυχία φόρτωσης συσκευών',
+
+  'Select Brand': 'Επιλογή Μάρκας',
+  'Search brands…': 'Αναζήτηση μαρκών…',
+
+  'Edit Mapping': 'Επεξεργασία Αντιστοίχισης',
+  'Configure Action': 'Διαμόρφωση Ενέργειας',
+  'Action': 'Ενέργεια',
+  'Gesture': 'Χειρονομία',
+  'Hand': 'Χέρι',
+  '⚠ This gesture + hand combination is already assigned to another mapping.': '⚠ Αυτός ο συνδυασμός χειρονομίας + χεριού έχει ήδη αντιστοιχιστεί σε άλλη αντιστοίχιση.',
+  'Cancel': 'Ακύρωση',
+  'Save Changes': 'Αποθήκευση Αλλαγών',
+  'Add Mapping': 'Προσθήκη Αντιστοίχισης',
+
+  // Pairing
+  'Pair New Device': 'Σύζευξη Νέας Συσκευής',
+  'Discovering devices…': 'Ανακάλυψη συσκευών…',
+  'No devices discovered. Make sure devices are in pairing mode.': 'Δεν ανακαλύφθηκαν συσκευές. Βεβαιωθείτε ότι οι συσκευές είναι σε λειτουργία σύζευξης.',
+  'Starting pairing…': 'Έναρξη σύζευξης…',
+  'Enter PIN shown on device': 'Εισάγετε το PIN που εμφανίζεται στη συσκευή',
+  'Pair': 'Σύζευξη',
+  'Device paired successfully!': 'Η συσκευή συζεύχθηκε επιτυχώς!',
+  'Pairing failed — check PIN': 'Σύζευξη απέτυχε — ελέγξτε το PIN',
+  'Error': 'Σφάλμα',
+
+  // Gesture / Hand labels
+  'Index + Thumb': 'Δείκτης + Αντίχειρας',
+  'Middle + Thumb': 'Μέσος + Αντίχειρας',
+  'Open Palm': 'Ανοιχτή Παλάμη',
+  'Fist': 'Γροθιά',
+  'Left': 'Αριστερό',
+  'Right': 'Δεξί',
+  'Both': 'Και τα δύο',
+
+  // Actions
+  'Turn on': 'Ενεργοποίηση',
+  'Turn off': 'Απενεργοποίηση',
+  'Increase volume': 'Αύξηση έντασης',
+  'Decrease volume': 'Μείωση έντασης',
+  'Open Spotify': 'Άνοιγμα Spotify',
+  'Open YouTube': 'Άνοιγμα YouTube',
+  'Close Window': 'Κλείσιμο Παραθύρου',
+  'Open Browser': 'Άνοιγμα Φυλλομετρητή',
+
+  // Device types
+  'Light': 'Φως',
+  'Fan': 'Ανεμιστήρας',
+  'PC': 'Υπολογιστής',
+};
+
+function t(key) {
+  if (state.lang === 'el') return TRANSLATIONS_EL[key] ?? key;
+  return key;
+}
+
 /* ─── State ─────────────────────────────────────────────────────────────── */
 const state = {
   configs: [],          // [{id,connectionType,entityId,brand,action,gesture,sound,hand,isSynced}]
@@ -47,6 +200,7 @@ const state = {
   syncInFlight: false,
   pollTimer: null,
   connectTimer: null,
+  lang: (typeof localStorage !== 'undefined' && localStorage.getItem('sensee.lang')) || 'en',
 };
 
 // IDs deleted locally but not yet confirmed gone from server — ignore server echoes for these
@@ -163,24 +317,52 @@ function navigate(view, subView = null) {
   render();
 }
 
+/* ─── Language ──────────────────────────────────────────────────────────── */
+function applyStaticTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === state.lang);
+  });
+  // Refresh current status text in user's language
+  const txt = document.getElementById('status-text');
+  if (txt) {
+    if (state.serverOnline === true) txt.textContent = t('Connected');
+    else if (state.serverOnline === false) txt.textContent = t('Disconnected');
+    else txt.textContent = t('Connecting…');
+  }
+}
+
+function setLanguage(lang) {
+  if (lang !== 'en' && lang !== 'el') return;
+  if (state.lang === lang) return;
+  state.lang = lang;
+  try { localStorage.setItem('sensee.lang', lang); } catch {}
+  applyStaticTranslations();
+  closeAllModals();
+  lastDashboardHash = '';
+  render();
+}
+
 /* ─── Server Status Polling ─────────────────────────────────────────────── */
 async function checkServer() {
   const dot = document.getElementById('status-dot');
   const txt = document.getElementById('status-text');
   if (!dot) return;
   dot.className = 'status-dot checking';
-  txt.textContent = 'Connecting…';
+  txt.textContent = t('Connecting…');
   try {
     await api.get('/ping');
     const wasOffline = state.serverOnline === false;
     state.serverOnline = true;
     dot.className = 'status-dot connected';
-    txt.textContent = 'Connected';
+    txt.textContent = t('Connected');
     if (wasOffline) pullConfigs();
   } catch {
     state.serverOnline = false;
     dot.className = 'status-dot disconnected';
-    txt.textContent = 'Disconnected';
+    txt.textContent = t('Disconnected');
   }
 }
 
@@ -233,9 +415,9 @@ async function pushConfigs(silent = false) {
     state.configs.forEach(c => c.isSynced = true);
     pendingDeletedIds.clear();
     if (state.view === 'dashboard') renderDashboardIfChanged();
-    if (!silent) toast('Mappings synced', 'success');
+    if (!silent) toast(t('Mappings synced'), 'success');
   } catch (e) {
-    toast('Sync failed: ' + e.message, 'error');
+    toast(t('Sync failed') + ': ' + e.message, 'error');
   }
 }
 
@@ -267,6 +449,21 @@ function deleteConfig(id) {
   pushConfigs(true);
 }
 
+function swapConfigs(idA, idB) {
+  const a = normalizeId(idA);
+  const b = normalizeId(idB);
+  if (!a || !b || a === b) return;
+  const i = state.configs.findIndex(c => normalizeId(c.id) === a);
+  const j = state.configs.findIndex(c => normalizeId(c.id) === b);
+  if (i < 0 || j < 0 || i === j) return;
+  [state.configs[i], state.configs[j]] = [state.configs[j], state.configs[i]];
+  state.configs[i].isSynced = false;
+  state.configs[j].isSynced = false;
+  lastDashboardHash = '';
+  if (state.view === 'dashboard') renderDashboard();
+  pushConfigs(true);
+}
+
 function hasConflict(gesture, hand, excludeId = null) {
   const normalizedExcludeId = normalizeId(excludeId);
   return state.configs.some(c => {
@@ -294,23 +491,24 @@ function render() {
 
 /* ─── Dashboard View ────────────────────────────────────────────────────── */
 function renderDashboardIfChanged() {
-  const hash = JSON.stringify(state.configs.map(c => ({ ...c, isSynced: c.isSynced })));
+  const hash = JSON.stringify({ lang: state.lang, configs: state.configs.map(c => ({ ...c, isSynced: c.isSynced })) });
   if (hash === lastDashboardHash) return;
   lastDashboardHash = hash;
   renderDashboard();
 }
 
 function renderDashboard() {
-  lastDashboardHash = JSON.stringify(state.configs.map(c => ({ ...c, isSynced: c.isSynced })));
+  lastDashboardHash = JSON.stringify({ lang: state.lang, configs: state.configs.map(c => ({ ...c, isSynced: c.isSynced })) });
 
   const main = document.getElementById('main-content');
   const configs = state.configs;
+  const countLabel = configs.length === 1 ? t('mapping configured') : t('mappings configured');
 
   const grid = configs.length === 0
     ? `<div class="empty-state">
         <div class="empty-icon">🖐</div>
-        <div class="empty-title">No gesture mappings yet</div>
-        <div class="empty-sub">Tap the + button to connect a device and assign a gesture.</div>
+        <div class="empty-title">${escHtml(t('No gesture mappings yet'))}</div>
+        <div class="empty-sub">${escHtml(t('Tap the + button to connect a device and assign a gesture.'))}</div>
        </div>`
     : `<div class="gesture-grid">${configs.map(renderGestureCard).join('')}</div>`;
 
@@ -318,14 +516,14 @@ function renderDashboard() {
     <div class="view">
       <div class="page-header">
         <div>
-          <div class="page-title">Gesture Mappings</div>
-          <div class="page-sub">${configs.length} mapping${configs.length !== 1 ? 's' : ''} configured</div>
+          <div class="page-title">${escHtml(t('Gesture Mappings'))}</div>
+          <div class="page-sub">${configs.length} ${escHtml(countLabel)}</div>
         </div>
-        ${configs.length > 0 ? `<button class="btn btn-ghost btn-sm" id="sync-btn">↻ Sync</button>` : ''}
+        ${configs.length > 0 ? `<button class="btn btn-ghost btn-sm" id="sync-btn">${escHtml(t('↻ Sync'))}</button>` : ''}
       </div>
       ${grid}
     </div>
-    <button class="fab" id="add-fab" title="Add mapping">+</button>
+    <button class="fab" id="add-fab" title="${escAttr(t('Add Mapping'))}">+</button>
   `;
 
   document.getElementById('add-fab').addEventListener('click', openAddWizard);
@@ -338,18 +536,77 @@ function renderDashboard() {
       const id = normalizeId(btn.closest('.gesture-card').dataset.id);
       const rect = btn.getBoundingClientRect();
       showCtxMenu([
-        { icon: '✏️', label: 'Edit',   action: () => openEditWizard(id) },
-        { icon: '🗑', label: 'Delete', danger: true, action: () => {
+        { icon: '✏️', label: t('Edit'),   action: () => openEditWizard(id) },
+        { icon: '🗑', label: t('Delete'), danger: true, action: () => {
           deleteConfig(id);
-          toast('Mapping deleted', 'info');
+          toast(t('Mapping deleted'), 'info');
         }},
       ], rect.left, rect.bottom + 4);
     });
   });
 
-  // Card click = edit
+  // Card click = edit (suppressed if a drag just happened)
+  let dragSourceId = null;
+  let currentDropTargetEl = null;
+  let suppressClickUntil = 0;
+
   main.querySelectorAll('.gesture-card').forEach(card => {
-    card.addEventListener('click', () => openEditWizard(normalizeId(card.dataset.id)));
+    card.addEventListener('click', () => {
+      if (Date.now() < suppressClickUntil) return;
+      openEditWizard(normalizeId(card.dataset.id));
+    });
+
+    card.draggable = true;
+
+    card.addEventListener('dragstart', e => {
+      if (e.target.closest('.card-menu-btn')) { e.preventDefault(); return; }
+      dragSourceId = normalizeId(card.dataset.id);
+      try {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', dragSourceId);
+      } catch {}
+      card.classList.add('dragging');
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      if (currentDropTargetEl) currentDropTargetEl.classList.remove('drop-target');
+      currentDropTargetEl = null;
+      dragSourceId = null;
+      suppressClickUntil = Date.now() + 250;
+    });
+
+    card.addEventListener('dragover', e => {
+      if (!dragSourceId) return;
+      const targetId = normalizeId(card.dataset.id);
+      if (targetId === dragSourceId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (currentDropTargetEl !== card) {
+        if (currentDropTargetEl) currentDropTargetEl.classList.remove('drop-target');
+        currentDropTargetEl = card;
+        card.classList.add('drop-target');
+      }
+    });
+
+    card.addEventListener('dragleave', e => {
+      if (currentDropTargetEl === card && !card.contains(e.relatedTarget)) {
+        card.classList.remove('drop-target');
+        currentDropTargetEl = null;
+      }
+    });
+
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      const targetId = normalizeId(card.dataset.id);
+      card.classList.remove('drop-target');
+      currentDropTargetEl = null;
+      if (!dragSourceId || targetId === dragSourceId) return;
+      const sourceId = dragSourceId;
+      dragSourceId = null;
+      suppressClickUntil = Date.now() + 250;
+      swapConfigs(sourceId, targetId);
+    });
   });
 }
 
@@ -360,7 +617,7 @@ function renderGestureCard(cfg) {
   const h = HANDS.find(h => h.id === cfg.hand) || HANDS[0];
   const synced = cfg.isSynced !== false;
   const brandLabel = cfg.connectionType === 'pc'
-    ? 'Local PC'
+    ? t('Local PC')
     : cfg.connectionType === 'smart'
       ? (cfg.entityId || dtype)
       : (cfg.brand || dtype);
@@ -370,19 +627,19 @@ function renderGestureCard(cfg) {
       style="--card-accent:${meta.accent}">
       <div class="card-header">
         <div class="card-device-icon" style="background:${meta.bg}">${meta.emoji}</div>
-        <button class="card-menu-btn" title="Options">⋯</button>
+        <button class="card-menu-btn" title="${escAttr(t('Edit'))}">⋯</button>
       </div>
       <div class="card-body">
-        <div class="card-action-label">${escHtml(cfg.action)}</div>
+        <div class="card-action-label">${escHtml(t(cfg.action))}</div>
         <div class="card-brand">${escHtml(brandLabel)}</div>
         <div class="card-badges">
-          <span class="badge badge-gesture">${g.icon} ${g.label}</span>
-          <span class="badge badge-hand">${h.icon} ${h.label}</span>
+          <span class="badge badge-gesture">${g.icon} ${escHtml(t(g.label))}</span>
+          <span class="badge badge-hand">${h.icon} ${escHtml(t(h.label))}</span>
         </div>
       </div>
       <div class="sync-indicator">
         <div class="sync-dot ${synced ? '' : 'unsynced'}"></div>
-        <span>${synced ? 'Synced' : 'Pending sync'}</span>
+        <span>${escHtml(synced ? t('Synced') : t('Pending sync'))}</span>
       </div>
     </div>`;
 }
@@ -394,20 +651,20 @@ function renderCamera() {
     <div class="view">
       <div class="page-header">
         <div>
-          <div class="page-title">Live Camera</div>
-          <div class="page-sub">Gesture recognition feed</div>
+          <div class="page-title">${escHtml(t('Live Camera'))}</div>
+          <div class="page-sub">${escHtml(t('Gesture recognition feed'))}</div>
         </div>
-        <button class="btn btn-ghost btn-sm" id="cam-refresh">↻ Refresh</button>
+        <button class="btn btn-ghost btn-sm" id="cam-refresh">${escHtml(t('↻ Refresh'))}</button>
       </div>
       <div class="camera-container">
         <div class="camera-frame">
-          <img id="cam-img" src="/video" alt="Camera feed"
+          <img id="cam-img" src="/video" alt="${escAttr(t('Live Camera'))}"
             onerror="this.style.display='none';document.getElementById('cam-no-feed').style.display='flex'"
           />
           <div id="cam-no-feed" class="camera-no-feed" style="display:none;flex-direction:column;align-items:center;gap:8px;padding:40px">
             <span style="font-size:40px">📷</span>
-            <span>No feed available</span>
-            <span style="font-size:12px;color:var(--t3)">Make sure the gesture engine is running</span>
+            <span>${escHtml(t('No feed available'))}</span>
+            <span style="font-size:12px;color:var(--t3)">${escHtml(t('Make sure the gesture engine is running'))}</span>
           </div>
         </div>
       </div>
@@ -426,32 +683,32 @@ function renderSettingsHub() {
     <div class="view">
       <div class="page-header">
         <div>
-          <div class="page-title">Settings</div>
-          <div class="page-sub">Configure your Sensee hub</div>
+          <div class="page-title">${escHtml(t('Settings'))}</div>
+          <div class="page-sub">${escHtml(t('Configure your Sensee hub'))}</div>
         </div>
       </div>
       <div class="settings-grid">
         <div class="settings-card" data-sub="ha">
           <div class="settings-card-icon" style="background:rgba(79,158,255,.15)">🏠</div>
           <div class="settings-card-body">
-            <div class="settings-card-title">Home Assistant</div>
-            <div class="settings-card-sub">URL and access token</div>
+            <div class="settings-card-title">${escHtml(t('Home Assistant'))}</div>
+            <div class="settings-card-sub">${escHtml(t('URL and access token'))}</div>
           </div>
           <div class="settings-card-arrow">›</div>
         </div>
         <div class="settings-card" data-sub="gesture">
           <div class="settings-card-icon" style="background:rgba(139,92,246,.15)">✋</div>
           <div class="settings-card-body">
-            <div class="settings-card-title">Gesture Settings</div>
-            <div class="settings-card-sub">Wake gesture, hold duration, active window</div>
+            <div class="settings-card-title">${escHtml(t('Gesture Settings'))}</div>
+            <div class="settings-card-sub">${escHtml(t('Wake gesture, hold duration, active window'))}</div>
           </div>
           <div class="settings-card-arrow">›</div>
         </div>
         <div class="settings-card" data-sub="camera-cfg">
           <div class="settings-card-icon" style="background:rgba(34,197,94,.15)">📹</div>
           <div class="settings-card-body">
-            <div class="settings-card-title">Camera Settings</div>
-            <div class="settings-card-sub">Network camera and stream URL</div>
+            <div class="settings-card-title">${escHtml(t('Camera Settings'))}</div>
+            <div class="settings-card-sub">${escHtml(t('Network camera and stream URL'))}</div>
           </div>
           <div class="settings-card-arrow">›</div>
         </div>
@@ -468,11 +725,11 @@ async function renderHASettings() {
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <div class="view">
-      <button class="back-btn" id="back-btn">‹ Settings</button>
+      <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
       <div class="page-header">
-        <div><div class="page-title">Home Assistant</div></div>
+        <div><div class="page-title">${escHtml(t('Home Assistant'))}</div></div>
       </div>
-      <div class="loading-row"><div class="spinner"></div> Loading…</div>
+      <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Loading…'))}</div>
     </div>`;
   document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
 
@@ -481,21 +738,21 @@ async function renderHASettings() {
 
   main.innerHTML = `
     <div class="view">
-      <button class="back-btn" id="back-btn">‹ Settings</button>
-      <div class="page-header"><div><div class="page-title">Home Assistant</div></div></div>
+      <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
+      <div class="page-header"><div><div class="page-title">${escHtml(t('Home Assistant'))}</div></div></div>
       <div class="settings-form">
         <div class="field-group">
-          <div class="field-label">Server URL</div>
+          <div class="field-label">${escHtml(t('Server URL'))}</div>
           <input class="field-input" id="ha-url" type="url" placeholder="http://homeassistant.local:8123"
             value="${escAttr(cfg.url)}" />
         </div>
         <div class="field-group">
-          <div class="field-label">Long-Lived Access Token</div>
+          <div class="field-label">${escHtml(t('Long-Lived Access Token'))}</div>
           <input class="field-input" id="ha-token" type="password"
-            placeholder="${cfg.token ? 'Token saved — enter new to replace' : 'Paste token here'}" />
-          ${cfg.token ? `<div style="font-size:12px;color:var(--t3);margin-top:4px">Current: ${escHtml(cfg.token)}</div>` : ''}
+            placeholder="${escAttr(cfg.token ? t('Token saved — enter new to replace') : t('Paste token here'))}" />
+          ${cfg.token ? `<div style="font-size:12px;color:var(--t3);margin-top:4px">${escHtml(t('Current'))}: ${escHtml(cfg.token)}</div>` : ''}
         </div>
-        <button class="btn btn-primary" id="ha-save">Save Configuration</button>
+        <button class="btn btn-primary" id="ha-save">${escHtml(t('Save Configuration'))}</button>
       </div>
     </div>`;
 
@@ -503,22 +760,22 @@ async function renderHASettings() {
   document.getElementById('ha-save').addEventListener('click', async () => {
     const url = document.getElementById('ha-url').value.trim();
     const token = document.getElementById('ha-token').value.trim();
-    if (!url) { toast('URL is required', 'error'); return; }
+    if (!url) { toast(t('URL is required'), 'error'); return; }
     const btn = document.getElementById('ha-save');
-    btn.disabled = true; btn.textContent = 'Saving…';
+    btn.disabled = true; btn.textContent = t('Saving…');
     try {
       await api.post('/ha/config', { url, token: token || cfg.token });
-      toast('Home Assistant configured', 'success');
+      toast(t('Home Assistant configured'), 'success');
       navigate('settings');
-    } catch (e) { toast('Failed: ' + e.message, 'error'); btn.disabled = false; btn.textContent = 'Save Configuration'; }
+    } catch (e) { toast(t('Failed') + ': ' + e.message, 'error'); btn.disabled = false; btn.textContent = t('Save Configuration'); }
   });
 }
 
 /* ─── Gesture Settings ──────────────────────────────────────────────────── */
 async function renderGestureSettings() {
   const main = document.getElementById('main-content');
-  main.innerHTML = `<div class="view"><button class="back-btn" id="back-btn">‹ Settings</button>
-    <div class="loading-row"><div class="spinner"></div> Loading…</div></div>`;
+  main.innerHTML = `<div class="view"><button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
+    <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Loading…'))}</div></div>`;
   document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
 
   let s = { wakeEnabled: false, holdDurationSeconds: 1.0, activeWindowSeconds: 10, selectedGesture: 'Fist' };
@@ -526,13 +783,13 @@ async function renderGestureSettings() {
 
   main.innerHTML = `
     <div class="view">
-      <button class="back-btn" id="back-btn">‹ Settings</button>
-      <div class="page-header"><div><div class="page-title">Gesture Settings</div></div></div>
+      <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
+      <div class="page-header"><div><div class="page-title">${escHtml(t('Gesture Settings'))}</div></div></div>
       <div class="settings-form">
         <div class="toggle-row">
           <div class="toggle-info">
-            <div class="toggle-title">Wake Gesture</div>
-            <div class="toggle-sub">Require a wake gesture before commands</div>
+            <div class="toggle-title">${escHtml(t('Wake Gesture'))}</div>
+            <div class="toggle-sub">${escHtml(t('Require a wake gesture before commands'))}</div>
           </div>
           <div class="toggle ${s.wakeEnabled ? 'on' : ''}" id="wake-toggle"></div>
         </div>
@@ -540,7 +797,7 @@ async function renderGestureSettings() {
         <div id="wake-options" style="display:${s.wakeEnabled ? 'flex' : 'none'};flex-direction:column;gap:14px">
           <div class="range-wrap">
             <div class="range-header">
-              <div class="field-label">Hold Duration</div>
+              <div class="field-label">${escHtml(t('Hold Duration'))}</div>
               <div class="range-val" id="hold-val">${s.holdDurationSeconds.toFixed(1)}s</div>
             </div>
             <input type="range" id="hold-range" min="0" max="5" step="0.5"
@@ -549,7 +806,7 @@ async function renderGestureSettings() {
 
           <div class="range-wrap">
             <div class="range-header">
-              <div class="field-label">Active Window</div>
+              <div class="field-label">${escHtml(t('Active Window'))}</div>
               <div class="range-val" id="active-val">${s.activeWindowSeconds}s</div>
             </div>
             <input type="range" id="active-range" min="5" max="20" step="1"
@@ -557,14 +814,14 @@ async function renderGestureSettings() {
           </div>
 
           <div class="field-group">
-            <div class="field-label">Wake Gesture</div>
+            <div class="field-label">${escHtml(t('Wake Gesture'))}</div>
             <select class="field-select" id="wake-gesture">
-              ${GESTURES.map(g => `<option value="${g.id}" ${g.id === s.selectedGesture ? 'selected' : ''}>${g.icon} ${g.label}</option>`).join('')}
+              ${GESTURES.map(g => `<option value="${g.id}" ${g.id === s.selectedGesture ? 'selected' : ''}>${g.icon} ${escHtml(t(g.label))}</option>`).join('')}
             </select>
           </div>
         </div>
 
-        <button class="btn btn-primary" id="gs-save">Save Settings</button>
+        <button class="btn btn-primary" id="gs-save">${escHtml(t('Save Settings'))}</button>
       </div>
     </div>`;
 
@@ -581,7 +838,7 @@ async function renderGestureSettings() {
 
   document.getElementById('gs-save').addEventListener('click', async () => {
     const btn = document.getElementById('gs-save');
-    btn.disabled = true; btn.textContent = 'Saving…';
+    btn.disabled = true; btn.textContent = t('Saving…');
     try {
       await api.post('/gesture-settings', {
         wakeEnabled: document.getElementById('wake-toggle').classList.contains('on'),
@@ -589,17 +846,17 @@ async function renderGestureSettings() {
         activeWindowSeconds: +document.getElementById('active-range').value,
         selectedGesture: document.getElementById('wake-gesture').value,
       });
-      toast('Gesture settings saved', 'success');
+      toast(t('Gesture settings saved'), 'success');
       navigate('settings');
-    } catch (e) { toast('Failed: ' + e.message, 'error'); btn.disabled = false; btn.textContent = 'Save Settings'; }
+    } catch (e) { toast(t('Failed') + ': ' + e.message, 'error'); btn.disabled = false; btn.textContent = t('Save Settings'); }
   });
 }
 
 /* ─── Camera Settings ───────────────────────────────────────────────────── */
 async function renderCameraSettings() {
   const main = document.getElementById('main-content');
-  main.innerHTML = `<div class="view"><button class="back-btn" id="back-btn">‹ Settings</button>
-    <div class="loading-row"><div class="spinner"></div> Loading…</div></div>`;
+  main.innerHTML = `<div class="view"><button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
+    <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Loading…'))}</div></div>`;
   document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
 
   let s = { useNetwork: false, streamUrl: '' };
@@ -607,28 +864,28 @@ async function renderCameraSettings() {
 
   main.innerHTML = `
     <div class="view">
-      <button class="back-btn" id="back-btn">‹ Settings</button>
-      <div class="page-header"><div><div class="page-title">Camera Settings</div></div></div>
+      <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
+      <div class="page-header"><div><div class="page-title">${escHtml(t('Camera Settings'))}</div></div></div>
       <div class="settings-form">
         <div class="toggle-row">
           <div class="toggle-info">
-            <div class="toggle-title">Use Network Camera</div>
-            <div class="toggle-sub">Stream from RTSP/HTTP instead of local camera</div>
+            <div class="toggle-title">${escHtml(t('Use Network Camera'))}</div>
+            <div class="toggle-sub">${escHtml(t('Stream from RTSP/HTTP instead of local camera'))}</div>
           </div>
           <div class="toggle ${s.useNetwork ? 'on' : ''}" id="net-toggle"></div>
         </div>
 
         <div id="stream-url-wrap" style="display:${s.useNetwork ? 'flex' : 'none'};flex-direction:column;gap:12px">
           <div class="field-group">
-            <div class="field-label">Stream URL</div>
+            <div class="field-label">${escHtml(t('Stream URL'))}</div>
             <input class="field-input" id="stream-url" type="url"
               placeholder="rtsp://... or http://..."
               value="${escAttr(s.streamUrl)}" />
           </div>
-          <button class="btn btn-ghost btn-sm" id="browse-ha-cams">📷 Browse HA Cameras</button>
+          <button class="btn btn-ghost btn-sm" id="browse-ha-cams">${escHtml(t('📷 Browse HA Cameras'))}</button>
         </div>
 
-        <button class="btn btn-primary" id="cs-save">Save Settings</button>
+        <button class="btn btn-primary" id="cs-save">${escHtml(t('Save Settings'))}</button>
       </div>
     </div>`;
 
@@ -641,27 +898,27 @@ async function renderCameraSettings() {
 
   document.getElementById('browse-ha-cams').addEventListener('click', async () => {
     const btn = document.getElementById('browse-ha-cams');
-    btn.textContent = 'Loading…'; btn.disabled = true;
+    btn.textContent = t('Loading…'); btn.disabled = true;
     try {
       const { cameras } = await api.get('/ha/cameras');
       showCameraPickerModal(cameras, url => {
         document.getElementById('stream-url').value = url;
       });
-    } catch (e) { toast('Could not load HA cameras: ' + e.message, 'error'); }
-    finally { btn.textContent = '📷 Browse HA Cameras'; btn.disabled = false; }
+    } catch (e) { toast(t('Could not load HA cameras') + ': ' + e.message, 'error'); }
+    finally { btn.textContent = t('📷 Browse HA Cameras'); btn.disabled = false; }
   });
 
   document.getElementById('cs-save').addEventListener('click', async () => {
     const btn = document.getElementById('cs-save');
-    btn.disabled = true; btn.textContent = 'Saving…';
+    btn.disabled = true; btn.textContent = t('Saving…');
     try {
       await api.post('/camera-settings', {
         useNetwork: netToggle.classList.contains('on'),
         streamUrl: document.getElementById('stream-url').value.trim(),
       });
-      toast('Camera settings saved', 'success');
+      toast(t('Camera settings saved'), 'success');
       navigate('settings');
-    } catch (e) { toast('Failed: ' + e.message, 'error'); btn.disabled = false; btn.textContent = 'Save Settings'; }
+    } catch (e) { toast(t('Failed') + ': ' + e.message, 'error'); btn.disabled = false; btn.textContent = t('Save Settings'); }
   });
 }
 
@@ -671,12 +928,12 @@ function showCameraPickerModal(cameras, onSelect) {
     modal.className = 'modal';
     modal.innerHTML = `
       <div class="modal-header">
-        <div class="modal-title">Select Camera</div>
+        <div class="modal-title">${escHtml(t('Select Camera'))}</div>
         <button class="modal-close" id="cam-modal-close">✕</button>
       </div>
       <div class="modal-body">
         ${cameras.length === 0
-          ? `<div class="empty-state" style="padding:32px"><div class="empty-title">No cameras found</div></div>`
+          ? `<div class="empty-state" style="padding:32px"><div class="empty-title">${escHtml(t('No cameras found'))}</div></div>`
           : `<div class="item-list">${cameras.map(cam => `
               <div class="list-item" data-url="${escAttr(cam.stream_url)}">
                 <div class="list-item-icon">📹</div>
@@ -692,7 +949,7 @@ function showCameraPickerModal(cameras, onSelect) {
       item.addEventListener('click', () => {
         onSelect(item.dataset.url);
         close();
-        toast('Camera selected', 'success');
+        toast(t('Camera selected'), 'success');
       });
     });
     return modal;
@@ -721,7 +978,7 @@ function showDeviceTypeStep(draft, editing) {
     modal.className = 'modal';
     modal.innerHTML = `
       <div class="modal-header">
-        <div class="modal-title">Select Device Type</div>
+        <div class="modal-title">${escHtml(t('Select Device Type'))}</div>
         <button class="modal-close" id="step1-close">✕</button>
       </div>
       <div class="step-indicator">
@@ -739,7 +996,7 @@ function showDeviceTypeStep(draft, editing) {
             const m = DEVICE_META[dt];
             return `<div class="select-card ${draft.sound === dt ? 'selected' : ''}" data-type="${dt}">
               <div class="select-card-icon">${m.emoji}</div>
-              <div class="select-card-label">${dt}</div>
+              <div class="select-card-label">${escHtml(t(dt))}</div>
             </div>`;
           }).join('')}
         </div>
@@ -772,7 +1029,7 @@ function showConnectionMethodStep(draft, editing) {
     modal.className = 'modal';
     modal.innerHTML = `
       <div class="modal-header">
-        <div class="modal-title">Connection Method</div>
+        <div class="modal-title">${escHtml(t('Connection Method'))}</div>
         <button class="modal-close" id="step2-close">✕</button>
       </div>
       <div class="step-indicator">
@@ -789,24 +1046,24 @@ function showConnectionMethodStep(draft, editing) {
           <div class="method-card" id="method-smart">
             <div class="method-card-icon">🏠</div>
             <div class="method-card-body">
-              <div class="method-card-title">Smart Home Device</div>
-              <div class="method-card-sub">Connect via Home Assistant</div>
+              <div class="method-card-title">${escHtml(t('Smart Home Device'))}</div>
+              <div class="method-card-sub">${escHtml(t('Connect via Home Assistant'))}</div>
             </div>
             <div class="method-card-arrow">›</div>
           </div>
           <div class="method-card" id="method-ir">
             <div class="method-card-icon">📡</div>
             <div class="method-card-body">
-              <div class="method-card-title">Classic / IR Device</div>
-              <div class="method-card-sub">Select brand from library</div>
+              <div class="method-card-title">${escHtml(t('Classic / IR Device'))}</div>
+              <div class="method-card-sub">${escHtml(t('Select brand from library'))}</div>
             </div>
             <div class="method-card-arrow">›</div>
           </div>
           ${draft.sound === 'TV' ? `<div class="method-card" id="method-pair">
             <div class="method-card-icon">🔗</div>
             <div class="method-card-body">
-              <div class="method-card-title">Pair New TV</div>
-              <div class="method-card-sub">Discover and pair via Home Assistant</div>
+              <div class="method-card-title">${escHtml(t('Pair New TV'))}</div>
+              <div class="method-card-sub">${escHtml(t('Discover and pair via Home Assistant'))}</div>
             </div>
             <div class="method-card-arrow">›</div>
           </div>` : ''}
@@ -834,7 +1091,7 @@ async function showSmartDeviceStep(draft, editing) {
     modal.className = 'modal modal-wide';
     modal.innerHTML = `
       <div class="modal-header">
-        <div class="modal-title">Select HA Device</div>
+        <div class="modal-title">${escHtml(t('Select HA Device'))}</div>
         <button class="modal-close" id="step3s-close">✕</button>
       </div>
       <div class="step-indicator">
@@ -844,7 +1101,7 @@ async function showSmartDeviceStep(draft, editing) {
         <div class="step-dot">4</div>
       </div>
       <div class="modal-body">
-        <div class="loading-row"><div class="spinner"></div> Loading devices…</div>
+        <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Loading devices…'))}</div>
       </div>`;
     modal.querySelector('#step3s-close').addEventListener('click', close);
 
@@ -852,16 +1109,19 @@ async function showSmartDeviceStep(draft, editing) {
       const filtered = devices.filter(d => d.type?.toLowerCase() === draft.sound?.toLowerCase() || !d.type);
       const body = modal.querySelector('.modal-body');
       if (filtered.length === 0) {
+        const noneTitle = (state.lang === 'el')
+          ? `Δεν βρέθηκαν συσκευές ${escHtml(t(draft.sound))}`
+          : `No ${escHtml(t(draft.sound))} devices found`;
         body.innerHTML = `<div class="empty-state" style="padding:24px">
-          <div class="empty-title">No ${draft.sound} devices found</div>
-          <div class="empty-sub">Make sure Home Assistant is configured and devices are added.</div>
+          <div class="empty-title">${noneTitle}</div>
+          <div class="empty-sub">${escHtml(t('Make sure Home Assistant is configured and devices are added.'))}</div>
         </div>`;
         return;
       }
       body.innerHTML = `
         <div class="list-search">
           <span>🔍</span>
-          <input id="device-search" placeholder="Search devices…" />
+          <input id="device-search" placeholder="${escAttr(t('Search devices…'))}" />
         </div>
         <div class="item-list" id="device-list">
           ${filtered.map(d => `
@@ -891,7 +1151,7 @@ async function showSmartDeviceStep(draft, editing) {
       });
     }).catch(e => {
       modal.querySelector('.modal-body').innerHTML =
-        `<div class="banner banner-error">Failed to load devices: ${escHtml(e.message)}</div>`;
+        `<div class="banner banner-error">${escHtml(t('Failed to load devices'))}: ${escHtml(e.message)}</div>`;
     });
 
     return modal;
@@ -906,7 +1166,7 @@ function showBrandStep(draft, editing) {
     modal.className = 'modal';
     modal.innerHTML = `
       <div class="modal-header">
-        <div class="modal-title">Select Brand</div>
+        <div class="modal-title">${escHtml(t('Select Brand'))}</div>
         <button class="modal-close" id="step3b-close">✕</button>
       </div>
       <div class="step-indicator">
@@ -918,7 +1178,7 @@ function showBrandStep(draft, editing) {
       <div class="modal-body">
         <div class="list-search">
           <span>🔍</span>
-          <input id="brand-search" placeholder="Search brands…" />
+          <input id="brand-search" placeholder="${escAttr(t('Search brands…'))}" />
         </div>
         <div class="item-list" id="brand-list">
           ${brands.map(b => `
@@ -963,18 +1223,18 @@ function showActionStep(draft, editing) {
     const gestureHTML = GESTURES.map(g => `
       <div class="gesture-option ${draft.gesture === g.id ? 'selected' : ''}" data-gesture="${g.id}">
         <div class="gesture-option-icon">${g.icon}</div>
-        <div class="gesture-option-label">${g.label}</div>
+        <div class="gesture-option-label">${escHtml(t(g.label))}</div>
       </div>`).join('');
 
     const handHTML = HANDS.map(h => `
       <div class="hand-option ${draft.hand === h.id ? 'selected' : ''}" data-hand="${h.id}">
         <div class="hand-option-icon">${h.icon}</div>
-        <div class="hand-option-label">${h.label}</div>
+        <div class="hand-option-label">${escHtml(t(h.label))}</div>
       </div>`).join('');
 
     modal.innerHTML = `
       <div class="modal-header">
-        <div class="modal-title">${editing ? 'Edit Mapping' : 'Configure Action'}</div>
+        <div class="modal-title">${escHtml(editing ? t('Edit Mapping') : t('Configure Action'))}</div>
         <button class="modal-close" id="step4-close">✕</button>
       </div>
       ${editing ? '' : `<div class="step-indicator">
@@ -986,31 +1246,31 @@ function showActionStep(draft, editing) {
       <div class="modal-body">
         <div class="config-section">
           <div class="field-group">
-            <div class="config-label">Action</div>
+            <div class="config-label">${escHtml(t('Action'))}</div>
             <select class="field-select" id="action-select">
-              ${actions.map(a => `<option value="${a}" ${draft.action === a ? 'selected' : ''}>${a}</option>`).join('')}
+              ${actions.map(a => `<option value="${a}" ${draft.action === a ? 'selected' : ''}>${escHtml(t(a))}</option>`).join('')}
             </select>
           </div>
 
           <div>
-            <div class="config-label">Gesture</div>
+            <div class="config-label">${escHtml(t('Gesture'))}</div>
             <div class="gesture-picker" id="gesture-picker">${gestureHTML}</div>
           </div>
 
           <div>
-            <div class="config-label">Hand</div>
+            <div class="config-label">${escHtml(t('Hand'))}</div>
             <div class="hand-picker" id="hand-picker">${handHTML}</div>
           </div>
 
           <div id="conflict-msg" class="conflict-msg" style="display:none">
-            ⚠ This gesture + hand combination is already assigned to another mapping.
+            ${escHtml(t('⚠ This gesture + hand combination is already assigned to another mapping.'))}
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost" id="step4-cancel">Cancel</button>
+        <button class="btn btn-ghost" id="step4-cancel">${escHtml(t('Cancel'))}</button>
         <button class="btn btn-primary" id="step4-save">
-          ${editing ? 'Save Changes' : 'Add Mapping'}
+          ${escHtml(editing ? t('Save Changes') : t('Add Mapping'))}
         </button>
       </div>`;
 
@@ -1048,7 +1308,7 @@ function showActionStep(draft, editing) {
       saveConfig({ ...draft });
       close();
       navigate('dashboard');
-      toast(editing ? 'Mapping updated' : 'Mapping added', 'success');
+      toast(editing ? t('Mapping updated') : t('Mapping added'), 'success');
     });
 
     checkConflict();
@@ -1063,18 +1323,18 @@ async function showPairingWizard(draft) {
     modal.className = 'modal';
     modal.innerHTML = `
       <div class="modal-header">
-        <div class="modal-title">Pair New Device</div>
+        <div class="modal-title">${escHtml(t('Pair New Device'))}</div>
         <button class="modal-close" id="pair-close">✕</button>
       </div>
       <div class="modal-body">
-        <div class="loading-row"><div class="spinner"></div> Discovering devices…</div>
+        <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Discovering devices…'))}</div>
       </div>`;
     modal.querySelector('#pair-close').addEventListener('click', close);
 
     api.get('/ha/discovered').then(({ flows }) => {
       const body = modal.querySelector('.modal-body');
       if (!flows || flows.length === 0) {
-        body.innerHTML = `<div class="banner banner-warn">No devices discovered. Make sure devices are in pairing mode.</div>`;
+        body.innerHTML = `<div class="banner banner-warn">${escHtml(t('No devices discovered. Make sure devices are in pairing mode.'))}</div>`;
         return;
       }
       body.innerHTML = `
@@ -1088,17 +1348,17 @@ async function showPairingWizard(draft) {
 
       body.querySelectorAll('.list-item').forEach(item => {
         item.addEventListener('click', async () => {
-          body.innerHTML = `<div class="loading-row"><div class="spinner"></div> Starting pairing…</div>`;
+          body.innerHTML = `<div class="loading-row"><div class="spinner"></div> ${escHtml(t('Starting pairing…'))}</div>`;
           try {
             const { result } = await api.post('/ha/pair/start', { handler: item.dataset.handler });
             body.innerHTML = `
               <div class="field-group">
-                <div class="field-label">Enter PIN shown on device</div>
+                <div class="field-label">${escHtml(t('Enter PIN shown on device'))}</div>
                 <input class="field-input" id="pair-pin" type="text" placeholder="e.g. 123456" />
               </div>
               <div class="modal-footer" style="padding:12px 0 0">
-                <button class="btn btn-ghost" id="pair-cancel">Cancel</button>
-                <button class="btn btn-primary" id="pair-submit">Pair</button>
+                <button class="btn btn-ghost" id="pair-cancel">${escHtml(t('Cancel'))}</button>
+                <button class="btn btn-primary" id="pair-submit">${escHtml(t('Pair'))}</button>
               </div>`;
             body.querySelector('#pair-cancel').addEventListener('click', close);
             body.querySelector('#pair-submit').addEventListener('click', async () => {
@@ -1108,19 +1368,19 @@ async function showPairingWizard(draft) {
                   flow_id: result.flow_id, user_input: { code: pin }
                 });
                 if (res.type === 'create_entry') {
-                  toast('Device paired successfully!', 'success');
+                  toast(t('Device paired successfully!'), 'success');
                   close();
                 } else {
-                  toast('Pairing failed — check PIN', 'error');
+                  toast(t('Pairing failed — check PIN'), 'error');
                 }
-              } catch (e) { toast('Error: ' + e.message, 'error'); }
+              } catch (e) { toast(t('Error') + ': ' + e.message, 'error'); }
             });
           } catch (e) { body.innerHTML = `<div class="banner banner-error">${escHtml(e.message)}</div>`; }
         });
       });
     }).catch(e => {
       modal.querySelector('.modal-body').innerHTML =
-        `<div class="banner banner-error">Failed: ${escHtml(e.message)}</div>`;
+        `<div class="banner banner-error">${escHtml(t('Failed'))}: ${escHtml(e.message)}</div>`;
     });
 
     return modal;
@@ -1133,6 +1393,12 @@ function escHtml(str) {
 }
 function escAttr(str) { return escHtml(str); }
 
+/* ─── Sidebar Collapse ──────────────────────────────────────────────────── */
+function setSidebarCollapsed(collapsed) {
+  document.getElementById('app').classList.toggle('sidebar-collapsed', collapsed);
+  try { localStorage.setItem('sensee.sidebarCollapsed', collapsed ? '1' : '0'); } catch {}
+}
+
 /* ─── Bootstrap ─────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   // Sidebar nav
@@ -1140,6 +1406,19 @@ document.addEventListener('DOMContentLoaded', () => {
     el.addEventListener('click', () => navigate(el.dataset.view));
   });
 
+  // Language switcher
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
+  });
+
+  // Sidebar collapse toggle
+  let savedCollapsed = false;
+  try { savedCollapsed = localStorage.getItem('sensee.sidebarCollapsed') === '1'; } catch {}
+  setSidebarCollapsed(savedCollapsed);
+  document.getElementById('sidebar-toggle').addEventListener('click', () => setSidebarCollapsed(true));
+  document.getElementById('sidebar-open-btn').addEventListener('click', () => setSidebarCollapsed(false));
+
+  applyStaticTranslations();
   navigate('dashboard');
   startPolling();
 });
