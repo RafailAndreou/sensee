@@ -16,7 +16,7 @@ SERVER_READY_TIMEOUT_SECONDS = 0.4
 def _open_dashboard_when_ready(ip: str, ports_to_try: list[int]) -> None:
     for _ in range(SERVER_READY_RETRIES):
         for port in ports_to_try:
-            for host in ("127.0.0.1", ip):
+            for host in ("sensee.local", ip):
                 try:
                     response = requests.get(
                         f"http://{host}:{port}/ping",
@@ -27,7 +27,7 @@ def _open_dashboard_when_ready(ip: str, ports_to_try: list[int]) -> None:
                     payload = response.json() if response.content else {}
                     if payload.get("status") != "ok":
                         continue
-                    dashboard_url = f"http://{host}:{port}/web/"
+                    dashboard_url = f"http://{host}:{port}/"
                     print(f"🌍 Opening dashboard: {dashboard_url}")
                     webbrowser.open_new_tab(dashboard_url)
                     return
