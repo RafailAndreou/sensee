@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sensee — Gesture Controller</title>
+  <link rel="stylesheet" href="/web/style.css" />
+</head>
+<body>
+  <div id="app">
+    <button class="sidebar-open-btn" id="sidebar-open-btn" type="button" aria-label="Open sidebar">☰</button>
+    <nav class="sidebar">
+      <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Collapse sidebar">‹</button>
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">👋</div>
+        <div>
+          <div class="sidebar-logo-text">Sensee</div>
+          <div class="sidebar-logo-sub" data-i18n="Gesture Controller">Gesture Controller</div>
+        </div>
+      </div>
+
+      <div class="nav-item active" data-view="dashboard">
+        <span class="nav-icon">⚡</span> <span data-i18n="Dashboard">Dashboard</span>
+      </div>
+      <div class="nav-item" data-view="camera">
+        <span class="nav-icon">📷</span> <span data-i18n="Camera">Camera</span>
+      </div>
+      <div class="nav-item" data-view="settings">
+        <span class="nav-icon">⚙️</span> <span data-i18n="Settings">Settings</span>
+      </div>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="lang-switcher" id="lang-switcher">
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+        <button class="lang-btn" data-lang="el" type="button">EL</button>
+      </div>
+
+      <div class="server-status" id="server-status-indicator">
+        <div class="status-dot checking" id="status-dot"></div>
+        <span id="status-text">Connecting…</span>
+      </div>
+    </nav>
+
+    <main class="main" id="main-content">
+      <!-- Views render here -->
+    </main>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+  <div id="ctx-menu-root"></div>
+
+  <script type="module" src="/web/js/main.js"></script>
+</body>
+</html>
