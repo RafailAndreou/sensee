@@ -75,15 +75,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Serve web dashboard
-_web_dir = os.path.join(os.path.dirname(__file__), "web")
+# Serve web dashboard (web folder lives one level above the server package)
+_web_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "web"))
 if os.path.isdir(_web_dir):
     app.mount("/web", StaticFiles(directory=_web_dir), name="web")
 
 # ---------------- Routes ----------------
 @app.get("/")
 def index():
-    web_index = os.path.join(os.path.dirname(__file__), "web", "index.html")
+    web_index = os.path.join(_web_dir, "index.html")
     if os.path.exists(web_index):
         with open(web_index, "r", encoding="utf-8") as f:
             return HTMLResponse(f.read())
