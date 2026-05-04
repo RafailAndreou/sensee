@@ -2,12 +2,9 @@
 
 Gesture-powered control for your space.
 
-Sensee is a two-part ecosystem:
+Sensee is a local engine that watches your camera and executes gesture-driven actions in real time. Configure mappings through a built-in web dashboard — no app install required — or use the optional mobile app.
 
-- A mobile app where you configure what each gesture should do.
-- A local engine device ( Pc or Raspberry Pi) that watches your camera and executes those actions in real time.
-
-The goal is a plug-and-play experience: power the device, open the app, map gestures to actions, and control your environment naturally.
+The goal is a plug-and-play experience: power the device, open the dashboard in your browser, map gestures to actions, and control your environment naturally.
 
 ## Demo Showcase
 
@@ -17,46 +14,44 @@ https://github.com/user-attachments/assets/64bbf61c-e38d-4bf4-9064-bd26c9c91c62
 
 Think of Sensee like this:
 
-1. You open the app and add a mapping.
-2. You choose a target device (for example TV), a gesture (for example Open Palm), and an action (for example Volume Up).
-3. The app syncs that mapping to your device.
+1. You plug in your Sensee device (PC or Raspberry Pi).
+2. You open `sensee.local:8000` in your browser (or the auto-opened dashboard).
+3. You add a mapping — choose a target (e.g. TV), a gesture (e.g. Open Palm), and an action (e.g. Volume Up).
 4. The camera sees your gesture and the action runs.
 
-You are not juggling two separate products. The app handles setup and control rules, while the engine handles real-time detection and execution.
+The web dashboard handles setup and configuration, while the engine handles real-time detection and execution.
 
 ## The Loop
 
 ### 1. Configure
 
-The Flutter app (Surface Controller) is the control center for:
+The web dashboard (served by the engine itself) is the control center for:
 
 - Adding gesture-to-action mappings
 - Editing and deleting mappings
-- Syncing configurations to the engine
 - Pairing with Home Assistant devices
+- Adjusting gesture and camera settings
 
-### 2. Discover and Connect
+An optional Flutter mobile app is also available for users who prefer a native experience with automatic network discovery.
 
-The app finds the engine over the local network using automatic discovery (mDNS and UDP fallback), so setup feels lightweight.
-
-### 3. Detect
+### 2. Detect
 
 The engine continuously processes camera frames and recognizes hand gestures in real time.
 
-### 4. Execute
+### 3. Execute
 
 When a mapping is matched, Sensee routes the action to the right target:
 
 - Smart Home / Home Assistant actions
-- IR-style device actions(future implementation, not ready yet)
+- IR-style device actions (future implementation, not ready yet)
 - PC actions
 
 ## Product Vision
 
 The product is designed as a consumer flow:
 
-- Plug in your Sensee device(raspberry pi or pc)
-- Open the phone app
+- Plug in your Sensee device (Raspberry Pi or PC)
+- Open the web dashboard or phone app
 - Configure gestures in a guided UI
 - Start controlling devices instantly
 
@@ -64,14 +59,16 @@ The long-term direction is a seamless hardware + software experience where setup
 
 ## Setup For Non Developers
 
-1. Install the app on your phone from the release page [app-release.apk](https://github.com/RafailAndreou/sensee/releases/tag/v0.6.9v)
-2. Install the zip on your windows from the release page [sensee-windows-x64.zip](https://github.com/RafailAndreou/sensee/releases/tag/v0.6.9v)
-3. Extract the zip
-4. Run the executable(sensee.exe)
-5. Open the settings and put your home assistant url and token(homeassistant url is http://localhost:8123 as the default)
-   **If you don't know how to setup homeassistant check raspi/docker/dockertutorial.md or https://www.home-assistant.io/docs/**
+1. Download the latest Windows zip from the [Releases page](https://github.com/RafailAndreou/sensee/releases)
+2. Extract the zip
+3. Run the executable (`sensee.exe`)
+4. The web dashboard will auto-open in your browser, or navigate to `http://sensee.local:8000`
+5. Open Settings and put your Home Assistant URL and token (Home Assistant URL is `http://localhost:8123` by default)
+   **If you don't know how to setup Home Assistant check [raspi/docker/dockertutorial.md](raspi/docker/dockertutorial.md) or https://www.home-assistant.io/docs/**
 
-**Important: The app and the engine must be on the same network(no need for internet access tho)**
+### Optional: Mobile App
+
+You can also download the latest Android APK from the [Releases page](https://github.com/RafailAndreou/sensee/releases) for a native experience with automatic device discovery. The app and the engine must be on the same network (no internet access required).
 
 ## Technical Setup (Developer Section)
 
@@ -81,7 +78,7 @@ This section keeps the implementation details separate from the user experience 
 
 - Python 3.10+
 - Webcam
-- Flutter SDK
+- Flutter SDK (optional, only if building the mobile app)
 
 ### Run the Engine (Python)
 
@@ -93,9 +90,9 @@ pip install -r requirements.txt
 python gesture.py
 ```
 
-Running `gesture.py` now also starts the FastAPI dashboard server automatically and opens the web UI in your browser (`/web`) on the first available port from `8000-8004`.
+Running `gesture.py` starts the FastAPI server and opens the web UI in your browser (`/web`) on the first available port from `8000-8004`.
 
-### Run the Surface Controller App (Flutter)
+### Run the Surface Controller App (Flutter, Optional)
 
 ```powershell
 cd mobile/surface_controller
@@ -105,7 +102,7 @@ flutter run
 
 ### Home Assistant Connect
 
-Create a ha_config.json file in the server folder with the following format(check raspi/docker/dockertutorial.md for more details on how to setup your homeassistant):
+Create a `ha_config.json` file in the server folder with the following format (check [raspi/docker/dockertutorial.md](raspi/docker/dockertutorial.md) for more details on how to setup your Home Assistant):
 
 ```json
 {
@@ -114,7 +111,7 @@ Create a ha_config.json file in the server folder with the following format(chec
 }
 ```
 
-**dont forget the http:// or you will get an error i will add normalization in the future**
+**Don't forget the `http://` or you will get an error — normalization will be added in the future.**
 
 ### Optional: Home Assistant Container
 
@@ -127,8 +124,8 @@ docker compose up -d
 
 ```text
 sensee/
-├── mobile/surface_controller/   # Flutter configuration app
-├── raspi/                       # Python engine + server
+├── mobile/surface_controller/   # Flutter configuration app (optional)
+├── raspi/                       # Python engine + server + web dashboard
 └── docker/                      # Home Assistant container setup
 ```
 
@@ -141,14 +138,15 @@ sensee/
 
 ## Tech Stack
 
-- Mobile App: Flutter (Dart)
+- Web Dashboard: Vanilla JS, CSS, HTML
+- Mobile App (optional): Flutter (Dart)
 - Engine & API: Python, FastAPI
 - Vision: MediaPipe, OpenCV
 - Smart Home Integration: Home Assistant
 
 # Community Testing
 
-This section is to list the hardware people have succesfully run it on so if you run it on your raspberry pi or another sbc please share the exact hardware so I can update this section.
+This section is to list the hardware people have successfully run it on. If you run it on your Raspberry Pi or another SBC, please share the exact hardware so I can update this section.
 
 # Contribute
 
@@ -159,7 +157,7 @@ This section is to list the hardware people have succesfully run it on so if you
    git clone https://github.com/YOUR_USERNAME/sensee.git
    cd sensee
    ```
-2. Follow the **Technical Setup** section above to get both the engine and app running
+2. Follow the **Technical Setup** section above to get the engine running
 3. Create a branch for your changes:
    ```powershell
    git checkout -b feature/your-feature-name
@@ -177,7 +175,7 @@ cd raspi
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-**App (Flutter):**
+**App (Flutter, optional):**
 
 ```powershell
 cd mobile/surface_controller
