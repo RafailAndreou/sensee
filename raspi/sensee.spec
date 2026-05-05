@@ -1,16 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
 
 block_cipher = None
+
+_pyautogui_datas, _pyautogui_binaries, _pyautogui_hidden = collect_all('pyautogui')
 
 a = Analysis(
     ['gesture.py'],
     pathex=[],
-    binaries=[],
+    binaries=_pyautogui_binaries,
     datas=[
         ('assets', 'assets'),
         ('server/web', 'server/web'),
-    ],
-    hiddenimports=[
+    ] + _pyautogui_datas,
+    hiddenimports=_pyautogui_hidden + [
         'gesture_engine.camera',
         'gesture_engine.capture',
         'gesture_engine.geometry',
@@ -67,6 +70,11 @@ a = Analysis(
         'server.events',
         'server.streamer',
         'server.timing',
+        'pyscreeze',
+        'pymsgbox',
+        'pytweening',
+        'mouseinfo',
+        'pygetwindow',
     ],
     hookspath=[],
     hooksconfig={},
