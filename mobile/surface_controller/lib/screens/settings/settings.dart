@@ -24,10 +24,12 @@ class Settings extends StatelessWidget {
             ),
           ),
           body: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Container(
             width: double.infinity,
             color: Theme.of(context).scaffoldBackgroundColor,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 24),
                 Settingsbutton(
@@ -79,6 +81,7 @@ class Settings extends StatelessWidget {
                   builder: (context, theme, _) =>
                       ThemeToggleCard(theme: theme),
                 ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
