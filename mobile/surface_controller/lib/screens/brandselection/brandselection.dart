@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:surface_controller/globals/connectionslist.dart';
 import 'package:surface_controller/globals/global.dart';
+import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/server/server.dart' as server_sync;
 import '../actions/actiondetails.dart';
 
@@ -108,90 +109,96 @@ class _BrandSelectionState extends State<BrandSelection> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          'Select ${widget.deviceType} Brand',
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search brands...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+    return ValueListenableBuilder<String>(
+      valueListenable: appLocale,
+      builder: (context, _, __) {
+        return Scaffold(
+          backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            title: Text(
+              tFormat('brand_screen_title', widget.deviceType),
+              style: const TextStyle(fontWeight: FontWeight.w900),
             ),
           ),
-          Expanded(
-            child: filteredBrands.isEmpty
-                ? Center(
-                    child: Text(
-                      'No brands found for "${_searchController.text}"',
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: t('brand_search_hint'),
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  )
-                : ListView.builder(
-                    itemCount: filteredBrands.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        title: Text(filteredBrands[index]),
-                        onTap: () async {
-                          if (widget.editingConnectionId != null) {
-                            final config = getConnectionConfig(
-                              widget.editingConnectionId!,
-                            );
-                            config.brand.value = filteredBrands[index];
-                            connectionsList.value = List.from(
-                              connectionsList.value,
-                            );
-                            saveConfigsToFile();
+                  ),
+                ),
+              ),
+              Expanded(
+                child: filteredBrands.isEmpty
+                    ? Center(
+                        child: Text(
+                          tFormat(
+                            'brand_not_found',
+                            _searchController.text,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredBrands.length,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            title: Text(filteredBrands[index]),
+                            onTap: () async {
+                              if (widget.editingConnectionId != null) {
+                                final config = getConnectionConfig(
+                                  widget.editingConnectionId!,
+                                );
+                                config.brand.value = filteredBrands[index];
+                                connectionsList.value = List.from(
+                                  connectionsList.value,
+                                );
+                                saveConfigsToFile();
 
-                            // Update UI immediately, send to server in background
-                            if (!mounted) return;
-                            Navigator.of(
-                              context,
-                            ).popUntil((route) => route.isFirst);
+                                if (!mounted) return;
+                                Navigator.of(
+                                  context,
+                                ).popUntil((route) => route.isFirst);
 
-                            // Fire and forget - don't wait for server response
-                            unawaited(server_sync.sendAllConfigurations());
-                            return;
-                          }
+                                unawaited(server_sync.sendAllConfigurations());
+                                return;
+                              }
 
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ActionDetails(
-                                deviceType: widget.deviceType,
-                                brand: filteredBrands[index],
-                              ),
-                            ),
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ActionDetails(
+                                    deviceType: widget.deviceType,
+                                    brand: filteredBrands[index],
+                                  ),
+                                ),
+                              );
+                            },
                           );
                         },
-                      );
-                    },
-                  ),
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

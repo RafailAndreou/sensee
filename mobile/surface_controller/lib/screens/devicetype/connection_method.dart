@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:surface_controller/globals/locale.dart';
 import '../brandselection/brandselection.dart';
 import 'smartdevice_list.dart';
 import '../setup/pairing_wizard.dart';
@@ -10,70 +11,75 @@ class ConnectionMethod extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFEAEDF4),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          'Add $deviceType',
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(18.0),
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            _buildOptionCard(
-              context,
-              title: "Smart Home Device",
-              subtitle: "Connect via Wi-Fi & Home Assistant",
-              icon: Icons.wifi,
-              color: Colors.blue,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SmartDeviceList(deviceType: deviceType),
-                  ),
-                );
-              },
+    return ValueListenableBuilder<String>(
+      valueListenable: appLocale,
+      builder: (context, _, __) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFEAEDF4),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.of(context).pop(),
             ),
-            const SizedBox(height: 20),
-            _buildOptionCard(
-              context,
-              title: "Pair New TV",
-              subtitle: "Scan for TVs on your network and link them",
-              icon: Icons.search,
-              color: Colors.orange,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PairingWizard(deviceType: deviceType),
-                  ),
-                );
-              },
+            title: Text(
+              'Add $deviceType',
+              style: const TextStyle(fontWeight: FontWeight.w900),
             ),
-            const SizedBox(height: 20),
-            _buildOptionCard(
-              context,
-              title: "Classic Device",
-              subtitle: "Connect via Infrared Blaster",
-              icon: Icons.settings_remote,
-              color: Colors.teal,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => BrandSelection(deviceType: deviceType),
-                  ),
-                );
-              },
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(18.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                _buildOptionCard(
+                  context,
+                  title: t('connection_smart_title'),
+                  subtitle: t('connection_smart_subtitle'),
+                  icon: Icons.wifi,
+                  color: Colors.blue,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SmartDeviceList(deviceType: deviceType),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                _buildOptionCard(
+                  context,
+                  title: t('connection_pair_title'),
+                  subtitle: t('connection_pair_subtitle'),
+                  icon: Icons.search,
+                  color: Colors.orange,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => PairingWizard(deviceType: deviceType),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                _buildOptionCard(
+                  context,
+                  title: t('connection_classic_title'),
+                  subtitle: t('connection_classic_subtitle'),
+                  icon: Icons.settings_remote,
+                  color: Colors.teal,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BrandSelection(deviceType: deviceType),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

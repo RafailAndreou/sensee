@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:surface_controller/globals/locale.dart';
 import 'widgets/devicetypebutton.dart';
 import 'connection_method.dart';
 import '../actions/actiondetails.dart';
@@ -8,78 +9,85 @@ class DeviceType extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFEAEDF4),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          ' Select Device Type',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-      ),
-      body: GridView.count(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-        crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 1.08,
-        children: [
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ConnectionMethod(deviceType: 'Tv'),
-                ),
-              );
-            },
-            child: const DeviceTypeButton(devicetype: 'Tv'),
+    return ValueListenableBuilder<String>(
+      valueListenable: appLocale,
+      builder: (context, _, __) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFEAEDF4),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            title: Text(
+              t('devicetype_title'),
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
           ),
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ConnectionMethod(deviceType: 'Ac'),
-                ),
-              );
-            },
-            child: const DeviceTypeButton(devicetype: 'Ac'),
+          body: GridView.count(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+            crossAxisCount: 2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1.08,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ConnectionMethod(deviceType: 'Tv'),
+                    ),
+                  );
+                },
+                child: const DeviceTypeButton(devicetype: 'Tv'),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ConnectionMethod(deviceType: 'Ac'),
+                    ),
+                  );
+                },
+                child: const DeviceTypeButton(devicetype: 'Ac'),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const ConnectionMethod(deviceType: 'Light'),
+                    ),
+                  );
+                },
+                child: const DeviceTypeButton(devicetype: 'Light'),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const ConnectionMethod(deviceType: 'Fan'),
+                    ),
+                  );
+                },
+                child: const DeviceTypeButton(devicetype: 'Fan'),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const ActionDetails(deviceType: 'PC', brand: ''),
+                    ),
+                  );
+                },
+                child: const DeviceTypeButton(devicetype: 'PC'),
+              ),
+            ],
           ),
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ConnectionMethod(deviceType: 'Light'),
-                ),
-              );
-            },
-            child: const DeviceTypeButton(devicetype: 'Light'),
-          ),
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ConnectionMethod(deviceType: 'Fan'),
-                ),
-              );
-            },
-            child: const DeviceTypeButton(devicetype: 'Fan'),
-          ),
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      const ActionDetails(deviceType: 'PC', brand: ''),
-                ),
-              );
-            },
-            child: const DeviceTypeButton(devicetype: 'PC'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

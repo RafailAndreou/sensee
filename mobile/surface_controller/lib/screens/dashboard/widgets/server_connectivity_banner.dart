@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/server/server.dart' as server_sync;
 
 class ServerConnectivityBanner extends StatefulWidget {
@@ -75,65 +76,70 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final isChecking = _isConnected == null;
-    final isOnline = _isConnected == true;
+    return ValueListenableBuilder<String>(
+      valueListenable: appLocale,
+      builder: (context, _, __) {
+        final isChecking = _isConnected == null;
+        final isOnline = _isConnected == true;
 
-    final Color backgroundColor = isChecking
-        ? const Color(0xFFE5E7EB)
-        : isOnline
-        ? const Color(0xFFDFF5E7)
-        : const Color(0xFFFFE3E3);
+        final Color backgroundColor = isChecking
+            ? const Color(0xFFE5E7EB)
+            : isOnline
+            ? const Color(0xFFDFF5E7)
+            : const Color(0xFFFFE3E3);
 
-    final Color foregroundColor = isChecking
-        ? const Color(0xFF374151)
-        : isOnline
-        ? const Color(0xFF166534)
-        : const Color(0xFF991B1B);
+        final Color foregroundColor = isChecking
+            ? const Color(0xFF374151)
+            : isOnline
+            ? const Color(0xFF166534)
+            : const Color(0xFF991B1B);
 
-    final IconData icon = isChecking
-        ? Icons.sync
-        : isOnline
-        ? Icons.cloud_done
-        : Icons.cloud_off;
+        final IconData icon = isChecking
+            ? Icons.sync
+            : isOnline
+            ? Icons.cloud_done
+            : Icons.cloud_off;
 
-    final String text = isChecking
-        ? 'Checking Sensee connection...'
-        : isOnline
-        ? 'Connected to Sensee'
-        : 'Disconnected from Sensee';
+        final String text = isChecking
+            ? t('banner_checking')
+            : isOnline
+            ? t('banner_online')
+            : t('banner_offline');
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: foregroundColor.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: foregroundColor),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: foregroundColor,
-              ),
-            ),
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: foregroundColor.withValues(alpha: 0.25)),
           ),
-          if (!isOnline)
-            TextButton(
-              onPressed: () => _refreshConnectivity(
-                discoverIfUnknown: true,
-                showChecking: true,
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: foregroundColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: foregroundColor,
+                  ),
+                ),
               ),
-              child: const Text('Retry'),
-            ),
-        ],
-      ),
+              if (!isOnline)
+                TextButton(
+                  onPressed: () => _refreshConnectivity(
+                    discoverIfUnknown: true,
+                    showChecking: true,
+                  ),
+                  child: Text(t('banner_retry')),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

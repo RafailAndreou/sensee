@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:surface_controller/globals/locale.dart';
 import '../../server/server.dart' as server_sync;
 import '../actions/actiondetails.dart';
 
@@ -45,9 +46,11 @@ class _SmartDeviceListState extends State<SmartDeviceList> {
           final allDevices = data['devices'] as List;
           setState(() {
             _devices = allDevices
-                .where((d) =>
-                    d['type'].toString().toLowerCase() ==
-                    widget.deviceType.toLowerCase())
+                .where(
+                  (d) =>
+                      d['type'].toString().toLowerCase() ==
+                      widget.deviceType.toLowerCase(),
+                )
                 .toList();
             _isLoading = false;
           });
@@ -67,19 +70,24 @@ class _SmartDeviceListState extends State<SmartDeviceList> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFEAEDF4),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          'Select Smart ${widget.deviceType}',
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
-      ),
-      body: _buildBody(),
+    return ValueListenableBuilder<String>(
+      valueListenable: appLocale,
+      builder: (context, _, __) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFEAEDF4),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            title: Text(
+              tFormat('smart_screen_title', widget.deviceType),
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+          body: _buildBody(),
+        );
+      },
     );
   }
 
@@ -98,15 +106,15 @@ class _SmartDeviceListState extends State<SmartDeviceList> {
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
               const SizedBox(height: 16),
               Text(
-                "Failed to load devices\n$_error",
+                "${t('smart_failed')}\n$_error",
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _fetchDevices,
-                child: const Text("Retry"),
-              )
+                child: Text(t('pairing_try_again')),
+              ),
             ],
           ),
         ),
@@ -116,7 +124,7 @@ class _SmartDeviceListState extends State<SmartDeviceList> {
     if (_devices.isEmpty) {
       return Center(
         child: Text(
-          "No smart ${widget.deviceType}s found on the network.",
+          tFormat('smart_none_found', widget.deviceType),
           style: TextStyle(color: Colors.grey[600], fontSize: 16),
         ),
       );
@@ -130,24 +138,38 @@ class _SmartDeviceListState extends State<SmartDeviceList> {
         return Card(
           elevation: 2,
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            leading: Icon(_getIconForType(widget.deviceType), color: Colors.blue),
-            title: Text(device['friendly_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(device['entity_id'], style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 8,
+            ),
+            leading: Icon(
+              _getIconForType(widget.deviceType),
+              color: Colors.blue,
+            ),
+            title: Text(
+              device['friendly_name'],
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              device['entity_id'],
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
             trailing: const Icon(Icons.add_circle, color: Colors.blue),
             onTap: () {
-                Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => ActionDetails(
-                            deviceType: widget.deviceType,
-                            brand: "${device['friendly_name']}",
-                            connectionType: "smart",
-                            entityId: device['entity_id'],
-                        ),
-                    ),
-                );
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ActionDetails(
+                    deviceType: widget.deviceType,
+                    brand: "${device['friendly_name']}",
+                    connectionType: "smart",
+                    entityId: device['entity_id'],
+                  ),
+                ),
+              );
             },
           ),
         );
@@ -157,11 +179,16 @@ class _SmartDeviceListState extends State<SmartDeviceList> {
 
   IconData _getIconForType(String type) {
     switch (type.toLowerCase()) {
-      case 'tv': return Icons.tv;
-      case 'ac': return Icons.ac_unit;
-      case 'light': return Icons.lightbulb;
-      case 'fan': return Icons.air;
-      default: return Icons.devices;
+      case 'tv':
+        return Icons.tv;
+      case 'ac':
+        return Icons.ac_unit;
+      case 'light':
+        return Icons.lightbulb;
+      case 'fan':
+        return Icons.air;
+      default:
+        return Icons.devices;
     }
   }
 }

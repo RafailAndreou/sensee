@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:surface_controller/globals/connectionslist.dart';
 import 'package:surface_controller/globals/global.dart';
+import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/server/server.dart' as server_sync;
 import 'package:surface_controller/screens/dashboard/widgets/dashboardnavigation.dart';
 import 'widgets/actionselectorcard.dart';
@@ -126,9 +127,7 @@ class _ActionDetailsState extends State<ActionDetails> {
       if (existingHands.contains('both hands')) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Both Hands is already assigned for this gesture.'),
-          ),
+          SnackBar(content: Text(t('err_both_hands_assigned'))),
         );
         return;
       }
@@ -139,30 +138,18 @@ class _ActionDetailsState extends State<ActionDetails> {
         _selectedHand = 'Right Hand';
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Both Hands conflicts with existing Left Hand. Assigned to Right Hand instead.',
-            ),
-          ),
+          SnackBar(content: Text(t('err_both_conflicts_left'))),
         );
       } else if (hasRight && !hasLeft) {
         _selectedHand = 'Left Hand';
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Both Hands conflicts with existing Right Hand. Assigned to Left Hand instead.',
-            ),
-          ),
+          SnackBar(content: Text(t('err_both_conflicts_right'))),
         );
       } else if (hasLeft && hasRight) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'This gesture already uses Left and Right Hand mappings.',
-            ),
-          ),
+          SnackBar(content: Text(t('err_both_left_right_used'))),
         );
         return;
       }
@@ -170,11 +157,7 @@ class _ActionDetailsState extends State<ActionDetails> {
       if (existingHands.contains('both hands')) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'This gesture is already assigned to Both Hands. Edit that mapping instead.',
-            ),
-          ),
+          SnackBar(content: Text(t('err_gesture_assigned_both'))),
         );
         return;
       }
@@ -185,11 +168,7 @@ class _ActionDetailsState extends State<ActionDetails> {
     )) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'This gesture and hand are already assigned. Please edit the existing mapping.',
-          ),
-        ),
+        SnackBar(content: Text(t('err_duplicate_gesture_hand'))),
       );
       return;
     }
@@ -197,9 +176,6 @@ class _ActionDetailsState extends State<ActionDetails> {
     final int connectionId;
     if (existingConnectionId != null) {
       connectionId = existingConnectionId;
-      // Preserve connection-level fields that may have been set during initial
-      // device selection; always keep them in sync with the widget values so
-      // that editing a smart-device connection doesn't lose its entity ID.
       final existing = getConnectionConfig(connectionId);
       if (widget.connectionType.isNotEmpty) {
         existing.connectionType.value = widget.connectionType;
@@ -224,7 +200,6 @@ class _ActionDetailsState extends State<ActionDetails> {
     config.hand.value = _selectedHand;
     config.sound.value = widget.deviceType;
 
-    // Ensure dashboard cards listening to id-list updates also repaint on edits.
     connectionsList.value = List.from(connectionsList.value);
 
     saveConfigsToFile();

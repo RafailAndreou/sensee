@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/globals/sizes.dart';
 import 'package:surface_controller/server/config_service.dart';
 
@@ -26,7 +27,6 @@ class _GesturesettingsState extends State<Gesturesettings> {
   }
 
   Future<void> _loadGestureSettings() async {
-    // Load from local storage immediately
     final localSettings = await loadGestureSettingsLocal();
     if (mounted) {
       setState(() {
@@ -45,7 +45,6 @@ class _GesturesettingsState extends State<Gesturesettings> {
       });
     }
 
-    // Sync with server in the background
     final serverSettings = await loadGestureSettings();
     if (serverSettings != null && mounted) {
       setState(() {
@@ -62,7 +61,6 @@ class _GesturesettingsState extends State<Gesturesettings> {
           20,
         );
       });
-      // Update local cache with server data
       await saveGestureSettingsLocal(
         wakeEnabled: _wakeEnabled,
         holdDurationSeconds: _holdDurationSeconds,
@@ -72,8 +70,26 @@ class _GesturesettingsState extends State<Gesturesettings> {
     }
   }
 
+  Future<void> _saveSettings() async {
+    await saveGestureSettingsLocal(
+      wakeEnabled: _wakeEnabled,
+      holdDurationSeconds: _holdDurationSeconds,
+      activeWindowSeconds: _activeWindowSeconds,
+      selectedGesture: _selectedGesture,
+    );
+    await sendGestureSettings(
+      wakeEnabled: _wakeEnabled,
+      holdDurationSeconds: _holdDurationSeconds,
+      activeWindowSeconds: _activeWindowSeconds,
+      selectedGesture: _selectedGesture,
+    );
+    if (mounted) {
+      Navigator.pop(context);
+    }
+  }
+
   String _formatSeconds(double value) {
-    return '${value.toInt()} seconds';
+    return '${value.toInt()} ${t('gesture_seconds_suffix')}';
   }
 
   Widget _buildLabeledSlider({
@@ -139,7 +155,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      tickValue.toInt().toString() + 's',
+                      '${tickValue.toInt()}s',
                       style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                     ),
                   ],
@@ -154,129 +170,118 @@ class _GesturesettingsState extends State<Gesturesettings> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFEAEDF4),
-      appBar: AppBar(
-        title: const Text(
-          "Gesture Settings",
-          style: TextStyle(fontSize: 27, fontWeight: FontWeight.w500),
-        ),
-      ),
-      body: Column(
-        children: [
-          Container(
-            // container takes 90% of the body
-            margin: const EdgeInsets.all(16),
-            width: getProportionalHeight(context, 500),
-            height: getProportionalHeight(context, 600),
-            // use decoration to keep rounded corners and background color
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.black12, width: 2),
+    return ValueListenableBuilder<String>(
+      valueListenable: appLocale,
+      builder: (context, _, __) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFEAEDF4),
+          appBar: AppBar(
+            title: Text(
+              t('gesture_settings_title'),
+              style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w500),
             ),
-            padding: const EdgeInsets.all(24),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Wake-up Gesture',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
+          ),
+          body: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.all(16),
+                width: getProportionalHeight(context, 500),
+                height: getProportionalHeight(context, 600),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.black12, width: 2),
+                ),
+                padding: const EdgeInsets.all(24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.back_hand, size: 40),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          "Enable Wake-up Gesture",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      Text(
+                        t('gesture_wakeup_section'),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      // toggle switch similar to the provided image
-                      Switch.adaptive(
-                        value: _wakeEnabled,
-                        activeTrackColor: Colors.blue,
-                        onChanged: (val) {
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          const Icon(Icons.back_hand, size: 40),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              t('gesture_enable_wakeup'),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          Switch.adaptive(
+                            value: _wakeEnabled,
+                            activeTrackColor: Colors.blue,
+                            onChanged: (val) {
+                              setState(() {
+                                _wakeEnabled = val;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 50),
+                      _scrollDownButton(context),
+                      const SizedBox(height: 20),
+                      _buildLabeledSlider(
+                        title: t('gesture_hold_duration'),
+                        value: _holdDurationSeconds,
+                        min: 0,
+                        max: 5,
+                        divisions: 5,
+                        onChanged: (value) {
                           setState(() {
-                            _wakeEnabled = val;
+                            _holdDurationSeconds = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 30),
+                      _buildLabeledSlider(
+                        title: t('gesture_active_window'),
+                        value: _activeWindowSeconds,
+                        min: 5,
+                        max: 20,
+                        divisions: 4,
+                        onChanged: (value) {
+                          setState(() {
+                            _activeWindowSeconds = value;
                           });
                         },
                       ),
                     ],
                   ),
-                  SizedBox(height: 50),
-                  _scrollDownButton(context),
-                  SizedBox(height: 20),
-                  _buildLabeledSlider(
-                    title: 'Hold Duration',
-                    value: _holdDurationSeconds,
-                    min: 0,
-                    max: 5,
-                    divisions: 5,
-                    onChanged: (value) {
-                      setState(() {
-                        _holdDurationSeconds = value;
-                      });
-                    },
+                ),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 100,
+                    vertical: 12,
                   ),
-                  SizedBox(height: 30),
-                  _buildLabeledSlider(
-                    title: 'Active Window',
-                    value: _activeWindowSeconds,
-                    min: 5,
-                    max: 20,
-                    divisions: 4,
-                    onChanged: (value) {
-                      setState(() {
-                        _activeWindowSeconds = value;
-                      });
-                    },
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                ),
+                onPressed: _saveSettings,
+                child: Text(
+                  t('gesture_save'),
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
-            ),
+            ],
           ),
-          TextButton(
-            // Blue color
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.blue,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 100,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () async {
-              // Save to local storage immediately
-              await saveGestureSettingsLocal(
-                wakeEnabled: _wakeEnabled,
-                holdDurationSeconds: _holdDurationSeconds,
-                activeWindowSeconds: _activeWindowSeconds,
-                selectedGesture: _selectedGesture,
-              );
-              // Send to server
-              await sendGestureSettings(
-                wakeEnabled: _wakeEnabled,
-                holdDurationSeconds: _holdDurationSeconds,
-                activeWindowSeconds: _activeWindowSeconds,
-                selectedGesture: _selectedGesture,
-              );
-              if (mounted) {
-                Navigator.pop(context);
-              }
-            },
-            child: Text("Save Settings", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -287,7 +292,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
         Padding(
           padding: const EdgeInsets.only(left: 8.0, bottom: 6.0),
           child: Text(
-            'Wake-up Gesture',
+            t('gesture_wakeup_section'),
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[700],
@@ -312,7 +317,6 @@ class _GesturesettingsState extends State<Gesturesettings> {
                 icon: const Icon(Icons.keyboard_arrow_down_rounded),
                 onChanged: (value) {
                   if (value == null) return;
-
                   setState(() {
                     _selectedGesture = value;
                   });
@@ -321,19 +325,19 @@ class _GesturesettingsState extends State<Gesturesettings> {
                 items: [
                   DropdownMenuItem(
                     value: "Open Hand",
-                    child: Text("Open Hand"),
+                    child: Text(t('gesture_dropdown_open_hand')),
                   ),
                   DropdownMenuItem(
                     value: "Closed Fist",
-                    child: Text("Closed Fist"),
+                    child: Text(t('gesture_dropdown_closed_fist')),
                   ),
                   DropdownMenuItem(
                     value: "Thumbs+Index",
-                    child: Text("Thumbs + Index"),
+                    child: Text(t('gesture_dropdown_thumbs_index')),
                   ),
                   DropdownMenuItem(
                     value: "Middle+Thumb",
-                    child: Text("Middle + Thumb"),
+                    child: Text(t('gesture_dropdown_middle_thumb')),
                   ),
                 ],
               ),

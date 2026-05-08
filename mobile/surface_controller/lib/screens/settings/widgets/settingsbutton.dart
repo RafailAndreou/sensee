@@ -21,7 +21,7 @@ class Settingsbutton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Container(
         width: getProportionalWidth(context, 350),
-        height: 100, // Set your constant height here
+        height: 115, // Set your constant height here
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),

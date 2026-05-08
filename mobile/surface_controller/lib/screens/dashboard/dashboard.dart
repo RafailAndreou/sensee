@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/connectionslist.dart';
 import 'package:surface_controller/globals/global.dart';
+import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/server/server.dart' as server_sync;
 import 'package:surface_controller/screens/actions/actiondetails.dart';
 import 'package:surface_controller/screens/brandselection/brandselection.dart';
@@ -78,61 +79,69 @@ class _DashboardState extends State<Dashboard> {
         }).toList();
 
         if (savedIds.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(maxWidth: 420),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color.fromARGB(24, 0, 0, 0),
-                      blurRadius: 16,
-                      offset: Offset(0, 8),
+          return ValueListenableBuilder<String>(
+            valueListenable: appLocale,
+            builder: (context, _, __) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color.fromARGB(24, 0, 0, 0),
+                          blurRadius: 16,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
                     ),
-                  ],
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.dashboard_customize_outlined,
+                          size: 44,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          t('dashboard_empty_title'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          t('dashboard_empty_subtitle'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          t('dashboard_empty_steps'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.dashboard_customize_outlined,
-                      size: 44,
-                      color: Colors.blue,
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      'Dashboard is empty',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Get started by adding your first device mapping.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 15, color: Colors.black87),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      '1. Tap the + button\n2. Choose a device type\n3. Select a brand or smart device\n4. Pick action, gesture, and hand\n5. Save to create your first card',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              );
+            },
           );
         }
 
@@ -183,7 +192,6 @@ class _DashboardState extends State<Dashboard> {
     if (config.sound.value.isEmpty) {
       return 'Tv';
     }
-
     return config.sound.value;
   }
 
@@ -201,7 +209,7 @@ class _DashboardState extends State<Dashboard> {
             children: [
               ListTile(
                 leading: const Icon(Icons.delete_outline),
-                title: const Text('Delete'),
+                title: Text(t('dashboard_delete')),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
                   removeConnection(connectionId);
@@ -212,7 +220,7 @@ class _DashboardState extends State<Dashboard> {
               if (deviceType != 'PC')
                 ListTile(
                   leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Change brand'),
+                  title: Text(t('dashboard_change_brand')),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     Navigator.of(context).push(

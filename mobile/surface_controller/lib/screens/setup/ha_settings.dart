@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:surface_controller/globals/locale.dart';
 import '../../server/server.dart';
 
 class HASettings extends StatefulWidget {
@@ -27,7 +28,6 @@ class _HASettingsState extends State<HASettings> {
     if (mounted && config != null) {
       setState(() {
         _urlController.text = config['url'] ?? "";
-        // A non-empty masked token means a token is already stored on the server.
         _tokenAlreadySaved = (config['token'] as String? ?? '').isNotEmpty;
         _isLoading = false;
       });
@@ -40,11 +40,9 @@ class _HASettingsState extends State<HASettings> {
     final url = _urlController.text.trim();
     final token = _tokenController.text.trim();
 
-    // Require both fields unless the token was previously saved and the user
-    // chose to leave the field blank (meaning "keep the existing token").
     if (url.isEmpty || (token.isEmpty && !_tokenAlreadySaved)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid URL and Token")),
+        SnackBar(content: Text(t('ha_err_missing_fields'))),
       );
       return;
     }
@@ -56,14 +54,12 @@ class _HASettingsState extends State<HASettings> {
       setState(() => _isSaving = false);
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Home Assistant settings saved!")),
+          SnackBar(content: Text(t('ha_success'))),
         );
         Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Failed to save settings. Check your connection."),
-          ),
+          SnackBar(content: Text(t('ha_err_save_failed'))),
         );
       }
     }
@@ -71,75 +67,85 @@ class _HASettingsState extends State<HASettings> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFEAEDF4),
-      appBar: AppBar(
-        title: const Text(
-          "Settings",
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Home Assistant Connection",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "Set the URL and Access Token for your Home Assistant server.",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 32),
-                  TextField(
-                    controller: _urlController,
-                    decoration: const InputDecoration(
-                      labelText: "Home Assistant URL",
-                      hintText: "http://192.168.1.50:8123",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _tokenController,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: "Long-Lived Access Token",
-                      hintText: _tokenAlreadySaved
-                          ? "Leave blank to keep existing token"
-                          : "Enter your HA Token here...",
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _saveConfig,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
+    return ValueListenableBuilder<String>(
+      valueListenable: appLocale,
+      builder: (context, _, __) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFEAEDF4),
+          appBar: AppBar(
+            title: Text(
+              t('ha_title'),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        t('ha_section_title'),
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      child: _isSaving
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              "Save Settings",
-                              style: TextStyle(fontSize: 18),
+                      const SizedBox(height: 8),
+                      Text(
+                        t('ha_section_subtitle'),
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 32),
+                      TextField(
+                        controller: _urlController,
+                        decoration: InputDecoration(
+                          labelText: t('ha_url_label'),
+                          hintText: "http://192.168.1.50:8123",
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _tokenController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: t('ha_token_label'),
+                          hintText: _tokenAlreadySaved
+                              ? t('ha_token_hint_existing')
+                              : t('ha_token_hint_new'),
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _isSaving ? null : _saveConfig,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
                             ),
-                    ),
+                          ),
+                          child: _isSaving
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                              : Text(
+                                  t('ha_save'),
+                                  style: const TextStyle(fontSize: 18),
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+        );
+      },
     );
   }
 }
