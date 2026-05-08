@@ -11,7 +11,7 @@ a = Analysis(
     binaries=_pyautogui_binaries,
     datas=[
         ('assets', 'assets'),
-        ('server/web', 'server/web'),
+        ('web', 'web'),
     ] + _pyautogui_datas,
     hiddenimports=_pyautogui_hidden + [
         'gesture_engine.camera',
