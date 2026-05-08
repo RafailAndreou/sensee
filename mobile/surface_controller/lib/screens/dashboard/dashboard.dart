@@ -94,7 +94,7 @@ class _DashboardState extends State<Dashboard> {
                     constraints: const BoxConstraints(maxWidth: 420),
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: const [
                         BoxShadow(
@@ -125,18 +125,17 @@ class _DashboardState extends State<Dashboard> {
                         Text(
                           t('dashboard_empty_subtitle'),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            color: Colors.black87,
-                          ),
+                          style: const TextStyle(fontSize: 15),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           t('dashboard_empty_steps'),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Colors.black54,
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.color,
                             height: 1.35,
                           ),
                         ),

@@ -76,7 +76,6 @@ class _VideoPageState extends State<VideoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEAEDF4),
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text('Video Stream'),

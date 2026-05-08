@@ -12,8 +12,9 @@ class DeviceTypeButton extends StatelessWidget {
     return ValueListenableBuilder<String>(
       valueListenable: appLocale,
       builder: (context, _, __) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Material(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           elevation: 3,
           shadowColor: Colors.black26,
           borderRadius: BorderRadius.circular(16),
@@ -25,13 +26,18 @@ class DeviceTypeButton extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFB7C0CF), width: 1),
+                border: Border.all(
+                  color: isDark
+                      ? const Color(0xFF4B5563)
+                      : const Color(0xFFB7C0CF),
+                  width: 1,
+                ),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Icon(_deviceIcon(), size: 28, color: Colors.black87),
+                  Icon(_deviceIcon(), size: 28),
                   const SizedBox(height: 8),
                   Text(
                     _displayName(),
@@ -39,7 +45,6 @@ class DeviceTypeButton extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: Colors.black87,
                     ),
                   ),
                 ],

@@ -23,7 +23,7 @@ class Settingsbutton extends StatelessWidget {
         width: getProportionalWidth(context, 350),
         height: 115, // Set your constant height here
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: const [
             BoxShadow(

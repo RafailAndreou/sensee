@@ -215,7 +215,6 @@ class _ActionDetailsState extends State<ActionDetails> {
     final displayName = widget.brand.isEmpty ? widget.deviceType : widget.brand;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEAEDF4),
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text(

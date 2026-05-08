@@ -10,7 +10,7 @@ class Gesturebutton extends StatelessWidget {
     return Container(
       height: 140,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -25,7 +25,15 @@ class Gesturebutton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset('assets/redesign/gesture.png', width: 42, height: 42),
+            Image.asset(
+              'assets/redesign/gesture.png',
+              width: 42,
+              height: 42,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : null,
+              colorBlendMode: BlendMode.srcIn,
+            ),
             const SizedBox(height: 10),
             Text(
               'Gesture:\n$gestureName',

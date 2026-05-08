@@ -15,7 +15,7 @@ class Actionbutton extends StatelessWidget {
     return Container(
       height: 140,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(

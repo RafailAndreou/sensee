@@ -32,7 +32,7 @@ class DashboardCard extends StatelessWidget {
         height: getProportionalHeight(context, 166),
         width: getProportionalHeight(context, 155),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 255, 255, 255),
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -89,13 +89,17 @@ class DashboardCard extends StatelessWidget {
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: onMoreTap,
-                    child: const SizedBox(
+                    child: SizedBox(
                       width: 33,
                       height: 28,
                       child: Image(
-                        image: AssetImage('assets/redesign/more.png'),
+                        image: const AssetImage('assets/redesign/more.png'),
                         width: 33,
                         height: 28,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : null,
+                        colorBlendMode: BlendMode.srcIn,
                       ),
                     ),
                   ),
@@ -129,10 +133,14 @@ class DashboardCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Image(
-                    image: AssetImage('assets/redesign/hand.png'),
+                  Image(
+                    image: const AssetImage('assets/redesign/hand.png'),
                     width: 44,
                     height: 44,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : null,
+                    colorBlendMode: BlendMode.srcIn,
                   ),
                   const SizedBox(width: 10),
                   Expanded(

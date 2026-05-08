@@ -151,6 +151,9 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
     return ValueListenableBuilder<String>(
       valueListenable: appLocale,
       builder: (context, _, __) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final pillBg =
+            isDark ? const Color(0xFF374151) : const Color(0xFFDCE3EC);
         return SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -158,7 +161,7 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -175,7 +178,7 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
                   const SizedBox(height: 12),
                   Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCE3EC),
+                      color: pillBg,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: DropdownButton<String>(
@@ -227,7 +230,7 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
                   const SizedBox(height: 12),
                   Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCE3EC),
+                      color: pillBg,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: DropdownButton<String>(
@@ -275,7 +278,7 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCE3EC),
+                      color: pillBg,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Row(
@@ -308,7 +311,9 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
                                       fontWeight: FontWeight.w500,
                                       color: selectedHand == hand
                                           ? Colors.white
-                                          : Colors.black87,
+                                          : Theme.of(
+                                              context,
+                                            ).textTheme.bodyMedium?.color,
                                     ),
                                   ),
                                 ),

@@ -13,7 +13,6 @@ class DeviceType extends StatelessWidget {
       valueListenable: appLocale,
       builder: (context, _, __) {
         return Scaffold(
-          backgroundColor: const Color(0xFFEAEDF4),
           appBar: AppBar(
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),

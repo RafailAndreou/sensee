@@ -15,6 +15,9 @@ class DashBoardNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultColor = isDark ? Colors.white : Colors.black87;
+
     return ValueListenableBuilder<String>(
       valueListenable: appLocale,
       builder: (context, _, __) {
@@ -36,14 +39,14 @@ class DashBoardNavigation extends StatelessWidget {
                           ? 'assets/redesign/dashboard-active.png'
                           : 'assets/redesign/dashboard-inactive.png',
                     ),
+                    color: isDark ? Colors.white : null,
+                    colorBlendMode: BlendMode.srcIn,
                   ),
                   Text(
                     t('nav_dashboard'),
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
-                      color: selectedTab == DashboardTab.dashboard
-                          ? Colors.black
-                          : Colors.black87,
+                      color: defaultColor,
                     ),
                   ),
                 ],
@@ -62,8 +65,10 @@ class DashBoardNavigation extends StatelessWidget {
                 children: [
                   Image(
                     image: const AssetImage('assets/redesign/Camera.png'),
-                    color:
-                        selectedTab == DashboardTab.camera ? Colors.blue : null,
+                    color: selectedTab == DashboardTab.camera
+                        ? Colors.blue
+                        : (isDark ? Colors.white : null),
+                    colorBlendMode: BlendMode.srcIn,
                   ),
                   Text(
                     t('nav_camera'),
@@ -71,7 +76,7 @@ class DashBoardNavigation extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       color: selectedTab == DashboardTab.camera
                           ? Colors.blue
-                          : Colors.black,
+                          : defaultColor,
                     ),
                   ),
                 ],
@@ -88,10 +93,15 @@ class DashBoardNavigation extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Image(
-                    image: AssetImage("assets/redesign/settings.png"),
+                  Image(
+                    image: const AssetImage('assets/redesign/settings.png'),
+                    color: isDark ? Colors.white : null,
+                    colorBlendMode: BlendMode.srcIn,
                   ),
-                  Text(t('nav_settings')),
+                  Text(
+                    t('nav_settings'),
+                    style: TextStyle(color: defaultColor),
+                  ),
                 ],
               ),
             ),
