@@ -6,7 +6,8 @@ const Map<String, Map<String, String>> _strings = {
     'banner_offline': 'Disconnected from Sensee',
     'banner_retry': 'Retry',
     'dashboard_empty_title': 'Dashboard is empty',
-    'dashboard_empty_subtitle': 'Get started by adding your first device mapping.',
+    'dashboard_empty_subtitle':
+        'Get started by adding your first device mapping.',
     'dashboard_empty_steps':
         '1. Tap the + button\n2. Choose a device type\n3. Select a brand or smart device\n4. Pick action, gesture, and hand\n5. Save to create your first card',
     'dashboard_delete': 'Delete',
@@ -63,12 +64,14 @@ const Map<String, Map<String, String>> _strings = {
     'hand_left': 'Left Hand',
     'hand_right': 'Right Hand',
     'hand_both': 'Both Hands',
-    'err_both_hands_assigned': 'Both Hands is already assigned for this gesture.',
+    'err_both_hands_assigned':
+        'Both Hands is already assigned for this gesture.',
     'err_both_conflicts_left':
         'Both Hands conflicts with existing Left Hand. Assigned to Right Hand instead.',
     'err_both_conflicts_right':
         'Both Hands conflicts with existing Right Hand. Assigned to Left Hand instead.',
-    'err_both_left_right_used': 'This gesture already uses Left and Right Hand mappings.',
+    'err_both_left_right_used':
+        'This gesture already uses Left and Right Hand mappings.',
     'err_gesture_assigned_both':
         'This gesture is already assigned to Both Hands. Edit that mapping instead.',
     'err_duplicate_gesture_hand':
@@ -95,7 +98,8 @@ const Map<String, Map<String, String>> _strings = {
     'camera_save': 'Save Settings',
     'ha_title': 'Settings',
     'ha_section_title': 'Home Assistant Connection',
-    'ha_section_subtitle': 'Set the URL and Access Token for your Home Assistant server.',
+    'ha_section_subtitle':
+        'Set the URL and Access Token for your Home Assistant server.',
     'ha_url_label': 'Home Assistant URL',
     'ha_token_label': 'Long-Lived Access Token',
     'ha_token_hint_existing': 'Leave blank to keep existing token',
@@ -109,13 +113,15 @@ const Map<String, Map<String, String>> _strings = {
     'pairing_none_found': 'No new %ss found on your network.',
     'pairing_try_again': 'Try Again',
     'pairing_pin_title': 'Enter PIN',
-    'pairing_pin_content': 'A PIN code should appear on your TV. Please enter it below:',
+    'pairing_pin_content':
+        'A PIN code should appear on your TV. Please enter it below:',
     'pairing_pin_label': 'PIN Code',
     'pairing_cancel': 'Cancel',
     'pairing_verify': 'Verify',
     'pairing_finish': 'Finish',
     'pairing_success_title': 'Success!',
-    'pairing_success_content': 'Your TV is now linked to Sensee. You can now set up gestures for it.',
+    'pairing_success_content':
+        'Your TV is now linked to Sensee. You can now set up gestures for it.',
     'pairing_failed_start': 'Failed to start pairing.',
     'pairing_failed_pin': 'Pairing failed. Check the PIN and try again.',
   },
@@ -126,7 +132,8 @@ const Map<String, Map<String, String>> _strings = {
     'banner_offline': 'Αποσυνδεδεμένο από το Sensee',
     'banner_retry': 'Επανάληψη',
     'dashboard_empty_title': 'Ο πίνακας είναι κενός',
-    'dashboard_empty_subtitle': 'Ξεκινήστε προσθέτοντας την πρώτη αντιστοίχιση.',
+    'dashboard_empty_subtitle':
+        'Ξεκινήστε προσθέτοντας την πρώτη αντιστοίχιση.',
     'dashboard_empty_steps':
         '1. Πατήστε το κουμπί +\n2. Επιλέξτε τύπο συσκευής\n3. Επιλέξτε μάρκα ή έξυπνη συσκευή\n4. Επιλέξτε ενέργεια, χειρονομία και χέρι\n5. Αποθηκεύστε για να δημιουργήσετε την πρώτη κάρτα',
     'dashboard_delete': 'Διαγραφή',
@@ -137,13 +144,14 @@ const Map<String, Map<String, String>> _strings = {
     'settings_server_title': 'Σύνδεση Διακομιστή',
     'settings_server_description': 'Ρυθμίσεις σύνδεσης HASS',
     'settings_gesture_title': 'Ρυθμίσεις Χειρονομιών',
-    'settings_gesture_description': 'Διαχείριση αφύπνισης και κρατήματος χειρονομιών',
+    'settings_gesture_description':
+        'Διαχείριση αφύπνισης και κρατήματος χειρονομιών',
     'settings_camera_title': 'Ρυθμίσεις Κάμερας',
     'settings_camera_description': 'Τοπική ή δικτυακή (RTSP/HTTP) πηγή κάμερας',
     'settings_language_title': 'Γλώσσα',
     'settings_language_description': 'Εναλλαγή Αγγλικών / Ελληνικών',
     'settings_theme_title': 'Θέμα',
-    'settings_theme_description': 'Εναλλαγή ανοιχτού / σκούρου θέματος',
+    'settings_theme_description': 'Εναλλαγή θέματος',
     'theme_light': 'Ανοιχτό',
     'theme_dark': 'Σκούρο',
     'devicetype_title': 'Επιλογή Τύπου Συσκευής',
@@ -183,12 +191,18 @@ const Map<String, Map<String, String>> _strings = {
     'hand_left': 'Αριστερό Χέρι',
     'hand_right': 'Δεξί Χέρι',
     'hand_both': 'Και τα Δύο',
-    'err_both_hands_assigned': 'Τα Δύο Χέρια έχουν ήδη αντιστοιχιστεί σε αυτή τη χειρονομία.',
-    'err_both_conflicts_left': 'Σύγκρουση με Αριστερό Χέρι. Αντιστοιχίστηκε στο Δεξί Χέρι.',
-    'err_both_conflicts_right': 'Σύγκρουση με Δεξί Χέρι. Αντιστοιχίστηκε στο Αριστερό Χέρι.',
-    'err_both_left_right_used': 'Αυτή η χειρονομία χρησιμοποιείται ήδη από τα δύο χέρια.',
-    'err_gesture_assigned_both': 'Αυτή η χειρονομία έχει αντιστοιχιστεί στα Δύο Χέρια.',
-    'err_duplicate_gesture_hand': 'Αυτή η χειρονομία και το χέρι έχουν ήδη αντιστοιχιστεί.',
+    'err_both_hands_assigned':
+        'Τα Δύο Χέρια έχουν ήδη αντιστοιχιστεί σε αυτή τη χειρονομία.',
+    'err_both_conflicts_left':
+        'Σύγκρουση με Αριστερό Χέρι. Αντιστοιχίστηκε στο Δεξί Χέρι.',
+    'err_both_conflicts_right':
+        'Σύγκρουση με Δεξί Χέρι. Αντιστοιχίστηκε στο Αριστερό Χέρι.',
+    'err_both_left_right_used':
+        'Αυτή η χειρονομία χρησιμοποιείται ήδη από τα δύο χέρια.',
+    'err_gesture_assigned_both':
+        'Αυτή η χειρονομία έχει αντιστοιχιστεί στα Δύο Χέρια.',
+    'err_duplicate_gesture_hand':
+        'Αυτή η χειρονομία και το χέρι έχουν ήδη αντιστοιχιστεί.',
     'gesture_settings_title': 'Ρυθμίσεις Χειρονομιών',
     'gesture_wakeup_section': 'Χειρονομία Αφύπνισης',
     'gesture_enable_wakeup': 'Ενεργοποίηση Χειρονομίας Αφύπνισης',
@@ -225,7 +239,8 @@ const Map<String, Map<String, String>> _strings = {
     'pairing_none_found': 'Δεν βρέθηκαν νέες %s στο δίκτυό σας.',
     'pairing_try_again': 'Δοκιμάστε ξανά',
     'pairing_pin_title': 'Εισαγωγή PIN',
-    'pairing_pin_content': 'Ένα PIN θα εμφανιστεί στην τηλεόρασή σας. Εισάγετέ το παρακάτω:',
+    'pairing_pin_content':
+        'Ένα PIN θα εμφανιστεί στην τηλεόρασή σας. Εισάγετέ το παρακάτω:',
     'pairing_pin_label': 'Κωδικός PIN',
     'pairing_cancel': 'Άκυρο',
     'pairing_verify': 'Επαλήθευση',
