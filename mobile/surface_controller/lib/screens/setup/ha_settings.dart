@@ -71,7 +71,6 @@ class _HASettingsState extends State<HASettings> {
       valueListenable: appLocale,
       builder: (context, _, __) {
         return Scaffold(
-          backgroundColor: const Color(0xFFEAEDF4),
           appBar: AppBar(
             title: Text(
               t('ha_title'),

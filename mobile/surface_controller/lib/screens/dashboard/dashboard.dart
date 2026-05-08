@@ -133,9 +133,7 @@ class _DashboardState extends State<Dashboard> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Theme.of(
-                              context,
-                            ).textTheme.bodySmall?.color,
+                            color: Theme.of(context).textTheme.bodySmall?.color,
                             height: 1.35,
                           ),
                         ),
@@ -205,6 +203,7 @@ class _DashboardState extends State<Dashboard> {
                     _dragOverIndex == index && candidateData.isNotEmpty;
                 return LongPressDraggable<int>(
                   data: connectionId,
+                  delay: const Duration(milliseconds: 150),
                   feedback: Material(
                     color: Colors.transparent,
                     child: Opacity(

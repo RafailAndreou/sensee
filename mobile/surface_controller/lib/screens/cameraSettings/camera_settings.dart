@@ -130,7 +130,6 @@ class _CameraSettingsScreenState extends State<CameraSettingsScreen> {
       valueListenable: appLocale,
       builder: (context, _, __) {
         return Scaffold(
-          backgroundColor: const Color(0xFFEAEDF4),
           appBar: AppBar(
             title: Text(
               t('camera_settings_title'),
@@ -143,7 +142,7 @@ class _CameraSettingsScreenState extends State<CameraSettingsScreen> {
                 margin: const EdgeInsets.all(16),
                 width: getProportionalHeight(context, 500),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.black12, width: 2),
                 ),

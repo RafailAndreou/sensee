@@ -89,18 +89,10 @@ class DashboardCard extends StatelessWidget {
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: onMoreTap,
-                    child: SizedBox(
+                    child: const SizedBox(
                       width: 33,
                       height: 28,
-                      child: Image(
-                        image: const AssetImage('assets/redesign/more.png'),
-                        width: 33,
-                        height: 28,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : null,
-                        colorBlendMode: BlendMode.srcIn,
-                      ),
+                      child: Icon(Icons.more_horiz),
                     ),
                   ),
                 ],

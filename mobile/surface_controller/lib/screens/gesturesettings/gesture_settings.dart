@@ -114,7 +114,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
         Text(
           _formatSeconds(value),
           textAlign: TextAlign.left,
-          style: const TextStyle(fontSize: 20, color: Colors.black),
+          style: const TextStyle(fontSize: 20),
         ),
         const SizedBox(height: 15),
         SliderTheme(
@@ -174,7 +174,6 @@ class _GesturesettingsState extends State<Gesturesettings> {
       valueListenable: appLocale,
       builder: (context, _, __) {
         return Scaffold(
-          backgroundColor: const Color(0xFFEAEDF4),
           appBar: AppBar(
             title: Text(
               t('gesture_settings_title'),
@@ -188,7 +187,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
                 width: getProportionalHeight(context, 500),
                 height: getProportionalHeight(context, 600),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.black12, width: 2),
                 ),
@@ -306,7 +305,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
             height: 56,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.black12, width: 1.5),
             ),
