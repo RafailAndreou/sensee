@@ -15,7 +15,6 @@ class ConnectionMethod extends StatelessWidget {
       valueListenable: appLocale,
       builder: (context, _, __) {
         return Scaffold(
-          backgroundColor: const Color(0xFFEAEDF4),
           appBar: AppBar(
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -97,7 +96,7 @@ class ConnectionMethod extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -133,7 +132,7 @@ class ConnectionMethod extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                   ),
                 ],
               ),
