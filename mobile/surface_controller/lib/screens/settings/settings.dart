@@ -23,9 +23,9 @@ class Settings extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
-          body: Container(
+          body: SingleChildScrollView(
+            child: Container(
             width: double.infinity,
-            height: double.infinity,
             color: Theme.of(context).scaffoldBackgroundColor,
             child: Column(
               children: [
@@ -81,6 +81,7 @@ class Settings extends StatelessWidget {
                 ),
               ],
             ),
+          ),
           ),
         );
       },
