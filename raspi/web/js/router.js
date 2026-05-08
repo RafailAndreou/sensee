@@ -1,20 +1,14 @@
-import { state } from './state.js';
+import { state, invalidateDashboardCache } from './state.js';
 import { t } from './i18n.js';
 import { closeAllModals } from './ui.js';
-import { renderDashboard, invalidateDashboardCache } from './views/dashboard.js';
+import { navigate, setRenderer } from './navigate.js';
+import { renderDashboard } from './views/dashboard.js';
 import { renderCamera } from './views/camera.js';
 import { renderSettingsHub, renderHASettings, renderGestureSettings, renderCameraSettings } from './views/settings.js';
 
-export function navigate(view, subView = null) {
-  state.view = view;
-  state.subView = subView;
-  document.querySelectorAll('.nav-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.view === view);
-  });
-  render();
-}
+export { navigate };
 
-export function render() {
+function dispatch() {
   if (state.view === 'dashboard') renderDashboard();
   else if (state.view === 'camera') renderCamera();
   else if (state.view === 'settings') {
@@ -24,6 +18,9 @@ export function render() {
     else renderSettingsHub();
   }
 }
+setRenderer(dispatch);
+
+export function render() { dispatch(); }
 
 export function applyStaticTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -32,7 +29,6 @@ export function applyStaticTranslations() {
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === state.lang);
   });
-  // Refresh current status text in user's language
   const txt = document.getElementById('status-text');
   if (txt) {
     if (state.serverOnline === true) txt.textContent = t('Connected');
@@ -49,5 +45,5 @@ export function setLanguage(lang) {
   applyStaticTranslations();
   closeAllModals();
   invalidateDashboardCache();
-  render();
+  dispatch();
 }

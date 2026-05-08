@@ -1,8 +1,8 @@
 import { api } from './api.js';
-import { state, pendingDeletedIds, normalizeId, sanitizeConfigForSync } from './state.js';
+import { state, pendingDeletedIds, normalizeId, sanitizeConfigForSync,
+         invalidateDashboardCache, triggerDashboardRefresh } from './state.js';
 import { t } from './i18n.js';
 import { toast } from './ui.js';
-import { renderDashboard, renderDashboardIfChanged, invalidateDashboardCache } from './views/dashboard.js';
 
 export async function pullConfigs() {
   if (state.syncInFlight) return;
@@ -26,7 +26,7 @@ export async function pullConfigs() {
           Object.assign(local, sc, { id: sc.id, isSynced: true });
         }
       });
-      if (state.view === 'dashboard') renderDashboardIfChanged();
+      if (state.view === 'dashboard') triggerDashboardRefresh();
     }
   } catch { /* server offline */ }
   finally { state.syncInFlight = false; }
@@ -40,7 +40,7 @@ export async function pushConfigs(silent = false) {
     await api.post('/configuration', payload);
     state.configs.forEach(c => c.isSynced = true);
     pendingDeletedIds.clear();
-    if (state.view === 'dashboard') renderDashboardIfChanged();
+    if (state.view === 'dashboard') triggerDashboardRefresh();
     if (!silent) toast(t('Mappings synced'), 'success');
   } catch (e) {
     toast(t('Sync failed') + ': ' + e.message, 'error');
@@ -71,7 +71,7 @@ export function deleteConfig(id) {
   pendingDeletedIds.add(normalizedId);
   state.configs = state.configs.filter(c => normalizeId(c.id) !== normalizedId);
   invalidateDashboardCache();
-  if (state.view === 'dashboard') renderDashboard();
+  if (state.view === 'dashboard') triggerDashboardRefresh();
   pushConfigs(true);
 }
 
@@ -86,7 +86,7 @@ export function swapConfigs(idA, idB) {
   state.configs[i].isSynced = false;
   state.configs[j].isSynced = false;
   invalidateDashboardCache();
-  if (state.view === 'dashboard') renderDashboard();
+  if (state.view === 'dashboard') triggerDashboardRefresh();
   pushConfigs(true);
 }
 

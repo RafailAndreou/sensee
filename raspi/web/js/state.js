@@ -7,7 +7,15 @@ export const state = {
   pollTimer: null,
   connectTimer: null,
   lang: (typeof localStorage !== 'undefined' && localStorage.getItem('sensee.lang')) || 'en',
+  dashboardHash: '',    // cache key for renderDashboardIfChanged
 };
+
+// Dashboard refresh callback — set by views/dashboard.js at module init to
+// avoid a circular dep between config-sync.js and views/dashboard.js.
+let _dashboardRefreshFn = null;
+export function setDashboardRefreshFn(fn) { _dashboardRefreshFn = fn; }
+export function triggerDashboardRefresh() { _dashboardRefreshFn?.(); }
+export function invalidateDashboardCache() { state.dashboardHash = ''; }
 
 // IDs deleted locally but not yet confirmed gone from server — ignore server echoes for these
 export const pendingDeletedIds = new Set();

@@ -5,7 +5,7 @@ import { api } from './api.js';
 import { escHtml, escAttr } from './utils.js';
 import { showModal, toast } from './ui.js';
 import { saveConfig, hasConflict, nextId } from './config-sync.js';
-import { navigate } from './router.js';
+import { navigate } from './navigate.js';
 import { showPairingWizard } from './pairing.js';
 
 export function openAddWizard() {

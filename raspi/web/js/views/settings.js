@@ -3,7 +3,7 @@ import { GESTURES } from '../constants.js';
 import { api } from '../api.js';
 import { escHtml, escAttr } from '../utils.js';
 import { showModal, toast } from '../ui.js';
-import { navigate } from '../router.js';
+import { navigate } from '../navigate.js';
 
 /* ─── Settings Hub ──────────────────────────────────────────────────────── */
 export function renderSettingsHub() {

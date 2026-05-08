@@ -1,4 +1,4 @@
-import { state, normalizeId } from '../state.js';
+import { state, normalizeId, setDashboardRefreshFn } from '../state.js';
 import { t } from '../i18n.js';
 import { DEVICE_META, GESTURES, HANDS } from '../constants.js';
 import { escHtml, escAttr } from '../utils.js';
@@ -6,21 +6,15 @@ import { showCtxMenu, toast } from '../ui.js';
 import { pushConfigs, deleteConfig, swapConfigs } from '../config-sync.js';
 import { openAddWizard, openEditWizard } from '../wizard.js';
 
-let lastDashboardHash = '';
-
-export function invalidateDashboardCache() {
-  lastDashboardHash = '';
-}
-
 export function renderDashboardIfChanged() {
   const hash = JSON.stringify({ lang: state.lang, configs: state.configs.map(c => ({ ...c, isSynced: c.isSynced })) });
-  if (hash === lastDashboardHash) return;
-  lastDashboardHash = hash;
+  if (hash === state.dashboardHash) return;
+  state.dashboardHash = hash;
   renderDashboard();
 }
 
 export function renderDashboard() {
-  lastDashboardHash = JSON.stringify({ lang: state.lang, configs: state.configs.map(c => ({ ...c, isSynced: c.isSynced })) });
+  state.dashboardHash = JSON.stringify({ lang: state.lang, configs: state.configs.map(c => ({ ...c, isSynced: c.isSynced })) });
 
   const main = document.getElementById('main-content');
   const configs = state.configs;
@@ -165,3 +159,7 @@ function renderGestureCard(cfg) {
       </div>
     </div>`;
 }
+
+// Register this module's refresh function so config-sync.js can trigger
+// dashboard re-renders without importing from this file (breaks circular dep).
+setDashboardRefreshFn(renderDashboardIfChanged);
