@@ -112,6 +112,7 @@ Future<void> saveConfigsToFile() async {
       };
     });
 
+    allConfigs['_order'] = connectionsList.value;
     final jsonString = jsonEncode(allConfigs);
     final file = await _configurationsFile;
     await file.writeAsString(jsonString);
@@ -178,12 +179,25 @@ Future<void> loadConfigurationsFromFile() async {
 
     // Update the connectionsList with loaded connection IDs
     if (loadedConnectionIds.isNotEmpty) {
-      loadedConnectionIds.sort();
       final maxConnectionId = loadedConnectionIds.reduce(
         (a, b) => a > b ? a : b,
       );
       _nextConnectionId = maxConnectionId + 1;
-      connectionsList.value = loadedConnectionIds;
+      final savedOrder = allConfigs['_order'];
+      if (savedOrder is List) {
+        final ordered = savedOrder
+            .whereType<int>()
+            .where(loadedConnectionIds.contains)
+            .toList();
+        final missing = loadedConnectionIds
+            .where((id) => !ordered.contains(id))
+            .toList()
+          ..sort();
+        connectionsList.value = [...ordered, ...missing];
+      } else {
+        loadedConnectionIds.sort();
+        connectionsList.value = loadedConnectionIds;
+      }
       debugPrint(
         'Updated connectionsList with ${loadedConnectionIds.length} connections',
       );
@@ -237,8 +251,14 @@ void applyServerConfigurationsSnapshot(List<Map<String, dynamic>> incoming) {
     }
   }
 
-  final allIds = [...incomingIds, ...localOnlyIds]..sort();
-  connectionsList.value = allIds;
-  _nextConnectionId = allIds.isEmpty ? 1 : (allIds.last + 1);
+  final allIds = <int>{...incomingIds, ...localOnlyIds}.toList();
+  final currentOrder = connectionsList.value;
+  final orderedKnown = currentOrder.where(allIds.contains).toList();
+  final newIds = allIds.where((id) => !currentOrder.contains(id)).toList()
+    ..sort();
+  final finalOrder = [...orderedKnown, ...newIds];
+  connectionsList.value = finalOrder;
+  _nextConnectionId =
+      allIds.isEmpty ? 1 : (allIds.reduce((a, b) => a > b ? a : b) + 1);
   saveConfigsToFile();
 }

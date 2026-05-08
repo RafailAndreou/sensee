@@ -20,7 +20,10 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> {
   Timer? _syncTimer;
+  Timer? _swapAnimTimer;
   bool _syncInFlight = false;
+  int? _dragOverIndex;
+  Set<int> _justSwappedIds = {};
 
   @override
   void initState() {
@@ -35,6 +38,7 @@ class _DashboardState extends State<Dashboard> {
   @override
   void dispose() {
     _syncTimer?.cancel();
+    _swapAnimTimer?.cancel();
     super.dispose();
   }
 
@@ -158,7 +162,8 @@ class _DashboardState extends State<Dashboard> {
             final config = getConnectionConfig(savedIds[index]);
             final connectionId = savedIds[index];
             final deviceType = _deviceTypeForConfig(config);
-            return DashboardCard(
+
+            final card = DashboardCard(
               brandName: config.brand.value,
               deviceType: deviceType,
               actionName: config.action.value,
@@ -182,10 +187,77 @@ class _DashboardState extends State<Dashboard> {
               onMoreTap: () =>
                   _showCardActions(context, connectionId, deviceType),
             );
+
+            return DragTarget<int>(
+              onWillAcceptWithDetails: (details) =>
+                  details.data != connectionId,
+              onAcceptWithDetails: (details) {
+                final fromIndex = savedIds.indexOf(details.data);
+                _swapCards(fromIndex, index, savedIds);
+              },
+              onLeave: (_) => setState(() => _dragOverIndex = null),
+              onMove: (_) {
+                if (_dragOverIndex != index) {
+                  setState(() => _dragOverIndex = index);
+                }
+              },
+              builder: (context, candidateData, _) {
+                final isHovered =
+                    _dragOverIndex == index && candidateData.isNotEmpty;
+                return LongPressDraggable<int>(
+                  data: connectionId,
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: Opacity(
+                      opacity: 0.9,
+                      child: Transform.scale(scale: 1.05, child: card),
+                    ),
+                  ),
+                  childWhenDragging: Opacity(opacity: 0.3, child: card),
+                  child: _justSwappedIds.contains(connectionId)
+                      ? TweenAnimationBuilder<double>(
+                          key: ValueKey('swap_$connectionId'),
+                          tween: Tween(begin: 0.82, end: 1.0),
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.elasticOut,
+                          builder: (_, scale, child) =>
+                              Transform.scale(scale: scale, child: child),
+                          child: card,
+                        )
+                      : AnimatedScale(
+                          scale: isHovered ? 1.04 : 1.0,
+                          duration: const Duration(milliseconds: 150),
+                          child: card,
+                        ),
+                );
+              },
+            );
           },
         );
       },
     );
+  }
+
+  void _swapCards(int fromSavedIndex, int toSavedIndex, List<int> savedIds) {
+    final fromId = savedIds[fromSavedIndex];
+    final toId = savedIds[toSavedIndex];
+    final fullList = List<int>.from(connectionsList.value);
+    final fullFromIndex = fullList.indexOf(fromId);
+    final fullToIndex = fullList.indexOf(toId);
+    fullList[fullFromIndex] = toId;
+    fullList[fullToIndex] = fromId;
+
+    _swapAnimTimer?.cancel();
+    _swapAnimTimer = Timer(const Duration(milliseconds: 450), () {
+      if (mounted) setState(() => _justSwappedIds = {});
+    });
+
+    setState(() {
+      _dragOverIndex = null;
+      _justSwappedIds = {fromId, toId};
+    });
+    connectionsList.value = fullList;
+    saveConfigsToFile();
   }
 
   String _deviceTypeForConfig(ConnectionConfig config) {
