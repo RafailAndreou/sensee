@@ -11,7 +11,7 @@ from gesture_engine.core.workers import start_workers
 
 SendMessageFn = Callable[[str], None]
 GetActiveConfigsFn = Callable[[], Sequence[Mapping[str, Any]]]
-TriggerHaActionFn = Callable[[str, str], None]
+TriggerHaActionFn = Callable[[str, str], bool]
 
 
 @dataclass(frozen=True)
