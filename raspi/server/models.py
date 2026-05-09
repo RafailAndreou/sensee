@@ -36,3 +36,14 @@ class GestureSettings(BaseModel):
 class CameraSettings(BaseModel):
     useNetwork: bool = False
     streamUrl: str = ""
+
+
+class IronmanParams(BaseModel):
+    enabled: bool = False
+    gain: int = 5000
+    damp: int = 50
+    sensitivity: int = 3
+    steps: int = 10
+    delay: float = 0.001
+    scroll: int = 10
+    gesture_map: dict = {}

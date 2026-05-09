@@ -19,6 +19,7 @@ HA_CONFIG_PATH = os.path.join(_data_dir(), "ha_config.json")
 CONFIG_FILE_PATH = os.path.join(_data_dir(), "configure.json")
 GESTURE_SETTINGS_PATH = os.path.join(_data_dir(), "gesture_settings.json")
 CAMERA_SETTINGS_PATH = os.path.join(_data_dir(), "camera_settings.json")
+IRONMAN_PARAMS_PATH = os.path.join(_data_dir(), "ironman_params.json")
 
 def save_configure_json(configuration: list):
     with open(CONFIG_FILE_PATH, "w+") as f:
@@ -81,6 +82,50 @@ def delete_gesture_settings() -> None:
             logger.info("Gesture settings deleted from %s", GESTURE_SETTINGS_PATH)
     except Exception as e:
         logger.warning("Error deleting gesture settings: %s", e)
+
+
+_IRONMAN_DEFAULTS = {
+    "enabled": False,
+    "gain": 5000,
+    "damp": 50,
+    "sensitivity": 3,
+    "steps": 10,
+    "delay": 0.001,
+    "scroll": 10,
+    "gesture_map": {
+        "move_cursor": "Open Palm",
+        "scroll": "Victory",
+        "left_click": "Thumb+Index",
+        "right_click": "Thumb+Middle",
+        "tab_forward": "Thumb+Ring",
+        "tab_backward": "Thumb+Pinky",
+        "new_tab": "ILoveYou",
+        "task_view": "Closed Fist",
+        "browser_forward": "Thumb Up",
+        "browser_back": "Thumb Down",
+        "browser_search": "Pointing Up",
+        "screenshot": "",
+        "close_tab": "",
+    },
+}
+
+
+def load_ironman_params() -> dict:
+    try:
+        if not os.path.exists(IRONMAN_PARAMS_PATH):
+            return dict(_IRONMAN_DEFAULTS)
+        with open(IRONMAN_PARAMS_PATH, "r") as f:
+            data = json.load(f)
+            return {**_IRONMAN_DEFAULTS, **data}
+    except Exception as e:
+        logger.warning("Error loading Ironman params: %s", e)
+        return dict(_IRONMAN_DEFAULTS)
+
+
+def save_ironman_params(params: dict) -> None:
+    with open(IRONMAN_PARAMS_PATH, "w+") as f:
+        json.dump(params, f, indent=4)
+        logger.info("Ironman params saved to %s", IRONMAN_PARAMS_PATH)
 
 
 def save_camera_settings(settings: dict) -> None:

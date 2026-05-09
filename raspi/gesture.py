@@ -13,7 +13,9 @@ import cv2
 import mediapipe as mp
 from gesture_engine.log import configure_logging, get_logger
 from gesture_engine.core.confirmation import TouchConfirmation
-from gesture_engine.core.matching import find_matched_config
+from gesture_engine.core.cursor_control import CursorController
+from gesture_engine.core.handlers.pc_handler import execute_pc_action
+from gesture_engine.core.matching import find_matched_config, normalize_name
 from gesture_engine.core.movement import start_hand_movement_monitor
 from gesture_engine.core.touch_gestures import (
     TOUCH_CONFIRM_FRAMES,
@@ -53,6 +55,9 @@ class GestureApp:
         self.touch_confirmation = TouchConfirmation(confirm_frames=TOUCH_CONFIRM_FRAMES)
         self.wrist_queue = Queue()
         self.wake_gate = WakeGate(file.load_gesture_settings)
+        self.cursor_controller = CursorController(file.load_ironman_params)
+        self._ironman_cooldowns: dict[str, float] = {}
+        self._ironman_cooldown_lock = threading.Lock()
 
     def _get_latest_frame_ts(self):
         with self.latest_frame_lock:
@@ -108,6 +113,18 @@ class GestureApp:
                     self.touch_confirmation.is_confirmed(
                         (hand_idx, gesture_name), False
                     )
+                else:
+                    # No regular config — check ironman gesture_map
+                    params = self.cursor_controller._get_params()
+                    if params.get("enabled", False):
+                        gmap = params.get("gesture_map", {})
+                        n = normalize_name(gesture_name)
+                        for action_key, gname in gmap.items():
+                            if action_key in ("move_cursor", "scroll"):
+                                continue
+                            if gname and normalize_name(gname) == n:
+                                self._fire_ironman_action(action_key)
+                                break
                 continue
 
             action_name = str(matched_config.get("action", ""))
@@ -120,6 +137,51 @@ class GestureApp:
                 continue
 
             self.enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
+
+    def _fire_ironman_action(self, action_key: str) -> None:
+        """Execute a one-shot PC action from the ironman gesture map, with 1.5 s cooldown."""
+        now = time.monotonic()
+        with self._ironman_cooldown_lock:
+            if now - self._ironman_cooldowns.get(action_key, 0) < 1.5:
+                return
+            self._ironman_cooldowns[action_key] = now
+        execute_pc_action(action_key.replace("_", " "))
+
+    def _feed_ironman_mode(self, snapshot, multi_hand_landmarks) -> None:
+        """Drive cursor/scroll and dispatch one-shot actions using ironman gesture_map."""
+        params = self.cursor_controller._get_params()
+        if not params.get("enabled", False):
+            return
+
+        gesture_map: dict = params.get("gesture_map", {})
+        if not gesture_map or not snapshot or not snapshot.gestures or not multi_hand_landmarks:
+            return
+
+        # Build reverse lookup: normalized_gesture → action_key (skip empty assignments)
+        reverse: dict[str, str] = {}
+        for action_key, gname in gesture_map.items():
+            n = normalize_name(gname) if gname else ""
+            if n:
+                reverse[n] = action_key
+
+        for hand_idx, gesture_list in enumerate(snapshot.gestures):
+            if not gesture_list or hand_idx >= len(multi_hand_landmarks):
+                continue
+            detected = normalize_name(gesture_list[0].category_name)
+            action_key = reverse.get(detected)
+            if action_key is None:
+                continue
+            if action_key == "move_cursor":
+                tip = multi_hand_landmarks[hand_idx].landmark[8]
+                self.cursor_controller.feed(tip.x, tip.y)
+                return
+            if action_key == "scroll":
+                tip = multi_hand_landmarks[hand_idx].landmark[8]
+                self.cursor_controller.feed_scroll(tip.x, tip.y)
+                return
+            # One-shot action (e.g. task_view, browser_forward …)
+            self._fire_ironman_action(action_key)
+            return
 
     def run(self):
         self.wake_gate.prime()
@@ -187,6 +249,8 @@ class GestureApp:
                             self.wrist_queue.put(wrist)
                         except Exception as e:
                             logger.warning("Hand processing error: %s", e)
+
+                    self._feed_ironman_mode(snapshot, multi_hand_landmarks)
 
                     for draw_hand_landmarks in multi_hand_landmarks:
                         mp_drawing.draw_landmarks(

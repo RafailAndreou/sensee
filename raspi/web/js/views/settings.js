@@ -41,6 +41,14 @@ export function renderSettingsHub() {
           </div>
           <div class="settings-card-arrow">›</div>
         </div>
+        <div class="settings-card" data-sub="ironman">
+          <div class="settings-card-icon" style="background:rgba(79,158,255,.15)">⚡</div>
+          <div class="settings-card-body">
+            <div class="settings-card-title">${escHtml(t('Ironman Mode'))}</div>
+            <div class="settings-card-sub">${escHtml(t('Gesture-controlled cursor & keyboard'))}</div>
+          </div>
+          <div class="settings-card-arrow">›</div>
+        </div>
       </div>
     </div>`;
 
@@ -249,6 +257,142 @@ export async function renderCameraSettings() {
       navigate('settings');
     } catch (e) { toast(t('Failed') + ': ' + e.message, 'error'); btn.disabled = false; btn.textContent = t('Save Settings'); }
   });
+}
+
+/* ─── Ironman Mode Settings ─────────────────────────────────────────────── */
+const _IM_GESTURES = [
+  '', 'Open Palm', 'Closed Fist', 'Thumb Up', 'Thumb Down',
+  'Victory', 'ILoveYou', 'Pointing Up',
+  'Thumb+Index', 'Thumb+Middle', 'Thumb+Ring', 'Thumb+Pinky',
+];
+
+const _IM_ACTIONS = [
+  ['move_cursor',    'Move Cursor'],
+  ['scroll',         'Scroll'],
+  ['left_click',     'Left Click'],
+  ['right_click',    'Right Click'],
+  ['tab_forward',    'Tab Forward'],
+  ['tab_backward',   'Tab Backward'],
+  ['new_tab',        'New Tab'],
+  ['close_tab',      'Close Tab'],
+  ['task_view',      'Task View'],
+  ['browser_forward','Browser Forward'],
+  ['browser_back',   'Browser Back'],
+  ['browser_search', 'Browser Search'],
+  ['screenshot',     'Screenshot'],
+];
+
+export async function renderIronmanSettings() {
+  const main = document.getElementById('main-content');
+  main.innerHTML = `<div class="view"><button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
+    <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Loading…'))}</div></div>`;
+  document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
+
+  let s = { enabled: false, gain: 5000, damp: 50, sensitivity: 3, steps: 10, delay: 0.001, scroll: 10, gesture_map: {} };
+  try { const d = await api.get('/ironman-params'); if (d && typeof d === 'object') Object.assign(s, d); } catch {}
+
+  const delayMs = +(s.delay * 1000).toFixed(1);
+  const gmap = s.gesture_map || {};
+
+  const gestureSelectsHtml = _IM_ACTIONS.map(([key, label]) => {
+    const cur = gmap[key] || '';
+    const opts = _IM_GESTURES.map(g =>
+      `<option value="${escAttr(g)}" ${g === cur ? 'selected' : ''}>${g || '— None —'}</option>`
+    ).join('');
+    return `
+      <div class="im-gesture-row">
+        <span class="im-gesture-label">${escHtml(label)}</span>
+        <select class="field-select im-gesture-select" data-action="${escAttr(key)}" style="width:auto;padding:4px 8px;font-size:12px">${opts}</select>
+      </div>`;
+  }).join('');
+
+  main.innerHTML = `
+    <div class="view">
+      <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
+      <div class="page-header"><div><div class="page-title">⚡ ${escHtml(t('Ironman Mode'))}</div></div></div>
+      <div class="settings-form">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-title">${escHtml(t('Ironman Mode'))}</div>
+            <div class="toggle-sub">${escHtml(t('Gesture-controlled cursor & keyboard'))}</div>
+          </div>
+          <div class="toggle ${s.enabled ? 'on' : ''}" id="im-toggle"></div>
+        </div>
+
+        <div class="ironman-params-panel ${s.enabled ? 'open' : ''}" id="im-panel">
+          <div class="im-section-label">${escHtml(t('Motion Parameters'))}</div>
+          ${_rangeRow('im-gain',        t('Gain'),        t('Cursor speed'),            s.gain,        100, 10000, 100, String(s.gain))}
+          ${_rangeRow('im-damp',        t('Damp'),        t('Jitter reduction'),         s.damp,        1,   200,   1,   String(s.damp))}
+          ${_rangeRow('im-sensitivity', t('Sensitivity'), t('Movement dead-zone'),       s.sensitivity, 1,   20,    1,   String(s.sensitivity))}
+          ${_rangeRow('im-steps',       t('Steps'),       t('Interpolation smoothness'), s.steps,       1,   100,   1,   String(s.steps))}
+          ${_rangeRow('im-delay',       t('Delay'),       t('Step interval (ms)'),       delayMs,       0.1, 10,    0.1, delayMs.toFixed(1) + ' ms')}
+          ${_rangeRow('im-scroll',      t('Scroll'),      t('Scroll sensitivity'),       s.scroll,      1,   50,    1,   String(s.scroll))}
+
+          <div class="im-section-label" style="margin-top:8px">${escHtml(t('Gesture Assignments'))}</div>
+          <div class="im-gesture-grid">${gestureSelectsHtml}</div>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
+
+  let saveTimer = null;
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      const newGmap = {};
+      document.querySelectorAll('.im-gesture-select').forEach(sel => {
+        newGmap[sel.dataset.action] = sel.value;
+      });
+      try {
+        await api.post('/ironman-params', {
+          enabled:     document.getElementById('im-toggle').classList.contains('on'),
+          gain:        +document.getElementById('im-gain').value,
+          damp:        +document.getElementById('im-damp').value,
+          sensitivity: +document.getElementById('im-sensitivity').value,
+          steps:       +document.getElementById('im-steps').value,
+          delay:       +(+document.getElementById('im-delay').value / 1000).toFixed(4),
+          scroll:      +document.getElementById('im-scroll').value,
+          gesture_map: newGmap,
+        });
+      } catch {}
+    }, 400);
+  }
+
+  const toggle = document.getElementById('im-toggle');
+  const panel  = document.getElementById('im-panel');
+  toggle.addEventListener('click', () => {
+    toggle.classList.toggle('on');
+    panel.classList.toggle('open', toggle.classList.contains('on'));
+    scheduleSave();
+  });
+
+  ['im-gain','im-damp','im-sensitivity','im-steps','im-delay','im-scroll'].forEach(id => {
+    const input = document.getElementById(id);
+    const valEl = document.getElementById(id + '-val');
+    input.addEventListener('input', () => {
+      valEl.textContent = id === 'im-delay' ? (+input.value).toFixed(1) + ' ms' : input.value;
+      scheduleSave();
+    });
+  });
+
+  document.querySelectorAll('.im-gesture-select').forEach(sel => {
+    sel.addEventListener('change', scheduleSave);
+  });
+}
+
+function _rangeRow(id, label, hint, value, min, max, step, display) {
+  return `
+    <div class="range-wrap">
+      <div class="range-header">
+        <div>
+          <span class="field-label">${escHtml(label)}</span>
+          <span style="font-size:11px;color:var(--t3);margin-left:6px">${escHtml(hint)}</span>
+        </div>
+        <div class="range-val" id="${escAttr(id)}-val">${escHtml(display)}</div>
+      </div>
+      <input type="range" id="${escAttr(id)}" min="${min}" max="${max}" step="${step}" value="${value}" />
+    </div>`;
 }
 
 function showCameraPickerModal(cameras, onSelect) {

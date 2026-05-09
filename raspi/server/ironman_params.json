@@ -1,0 +1,14 @@
+{
+    "enabled": true,
+    "gain": 5000,
+    "damp": 50,
+    "sensitivity": 3,
+    "steps": 10,
+    "delay": 0.001,
+    "scroll": 10,
+    "gesture_map": {
+        "move_cursor": "Open Palm",
+        "browser_search": "Closed Fist",
+        "left_click": "Thumb+Index"
+    }
+}

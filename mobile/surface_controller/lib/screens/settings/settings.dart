@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/app_theme.dart';
 import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/globals/sizes.dart';
+import 'widgets/ironman_mode_card.dart';
 import 'widgets/settingsbutton.dart';
 import 'widgets/theme_toggle_card.dart';
 import '../setup/ha_settings.dart';
@@ -81,6 +82,8 @@ class Settings extends StatelessWidget {
                   builder: (context, theme, _) =>
                       ThemeToggleCard(theme: theme),
                 ),
+                const SizedBox(height: 24),
+                const IronmanModeCard(),
                 const SizedBox(height: 24),
               ],
             ),

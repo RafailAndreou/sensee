@@ -21,6 +21,7 @@ from server.models import (
     HAPairStartRequest,
     HAPairSubmitRequest,
     GestureSettings,
+    IronmanParams,
 )
 from server.startup import run_uvicorn_with_port_retry
 from server.streamer import frame_hub
@@ -196,6 +197,15 @@ def post_camera_settings(settings: CameraSettings):
 @app.get("/camera-settings")
 def get_camera_settings():
     return file.load_camera_settings()
+
+@app.get("/ironman-params")
+def get_ironman_params():
+    return file.load_ironman_params()
+
+@app.post("/ironman-params")
+def post_ironman_params(params: IronmanParams):
+    file.save_ironman_params(params.model_dump())
+    return {"status": "saved"}
 
 # -------------- Main --------------
 if __name__ == "__main__":

@@ -29,30 +29,42 @@ def action_requires_confirmation(action_name: str) -> bool:
 def detect_touch_gestures(hand_landmarks) -> list[tuple[str, bool]]:
     """Return [(gesture_name, is_touching), ...] for thumb-finger contacts.
 
-    Order matters: Thumb+Middle is checked first; if active it suppresses
-    Thumb+Index to avoid co-firing while the thumb crosses both fingers.
+    Priority chain: Pinky > Ring > Middle > Index. Each higher-priority touch
+    suppresses lower-priority ones to prevent co-firing as the thumb sweeps.
     """
     thumb = hand_landmarks.landmark[4]
     index = hand_landmarks.landmark[8]
     middle = hand_landmarks.landmark[12]
+    ring = hand_landmarks.landmark[16]
+    pinky = hand_landmarks.landmark[20]
 
-    middle_touching = touching(
-        thumb,
-        middle,
-        threshold=TOUCH_XY_THRESHOLD,
-        z_threshold=TOUCH_Z_THRESHOLD,
+    pinky_touching = touching(
+        thumb, pinky, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
+    )
+    ring_touching = (
+        False
+        if pinky_touching
+        else touching(
+            thumb, ring, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
+        )
+    )
+    middle_touching = (
+        False
+        if ring_touching
+        else touching(
+            thumb, middle, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
+        )
     )
     index_touching = (
         False
         if middle_touching
         else touching(
-            thumb,
-            index,
-            threshold=TOUCH_XY_THRESHOLD,
-            z_threshold=TOUCH_Z_THRESHOLD,
+            thumb, index, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
         )
     )
     return [
+        ("Thumb+Pinky", pinky_touching),
+        ("Thumb+Ring", ring_touching),
         ("Thumb+Middle", middle_touching),
         ("Thumb+Index", index_touching),
     ]

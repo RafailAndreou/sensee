@@ -59,5 +59,93 @@ def execute_pc_action(action_name: str) -> bool:
             logger.error("Failed to close active window: %s", error)
             return False
 
+    if action_normalized == "left click":
+        try:
+            pyautogui.click()
+            return True
+        except Exception as error:
+            logger.error("Failed to left click: %s", error)
+            return False
+
+    if action_normalized == "right click":
+        try:
+            pyautogui.rightClick()
+            return True
+        except Exception as error:
+            logger.error("Failed to right click: %s", error)
+            return False
+
+    if action_normalized == "tab forward":
+        try:
+            pyautogui.hotkey("ctrl", "tab")
+            return True
+        except Exception as error:
+            logger.error("Failed to tab forward: %s", error)
+            return False
+
+    if action_normalized == "tab backward":
+        try:
+            pyautogui.hotkey("ctrl", "shift", "tab")
+            return True
+        except Exception as error:
+            logger.error("Failed to tab backward: %s", error)
+            return False
+
+    if action_normalized == "new tab":
+        try:
+            pyautogui.hotkey("ctrl", "t")
+            return True
+        except Exception as error:
+            logger.error("Failed to open new tab: %s", error)
+            return False
+
+    if action_normalized == "close tab":
+        try:
+            pyautogui.hotkey("ctrl", "w")
+            return True
+        except Exception as error:
+            logger.error("Failed to close tab: %s", error)
+            return False
+
+    if action_normalized == "task view":
+        try:
+            pyautogui.hotkey("win", "tab")
+            return True
+        except Exception as error:
+            logger.error("Failed to open task view: %s", error)
+            return False
+
+    if action_normalized == "browser forward":
+        try:
+            pyautogui.hotkey("alt", "right")
+            return True
+        except Exception as error:
+            logger.error("Failed to navigate browser forward: %s", error)
+            return False
+
+    if action_normalized == "browser back":
+        try:
+            pyautogui.hotkey("alt", "left")
+            return True
+        except Exception as error:
+            logger.error("Failed to navigate browser back: %s", error)
+            return False
+
+    if action_normalized == "browser search":
+        try:
+            pyautogui.hotkey("ctrl", "l")
+            return True
+        except Exception as error:
+            logger.error("Failed to focus browser search: %s", error)
+            return False
+
+    if action_normalized == "screenshot":
+        try:
+            pyautogui.hotkey("win", "shift", "s")
+            return True
+        except Exception as error:
+            logger.error("Failed to take screenshot: %s", error)
+            return False
+
     logger.warning("Unsupported PC action: %s", action_name)
     return False

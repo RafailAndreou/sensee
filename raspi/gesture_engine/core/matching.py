@@ -8,6 +8,10 @@ _GESTURE_ALIAS_MAP = {
     "index thumb": "thumb index",
     "thumb middle": "thumb middle",
     "middle thumb": "thumb middle",
+    "thumb ring": "thumb ring",
+    "ring thumb": "thumb ring",
+    "thumb pinky": "thumb pinky",
+    "pinky thumb": "thumb pinky",
 }
 
 

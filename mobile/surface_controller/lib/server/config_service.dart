@@ -222,6 +222,35 @@ Future<void> saveCameraSettingsLocal({
   } catch (_) {}
 }
 
+Future<Map<String, dynamic>?> loadIronmanParams() async {
+  try {
+    final client = await getServerClient();
+    if (client == null) return null;
+    final response = await http.get(client.ironmanParamsUri);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<bool> saveIronmanParams(Map<String, dynamic> params) async {
+  try {
+    final client = await getServerClient();
+    if (client == null) return false;
+    final response = await http.post(
+      client.ironmanParamsUri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(params),
+    );
+    return response.statusCode == 200;
+  } catch (_) {
+    return false;
+  }
+}
+
 Future<List<Map<String, dynamic>>> loadHACameras() async {
   try {
     final client = await getServerClient();
