@@ -33,6 +33,7 @@ class ServerClient {
   Uri get haDiscoveredUri => _uriForPath('/ha/discovered');
   Uri get haPairStartUri => _uriForPath('/ha/pair/start');
   Uri get haPairSubmitUri => _uriForPath('/ha/pair/submit');
+  Uri get pingUri => _uriForPath('/ping');
   Uri get smartDevicesUri => _uriForPath('/smart-devices');
   Uri get videoUri => _uriForPath('/video');
 
@@ -55,16 +56,33 @@ class ServerClient {
 
 ServerClient? _cachedClient;
 Future<String?>? _discoveryInFlight;
+DateTime? _lastProbeOk;
+const Duration _probeFreshness = Duration(seconds: 2);
+
+void invalidateServerClientCache() {
+  _cachedClient = null;
+  _lastProbeOk = null;
+}
 
 Future<bool> _probeClient(ServerClient client, {int timeoutMs = 900}) async {
   try {
     final response = await http
-        .get(client.configUri)
+        .get(client.pingUri)
         .timeout(Duration(milliseconds: timeoutMs));
-    return response.statusCode == 200 || response.statusCode == 405;
+    return response.statusCode == 200;
   } catch (_) {
     return false;
   }
+}
+
+Future<bool> _probeOrFresh(ServerClient client, {int timeoutMs = 900}) async {
+  final now = DateTime.now();
+  if (_lastProbeOk != null && now.difference(_lastProbeOk!) < _probeFreshness) {
+    return true;
+  }
+  final ok = await _probeClient(client, timeoutMs: timeoutMs);
+  if (ok) _lastProbeOk = now;
+  return ok;
 }
 
 Future<String?> discoverServer({int timeoutMs = 3000}) async {
@@ -164,16 +182,17 @@ Future<String?> discoverServerSmart() async {
 
 Future<String?> _discoverServerSmartInternal() async {
   // 1. Check cached client first
-  if (_cachedClient != null && await _probeClient(_cachedClient!)) {
+  if (_cachedClient != null && await _probeOrFresh(_cachedClient!)) {
     return _cachedClient!.configUri.toString();
   }
-  _cachedClient = null;
+  invalidateServerClientCache();
 
   // 2. The "Smart" part: Try mDNS first (Fast & Reliable)
   debugPrint("Attempting mDNS discovery...");
   final mdnsResult = await discoverServerMDNS(timeoutMs: 1500);
   if (mdnsResult != null) {
     _cachedClient = ServerClient.fromConfigurationUri(Uri.parse(mdnsResult));
+    _lastProbeOk = DateTime.now();
     debugPrint("Found via mDNS: $mdnsResult");
     return mdnsResult;
   }
@@ -183,6 +202,7 @@ Future<String?> _discoverServerSmartInternal() async {
   final udpResult = await discoverServer(timeoutMs: 1200);
   if (udpResult != null) {
     _cachedClient = ServerClient.fromConfigurationUri(Uri.parse(udpResult));
+    _lastProbeOk = DateTime.now();
     debugPrint("Found via UDP discovery: $udpResult");
     return udpResult;
   }
@@ -211,6 +231,7 @@ Future<String?> _discoverServerSmartInternal() async {
     );
 
     _cachedClient = winningClient;
+    _lastProbeOk = DateTime.now();
     debugPrint("Found via fallback: ${winningClient.configUri}");
     return winningClient.configUri.toString();
   } catch (_) {
@@ -226,7 +247,7 @@ Future<bool> isServerReachable({
 }) async {
   try {
     if (_cachedClient != null &&
-        await _probeClient(_cachedClient!, timeoutMs: timeoutMs)) {
+        await _probeOrFresh(_cachedClient!, timeoutMs: timeoutMs)) {
       return true;
     }
 
@@ -235,6 +256,7 @@ Future<bool> isServerReachable({
         final candidate = ServerClient('http://$host:$port');
         if (await _probeClient(candidate, timeoutMs: timeoutMs)) {
           _cachedClient = candidate;
+          _lastProbeOk = DateTime.now();
           return true;
         }
       }
@@ -251,7 +273,7 @@ Future<bool> isServerReachable({
 }
 
 Future<ServerClient?> getServerClient() async {
-  if (_cachedClient != null && await _probeClient(_cachedClient!)) {
+  if (_cachedClient != null && await _probeOrFresh(_cachedClient!)) {
     return _cachedClient;
   }
 

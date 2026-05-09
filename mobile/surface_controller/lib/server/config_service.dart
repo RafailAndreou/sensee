@@ -46,6 +46,7 @@ Future<void> sendAllConfigurations() async {
       connectionConfigs.forEach((id, config) => config.isSynced.value = false);
     }
   } catch (_) {
+    invalidateServerClientCache();
     connectionConfigs.forEach((id, config) => config.isSynced.value = false);
   }
 }
@@ -86,6 +87,7 @@ Future<bool> pullLatestConfigurationsFromServer() async {
     applyServerConfigurationsSnapshot(configs);
     return true;
   } catch (_) {
+    invalidateServerClientCache();
     return false;
   }
 }
