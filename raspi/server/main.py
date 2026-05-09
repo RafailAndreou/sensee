@@ -22,6 +22,7 @@ from server.models import (
     HAPairSubmitRequest,
     GestureSettings,
     IronmanParams,
+    VoiceSettings,
 )
 from server.startup import run_uvicorn_with_port_retry
 from server.streamer import frame_hub
@@ -205,6 +206,15 @@ def get_ironman_params():
 @app.post("/ironman-params")
 def post_ironman_params(params: IronmanParams):
     file.save_ironman_params(params.model_dump())
+    return {"status": "saved"}
+
+@app.get("/voice-settings")
+def get_voice_settings():
+    return file.load_voice_settings()
+
+@app.post("/voice-settings")
+def post_voice_settings(settings: VoiceSettings):
+    file.save_voice_settings(settings.model_dump())
     return {"status": "saved"}
 
 # -------------- Main --------------

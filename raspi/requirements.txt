@@ -6,3 +6,6 @@ zeroconf
 requests
 numpy
 pyautogui
+openai-whisper
+sounddevice
+pyperclip

@@ -61,14 +61,20 @@ class CursorController:
     def _run(self) -> None:
         prev_x: float | None = None
         prev_y: float | None = None
+        prev_mode: str | None = None
+        scroll_accum: float = 0.0
 
         while True:
             try:
                 x, y, mode = self.cursor_queue.get(timeout=0.15)
             except Empty:
-                # No position — cursor mode deactivated; reset so next entry starts clean.
-                prev_x = None
-                prev_y = None
+                # Gap in position feed — reset position so next entry starts without a jump.
+                # For scroll, keep the accumulator alive across brief recognition gaps
+                # (MediaPipe may skip frames on slow hardware); for cursor, full reset.
+                prev_x = prev_y = None
+                if prev_mode != "scroll":
+                    prev_mode = None
+                    scroll_accum = 0.0
                 continue
             except Exception as e:
                 logger.error("CursorController queue error: %s", e)
@@ -79,12 +85,20 @@ class CursorController:
                 prev_x, prev_y = x, y
                 continue
 
+            if prev_mode != mode:
+                # Mode changed: full reset.
+                prev_x, prev_y = x, y
+                prev_mode = mode
+                scroll_accum = 0.0
+                continue
+
             if prev_x is None:
+                # Re-entering after a gap: re-anchor position but keep scroll accum.
                 prev_x, prev_y = x, y
                 continue
 
             if mode == "scroll":
-                self._do_scroll(y, prev_y, params)
+                scroll_accum = self._do_scroll(y, prev_y, params, scroll_accum)
             else:
                 self._do_cursor(x, y, prev_x, prev_y, params)
 
@@ -117,15 +131,19 @@ class CursorController:
                 break
             time.sleep(delay)
 
-    def _do_scroll(self, y, prev_y, params):
+    def _do_scroll(self, y, prev_y, params, accum: float) -> float:
         scroll_speed = max(params.get("scroll", 10), 1)
+        # Positive dy → hand moved up → scroll up.
         dy = (prev_y - y) * 1000
-        if abs(dy) < 2:
-            return
-        clicks = int(dy / scroll_speed)
+        accum += dy
+        # Fire only when enough has accumulated — avoids int(small/speed)=0 every frame.
+        if abs(accum) < scroll_speed:
+            return accum
+        clicks = int(accum / scroll_speed)
         if clicks == 0:
-            return
+            return accum
         try:
             pyautogui.scroll(clicks, _pause=False)
         except Exception as e:
             logger.warning("Scroll error: %s", e)
+        return accum - clicks * scroll_speed

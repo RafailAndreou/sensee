@@ -40,6 +40,7 @@ raspi/server/ha_config.json
 raspi/server/gesture_settings.json
 raspi/server/camera_settings.json
 raspi/oauth.json
+raspi/server/ironman_params.json
 
 
 # docker
@@ -57,3 +58,5 @@ CLAUDE.md
 # Instructions.md
 
 instructions.md
+raspi/server/ironman_params.json
+raspi/server/voice_settings.json

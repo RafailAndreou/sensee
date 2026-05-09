@@ -14,6 +14,7 @@ import mediapipe as mp
 from gesture_engine.log import configure_logging, get_logger
 from gesture_engine.core.confirmation import TouchConfirmation
 from gesture_engine.core.cursor_control import CursorController
+from voice_engine.voice_controller import VoiceController
 from gesture_engine.core.handlers.pc_handler import execute_pc_action
 from gesture_engine.core.matching import find_matched_config, normalize_name
 from gesture_engine.core.movement import start_hand_movement_monitor
@@ -58,6 +59,7 @@ class GestureApp:
         self.cursor_controller = CursorController(file.load_ironman_params)
         self._ironman_cooldowns: dict[str, float] = {}
         self._ironman_cooldown_lock = threading.Lock()
+        self.voice_controller = VoiceController(file.load_voice_settings)
 
     def _get_latest_frame_ts(self):
         with self.latest_frame_lock:
@@ -176,8 +178,8 @@ class GestureApp:
                 self.cursor_controller.feed(tip.x, tip.y)
                 return
             if action_key == "scroll":
-                tip = multi_hand_landmarks[hand_idx].landmark[8]
-                self.cursor_controller.feed_scroll(tip.x, tip.y)
+                wrist = multi_hand_landmarks[hand_idx].landmark[0]
+                self.cursor_controller.feed_scroll(wrist.x, wrist.y)
                 return
             # One-shot action (e.g. task_view, browser_forward …)
             self._fire_ironman_action(action_key)

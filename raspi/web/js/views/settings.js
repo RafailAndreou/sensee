@@ -49,6 +49,14 @@ export function renderSettingsHub() {
           </div>
           <div class="settings-card-arrow">›</div>
         </div>
+        <div class="settings-card" data-sub="voice">
+          <div class="settings-card-icon" style="background:rgba(34,197,94,.15)">🎤</div>
+          <div class="settings-card-body">
+            <div class="settings-card-title">${escHtml(t('Voice Control'))}</div>
+            <div class="settings-card-sub">${escHtml(t('Whisper-powered voice commands'))}</div>
+          </div>
+          <div class="settings-card-arrow">›</div>
+        </div>
       </div>
     </div>`;
 
@@ -393,6 +401,80 @@ function _rangeRow(id, label, hint, value, min, max, step, display) {
       </div>
       <input type="range" id="${escAttr(id)}" min="${min}" max="${max}" step="${step}" value="${value}" />
     </div>`;
+}
+
+/* ─── Voice Control Settings ─────────────────────────────────────────────── */
+export async function renderVoiceSettings() {
+  const main = document.getElementById('main-content');
+  main.innerHTML = `<div class="view"><button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
+    <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Loading…'))}</div></div>`;
+  document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
+
+  let s = { enabled: false, model: 'tiny', language: 'en' };
+  try { const d = await api.get('/voice-settings'); if (d && typeof d === 'object') Object.assign(s, d); } catch {}
+
+  main.innerHTML = `
+    <div class="view">
+      <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
+      <div class="page-header"><div><div class="page-title">🎤 ${escHtml(t('Voice Control'))}</div></div></div>
+      <div class="settings-form">
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-title">${escHtml(t('Voice Control'))}</div>
+            <div class="toggle-sub">${escHtml(t('Speak to type — Whisper transcribes into any text field'))}</div>
+          </div>
+          <div class="toggle ${s.enabled ? 'on' : ''}" id="vc-toggle"></div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">${escHtml(t('Whisper Model'))}</div>
+          <select class="field-select" id="vc-model">
+            <option value="tiny"  ${s.model === 'tiny'  ? 'selected' : ''}>${escHtml(t('Tiny — fastest (~39 MB)'))}</option>
+            <option value="base"  ${s.model === 'base'  ? 'selected' : ''}>${escHtml(t('Base (~74 MB)'))}</option>
+            <option value="small" ${s.model === 'small' ? 'selected' : ''}>${escHtml(t('Small — best accuracy (~244 MB)'))}</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">${escHtml(t('Language'))}</div>
+          <select class="field-select" id="vc-lang">
+            <option value="en"   ${s.language === 'en'   ? 'selected' : ''}>${escHtml(t('English'))}</option>
+            <option value="el"   ${s.language === 'el'   ? 'selected' : ''}>${escHtml(t('Greek'))}</option>
+            <option value="auto" ${s.language === 'auto' ? 'selected' : ''}>${escHtml(t('Auto-detect'))}</option>
+          </select>
+        </div>
+
+        <div class="vc-how-it-works">
+          <div class="vc-tip">🖱️ ${escHtml(t('Click inside any text field (search bar, address bar, chat…)'))}</div>
+          <div class="vc-tip">🎤 ${escHtml(t('Speak — Whisper transcribes after you stop talking'))}</div>
+          <div class="vc-tip">⌨️ ${escHtml(t('The transcribed text is pasted at the cursor position'))}</div>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
+
+  let saveTimer = null;
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        await api.post('/voice-settings', {
+          enabled:  document.getElementById('vc-toggle').classList.contains('on'),
+          model:    document.getElementById('vc-model').value,
+          language: document.getElementById('vc-lang').value,
+        });
+      } catch {}
+    }, 400);
+  }
+
+  document.getElementById('vc-toggle').addEventListener('click', () => {
+    document.getElementById('vc-toggle').classList.toggle('on');
+    scheduleSave();
+  });
+  document.getElementById('vc-model').addEventListener('change', scheduleSave);
+  document.getElementById('vc-lang').addEventListener('change', scheduleSave);
 }
 
 function showCameraPickerModal(cameras, onSelect) {

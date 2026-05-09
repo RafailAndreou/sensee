@@ -20,6 +20,7 @@ CONFIG_FILE_PATH = os.path.join(_data_dir(), "configure.json")
 GESTURE_SETTINGS_PATH = os.path.join(_data_dir(), "gesture_settings.json")
 CAMERA_SETTINGS_PATH = os.path.join(_data_dir(), "camera_settings.json")
 IRONMAN_PARAMS_PATH = os.path.join(_data_dir(), "ironman_params.json")
+VOICE_SETTINGS_PATH = os.path.join(_data_dir(), "voice_settings.json")
 
 def save_configure_json(configuration: list):
     with open(CONFIG_FILE_PATH, "w+") as f:
@@ -126,6 +127,31 @@ def save_ironman_params(params: dict) -> None:
     with open(IRONMAN_PARAMS_PATH, "w+") as f:
         json.dump(params, f, indent=4)
         logger.info("Ironman params saved to %s", IRONMAN_PARAMS_PATH)
+
+
+_VOICE_DEFAULTS: dict = {
+    "enabled": False,
+    "model": "tiny",
+    "language": "en",
+}
+
+
+def load_voice_settings() -> dict:
+    try:
+        if not os.path.exists(VOICE_SETTINGS_PATH):
+            return dict(_VOICE_DEFAULTS)
+        with open(VOICE_SETTINGS_PATH, "r") as f:
+            data = json.load(f)
+            return {**_VOICE_DEFAULTS, **data}
+    except Exception as e:
+        logger.warning("Error loading voice settings: %s", e)
+        return dict(_VOICE_DEFAULTS)
+
+
+def save_voice_settings(settings: dict) -> None:
+    with open(VOICE_SETTINGS_PATH, "w+") as f:
+        json.dump(settings, f, indent=4)
+        logger.info("Voice settings saved to %s", VOICE_SETTINGS_PATH)
 
 
 def save_camera_settings(settings: dict) -> None:

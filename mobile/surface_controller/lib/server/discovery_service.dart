@@ -29,6 +29,7 @@ class ServerClient {
   Uri get gestureSettingsUri => _uriForPath('/gesture-settings');
   Uri get cameraSettingsUri => _uriForPath('/camera-settings');
   Uri get ironmanParamsUri => _uriForPath('/ironman-params');
+  Uri get voiceSettingsUri => _uriForPath('/voice-settings');
   Uri get haCamerasUri => _uriForPath('/ha/cameras');
   Uri get haConfigUri => _uriForPath('/ha/config');
   Uri get haDiscoveredUri => _uriForPath('/ha/discovered');

@@ -4,7 +4,7 @@ import { closeAllModals } from './ui.js';
 import { navigate, setRenderer } from './navigate.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderCamera } from './views/camera.js';
-import { renderSettingsHub, renderHASettings, renderGestureSettings, renderCameraSettings, renderIronmanSettings } from './views/settings.js';
+import { renderSettingsHub, renderHASettings, renderGestureSettings, renderCameraSettings, renderIronmanSettings, renderVoiceSettings } from './views/settings.js';
 
 export { navigate };
 
@@ -16,6 +16,7 @@ function dispatch() {
     else if (state.subView === 'gesture') renderGestureSettings();
     else if (state.subView === 'camera-cfg') renderCameraSettings();
     else if (state.subView === 'ironman') renderIronmanSettings();
+    else if (state.subView === 'voice') renderVoiceSettings();
     else renderSettingsHub();
   }
 }

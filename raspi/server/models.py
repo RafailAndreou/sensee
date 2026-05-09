@@ -47,3 +47,9 @@ class IronmanParams(BaseModel):
     delay: float = 0.001
     scroll: int = 10
     gesture_map: dict = {}
+
+
+class VoiceSettings(BaseModel):
+    enabled: bool = False
+    model: str = "tiny"
+    language: str = "en"
