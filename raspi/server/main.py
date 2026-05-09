@@ -206,7 +206,9 @@ def get_ironman_params():
 
 @app.post("/ironman-params")
 def post_ironman_params(params: IronmanParams):
-    file.save_ironman_params(params.model_dump())
+    current = file.load_ironman_params()
+    merged = {**current, **params.model_dump(exclude_unset=True)}
+    file.save_ironman_params(merged)
     return {"status": "saved"}
 
 @app.get("/voice-settings")
@@ -215,11 +217,13 @@ def get_voice_settings():
 
 @app.post("/voice-settings")
 def post_voice_settings(settings: VoiceSettings):
-    # Merge with existing so a partial update never wipes unset fields
     current = file.load_voice_settings()
-    merged = {**current, **settings.model_dump()}
+    incoming = settings.model_dump(exclude_unset=True)
+    merged = {**current, **incoming}
     file.save_voice_settings(merged)
-    voice_status.request_preload(settings.model)
+    if "model" in incoming:
+        voice_status.request_preload(merged["model"])
+    voice_status.notify_settings_changed()
     return {"status": "saved"}
 
 @app.get("/voice-status")

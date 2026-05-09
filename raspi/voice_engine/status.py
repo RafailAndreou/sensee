@@ -10,6 +10,7 @@ _status: str = "idle"   # "idle" | "loading" | "ready"
 _model: str | None = None
 
 _preload_fn = None
+_settings_changed_fn = None
 
 
 def register_preload(fn) -> None:
@@ -20,6 +21,16 @@ def register_preload(fn) -> None:
 def request_preload(model_name: str) -> None:
     if _preload_fn:
         _preload_fn(model_name)
+
+
+def register_settings_changed(fn) -> None:
+    global _settings_changed_fn
+    _settings_changed_fn = fn
+
+
+def notify_settings_changed() -> None:
+    if _settings_changed_fn:
+        _settings_changed_fn()
 
 
 def set_loading(model_name: str) -> None:

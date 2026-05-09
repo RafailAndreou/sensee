@@ -15,7 +15,6 @@ from gesture_engine.log import configure_logging, get_logger
 from gesture_engine.core.confirmation import TouchConfirmation
 from gesture_engine.core.cursor_control import CursorController
 from voice_engine.voice_controller import VoiceController
-from gesture_engine.core.handlers.pc_handler import execute_pc_action
 from gesture_engine.core.matching import find_matched_config
 from gesture_engine.core.movement import start_hand_movement_monitor
 from gesture_engine.core.touch_gestures import (
@@ -54,11 +53,9 @@ class GestureApp:
             trigger_ha_action=homeassistant.trigger_ha_action,
         )
         self.touch_confirmation = TouchConfirmation(confirm_frames=TOUCH_CONFIRM_FRAMES)
-        self.wrist_queue = Queue()
+        self.wrist_queue = Queue(maxsize=1)
         self.wake_gate = WakeGate(file.load_gesture_settings)
         self.cursor_controller = CursorController(file.load_ironman_params)
-        self._ironman_cooldowns: dict[str, float] = {}
-        self._ironman_cooldown_lock = threading.Lock()
         self.voice_controller = VoiceController(file.load_voice_settings)
 
     def _get_latest_frame_ts(self):
@@ -118,7 +115,7 @@ class GestureApp:
                 else:
                     action_key = self.cursor_controller.resolve_action(gesture_name)
                     if action_key and action_key not in ("move_cursor", "scroll", "scroll_up", "scroll_down"):
-                        self._fire_ironman_action(action_key)
+                        self.cursor_controller.fire_action(action_key)
                 continue
 
             action_name = str(matched_config.get("action", ""))
@@ -131,15 +128,6 @@ class GestureApp:
                 continue
 
             self.enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
-
-    def _fire_ironman_action(self, action_key: str) -> None:
-        """Execute a one-shot PC action from the ironman gesture map, with 1.5 s cooldown."""
-        now = time.monotonic()
-        with self._ironman_cooldown_lock:
-            if now - self._ironman_cooldowns.get(action_key, 0) < 1.5:
-                return
-            self._ironman_cooldowns[action_key] = now
-        execute_pc_action(action_key.replace("_", " "))
 
     def _feed_ironman_mode(self, snapshot, multi_hand_landmarks) -> None:
         if not snapshot or not snapshot.gestures or not multi_hand_landmarks:
@@ -164,7 +152,7 @@ class GestureApp:
                 wrist = multi_hand_landmarks[hand_idx].landmark[0]
                 self.cursor_controller.feed_scroll(wrist.x, wrist.y)
                 return
-            self._fire_ironman_action(action_key)
+            self.cursor_controller.fire_action(action_key)
             return
 
     def run(self):
@@ -230,7 +218,10 @@ class GestureApp:
                             )
 
                             wrist = hand_landmarks.landmark[0]
-                            self.wrist_queue.put(wrist)
+                            try:
+                                self.wrist_queue.put_nowait(wrist)
+                            except Exception:
+                                pass
                         except Exception as e:
                             logger.warning("Hand processing error: %s", e)
 

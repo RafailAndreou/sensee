@@ -1,3 +1,4 @@
+import queue
 import threading
 import time
 
@@ -15,6 +16,9 @@ _SILENCE_RMS = 0.015      # energy gate — below this is treated as silence
 _SILENCE_CHUNKS = 25      # ~750 ms of silence ends the utterance
 _MAX_CHUNKS = 200         # 6 s hard cap per utterance
 _PARAMS_TTL = 1.0         # seconds between config reloads
+# 15 s of buffered audio. If transcription falls behind, oldest chunks are
+# dropped at the producer (callback) side — see _audio_callback.
+_AUDIO_QUEUE_MAX = 500
 
 
 class VoiceController:
@@ -31,8 +35,22 @@ class VoiceController:
         # Serializes loading so only one thread downloads/loads at a time.
         self._model_load_lock = threading.Lock()
 
+        # Signaled by the settings POST handler so the worker re-reads config
+        # immediately instead of waiting out its 1s idle sleep.
+        self._wake = threading.Event()
+
+        # Audio callback (sounddevice's audio thread) → _collect_utterance.
+        # Bounded so a slow transcriber can't grow it without limit.
+        self._audio_queue: queue.Queue = queue.Queue(maxsize=_AUDIO_QUEUE_MAX)
+
         voice_status.register_preload(self.preload)
+        voice_status.register_settings_changed(self._on_settings_changed)
         threading.Thread(target=self._run, daemon=True, name="VoiceController").start()
+
+    def _on_settings_changed(self) -> None:
+        with self._params_lock:
+            self._cache_ts = 0.0  # force fresh disk read on next _params()
+        self._wake.set()
 
     # ── Params cache ──────────────────────────────────────────────────────────
 
@@ -88,6 +106,20 @@ class VoiceController:
 
     # ── Main loop ─────────────────────────────────────────────────────────────
 
+    def _audio_callback(self, indata, frames, time_info, status) -> None:
+        """sounddevice audio thread → push raw mono PCM to queue. Drops on overflow."""
+        try:
+            self._audio_queue.put_nowait(indata[:, 0].copy())
+        except queue.Full:
+            pass  # transcription is falling behind; oldest stays, newest dropped
+
+    def _drain_audio_queue(self) -> None:
+        while True:
+            try:
+                self._audio_queue.get_nowait()
+            except queue.Empty:
+                return
+
     def _run(self) -> None:
         try:
             import sounddevice as sd
@@ -109,21 +141,36 @@ class VoiceController:
                     _was_enabled = False
                 else:
                     logger.debug("Voice Control is disabled — enable it from the app/web settings")
-                time.sleep(1.0)
+                self._wake.wait(timeout=1.0)
+                self._wake.clear()
                 continue
             if not _was_enabled:
                 logger.info("Voice Control enabled — listening for speech (model: %s, lang: %s)",
                             p.get("model", "tiny"), p.get("language", "en"))
                 _was_enabled = True
 
+            self._drain_audio_queue()
             try:
-                audio = self._record_utterance(sd)
+                with sd.InputStream(
+                    samplerate=_SAMPLE_RATE,
+                    channels=1,
+                    dtype="float32",
+                    blocksize=_CHUNK_SAMPLES,
+                    callback=self._audio_callback,
+                ):
+                    self._listen_until_disabled()
             except Exception as e:
                 logger.warning("Microphone error: %s", e)
-                time.sleep(1.0)
-                continue
+                self._wake.wait(timeout=1.0)
+                self._wake.clear()
 
-            if audio is None or len(audio) < _SAMPLE_RATE * 0.3:
+    def _listen_until_disabled(self) -> None:
+        """Inner loop: collect utterances and transcribe them while voice is enabled."""
+        while self._params().get("enabled", False):
+            audio = self._collect_utterance()
+            if audio is None:
+                return  # voice was disabled mid-utterance — caller closes the stream
+            if len(audio) < _SAMPLE_RATE * 0.3:
                 continue
 
             p = self._params()
@@ -143,10 +190,8 @@ class VoiceController:
                 logger.warning("Whisper transcription error: %s", e)
                 continue
 
-            if not text:
-                continue
-
-            self._type_text(text)
+            if text:
+                self._type_text(text)
 
     def _type_text(self, text: str) -> None:
         """Paste transcribed text at the current cursor position via clipboard."""
@@ -165,31 +210,33 @@ class VoiceController:
 
     # ── Audio capture ─────────────────────────────────────────────────────────
 
-    def _record_utterance(self, sd) -> np.ndarray | None:
-        """Block until voice detected, record until silence, return float32 PCM."""
+    def _collect_utterance(self) -> np.ndarray | None:
+        """Consume queued audio chunks, segment by silence, return float32 PCM.
+
+        Returns None if voice gets disabled before an utterance completes — the
+        caller treats that as the signal to close the InputStream.
+        """
         chunks: list[np.ndarray] = []
         silence_count = 0
         recording = False
 
-        with sd.InputStream(
-            samplerate=_SAMPLE_RATE,
-            channels=1,
-            dtype="float32",
-            blocksize=_CHUNK_SAMPLES,
-        ) as stream:
-            while True:
-                if not self._params().get("enabled", False):
-                    return None
-                data, _ = stream.read(_CHUNK_SAMPLES)
-                rms = float(np.sqrt(np.mean(data[:, 0] ** 2)))
-                if rms > _SILENCE_RMS:
-                    recording = True
-                    silence_count = 0
-                    chunks.append(data[:, 0].copy())
-                elif recording:
-                    chunks.append(data[:, 0].copy())
-                    silence_count += 1
-                    if silence_count >= _SILENCE_CHUNKS or len(chunks) >= _MAX_CHUNKS:
-                        break
+        while True:
+            if not self._params().get("enabled", False):
+                return None
+            try:
+                data = self._audio_queue.get(timeout=0.1)
+            except queue.Empty:
+                continue
+
+            rms = float(np.sqrt(np.mean(data ** 2)))
+            if rms > _SILENCE_RMS:
+                recording = True
+                silence_count = 0
+                chunks.append(data)
+            elif recording:
+                chunks.append(data)
+                silence_count += 1
+                if silence_count >= _SILENCE_CHUNKS or len(chunks) >= _MAX_CHUNKS:
+                    break
 
         return np.concatenate(chunks) if chunks else None

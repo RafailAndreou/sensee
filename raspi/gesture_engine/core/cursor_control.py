@@ -6,6 +6,7 @@ import pyautogui
 
 from gesture_engine.log import get_logger
 from gesture_engine.core.matching import normalize_name
+from gesture_engine.core.handlers.pc_handler import execute_pc_action
 
 logger = get_logger(__name__)
 
@@ -14,6 +15,7 @@ pyautogui.PAUSE = 0
 
 _PARAMS_CACHE_TTL = 0.5  # seconds between disk reads
 _DIRECTIONAL_SCROLL_BOOST = 3  # Integer speed multiplier for scroll_up/scroll_down.
+_ACTION_COOLDOWN_SECONDS = 1.5  # Per-action cooldown for one-shot ironman gestures.
 
 
 class CursorController:
@@ -33,6 +35,9 @@ class CursorController:
         self._params_cache_ts: float = 0.0
         self._params_lock = threading.Lock()
         self._reverse_map: dict[str, str] = {}  # gesture_name → action_key, rebuilt with params
+
+        self._action_cooldowns: dict[str, float] = {}
+        self._action_lock = threading.Lock()
 
         self.cursor_queue: Queue = Queue(maxsize=2)
 
@@ -89,6 +94,15 @@ class CursorController:
         if not params.get("enabled", False):
             return None
         return self._reverse_map.get(normalize_name(gesture_name))
+
+    def fire_action(self, action_key: str) -> None:
+        """Execute a one-shot PC action with per-action cooldown."""
+        now = time.monotonic()
+        with self._action_lock:
+            if now - self._action_cooldowns.get(action_key, 0) < _ACTION_COOLDOWN_SECONDS:
+                return
+            self._action_cooldowns[action_key] = now
+        execute_pc_action(action_key.replace("_", " "))
 
     def _run(self) -> None:
         prev_x: float | None = None
