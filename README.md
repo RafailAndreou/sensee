@@ -21,7 +21,7 @@ Think of Sensee like this:
 
 The web dashboard handles setup and configuration, while the engine handles real-time detection and execution.
 
-## The Loop
+## The Loops
 
 ### 1. Configure
 
