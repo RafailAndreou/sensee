@@ -6,9 +6,13 @@ import threading
 import time
 from typing import Any, Mapping, Sequence
 
+from gesture_engine.log import get_logger
+
 from .ha_services import get_domain_from_entity
 from .ha_transport import MOCK_MODE, get_http_client
 from .ha_config import get_ha_config
+
+logger = get_logger(__name__)
 
 _entities_cache: list[dict[str, str]] = []
 _entities_cache_time = 0.0
@@ -47,7 +51,7 @@ def _write_entities_cache(devices: Sequence[dict[str, str]], cache_time: float) 
         _entities_cache_time = cache_time
 
 
-def _format_states_to_devices(all_states: Sequence[Mapping[str, Any]], device_type_filter: str | None = None) -> list[dict[str, str]]:
+def _format_states_to_devices(all_states: Sequence[Mapping[str, Any]]) -> list[dict[str, str]]:
     """Convert Home Assistant entity states into Sensee device records."""
     formatted_devices: list[dict[str, str]] = []
 
@@ -56,9 +60,6 @@ def _format_states_to_devices(all_states: Sequence[Mapping[str, Any]], device_ty
         domain = get_domain_from_entity(entity_id)
         sensee_type = _DOMAIN_TO_SENSEE_TYPE.get(domain)
         if not sensee_type:
-            continue
-
-        if device_type_filter and sensee_type.lower() != device_type_filter.lower():
             continue
 
         attributes = state.get("attributes", {})
@@ -92,14 +93,14 @@ def get_ha_cameras() -> list[dict[str, str]]:
 
     url_base, token = get_ha_config()
     if not _has_valid_runtime_config(url_base, token):
-        print("❌ Home Assistant config missing. Cannot fetch cameras.")
+        logger.error("Home Assistant config missing. Cannot fetch cameras.")
         return []
 
     try:
         http_client = get_http_client()
         response = http_client.get_all_states(url_base, token)
         if response.status_code != 200:
-            print(f"❌ HA Fetch Error {response.status_code}: {response.text}")
+            logger.error("HA fetch error %s: %s", response.status_code, response.text)
             return []
 
         cameras = []
@@ -117,21 +118,22 @@ def get_ha_cameras() -> list[dict[str, str]]:
             })
         return cameras
     except Exception as e:
-        print(f"❌ Exception fetching cameras from Home Assistant: {e}")
+        logger.exception("Exception fetching cameras from Home Assistant: %s", e)
         return []
 
 
 def get_ha_entities(device_type_filter: str | None = None) -> list[dict[str, str]]:
     """Fetch and format entities for the Sensee UI."""
-    global _entities_cache_time
-
     if MOCK_MODE:
-        return [
-            {"entity_id": "media_player.living_room_tv", "friendly_name": "Mock Living Room TV", "type": "Tv"},
-            {"entity_id": "light.bedroom_lamp", "friendly_name": "Mock Bedroom Lamp", "type": "Light"},
-            {"entity_id": "climate.downstairs_ac", "friendly_name": "Mock Living Room AC", "type": "Ac"},
-            {"entity_id": "fan.kitchen_fan", "friendly_name": "Mock Kitchen Fan", "type": "Fan"},
-        ]
+        return _filter_entities_by_type(
+            [
+                {"entity_id": "media_player.living_room_tv", "friendly_name": "Mock Living Room TV", "type": "Tv"},
+                {"entity_id": "light.bedroom_lamp", "friendly_name": "Mock Bedroom Lamp", "type": "Light"},
+                {"entity_id": "climate.downstairs_ac", "friendly_name": "Mock Living Room AC", "type": "Ac"},
+                {"entity_id": "fan.kitchen_fan", "friendly_name": "Mock Kitchen Fan", "type": "Fan"},
+            ],
+            device_type_filter,
+        )
 
     now = time.monotonic()
     with _entities_cache_lock:
@@ -140,21 +142,21 @@ def get_ha_entities(device_type_filter: str | None = None) -> list[dict[str, str
 
     url_base, token = get_ha_config()
     if not _has_valid_runtime_config(url_base, token):
-        print("❌ Home Assistant config missing. Cannot fetch entities.")
+        logger.error("Home Assistant config missing. Cannot fetch entities.")
         return []
 
     try:
         http_client = get_http_client()
         response = http_client.get_all_states(url_base, token)
         if response.status_code != 200:
-            print(f"❌ HA Fetch Error {response.status_code}: {response.text}")
+            logger.error("HA fetch error %s: %s", response.status_code, response.text)
             return _read_entities_cache(device_type_filter)
 
         all_states = response.json()
-        formatted_devices = _format_states_to_devices(all_states, device_type_filter)
+        all_devices = _format_states_to_devices(all_states)
 
-        _write_entities_cache(formatted_devices, now)
-        return list(formatted_devices)
+        _write_entities_cache(all_devices, now)
+        return _filter_entities_by_type(all_devices, device_type_filter)
     except Exception as e:
-        print(f"❌ Exception fetching entities from Home Assistant: {e}")
+        logger.exception("Exception fetching entities from Home Assistant: %s", e)
         return _read_entities_cache(device_type_filter)

@@ -1,5 +1,9 @@
 import os
 
+from gesture_engine.log import get_logger
+
+logger = get_logger(__name__)
+
 
 def run_uvicorn_with_port_retry(
     app_import_path,
@@ -16,7 +20,7 @@ def run_uvicorn_with_port_retry(
 
     for attempt_port in ports_to_try:
         try:
-            print(f"\n🌐 {context_label}: http://{ip}:{attempt_port}\n")
+            logger.info("%s: http://%s:%s", context_label, ip, attempt_port)
             os.environ["SENSEE_PORT"] = str(attempt_port)
 
             run_kwargs = {
@@ -33,14 +37,14 @@ def run_uvicorn_with_port_retry(
             error_str = str(e)
             if "10048" in error_str or "Address already in use" in error_str:
                 if attempt_port == ports_to_try[-1]:
-                    print(f"❌ All ports {ports_to_try} are already in use!")
-                    print("   Please kill the background process or restart your system.")
+                    logger.error("All ports %s are already in use!", ports_to_try)
+                    logger.error("Please kill the background process or restart your system.")
                     raise SystemExit(1)
-                print(f"⚠️  Port {attempt_port} in use, trying {attempt_port + 1}...")
+                logger.warning("Port %s in use, trying %s...", attempt_port, attempt_port + 1)
             else:
                 raise
         except Exception as e:
-            print(f"❌ Unexpected error: {e}")
+            logger.error("Unexpected error: %s", e)
             raise
 
     raise SystemExit(1)

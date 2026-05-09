@@ -4,7 +4,10 @@ import webbrowser
 
 import requests
 
+from gesture_engine.log import get_logger
 from server.startup import run_uvicorn_with_port_retry
+
+logger = get_logger(__name__)
 
 
 DEFAULT_SERVER_PORTS = [8000, 8001, 8002, 8003, 8004]
@@ -28,14 +31,14 @@ def _open_dashboard_when_ready(ip: str, ports_to_try: list[int]) -> None:
                     if payload.get("status") != "ok":
                         continue
                     dashboard_url = f"http://{host}:{port}/"
-                    print(f"🌍 Opening dashboard: {dashboard_url}")
+                    logger.info("Opening dashboard: %s", dashboard_url)
                     webbrowser.open_new_tab(dashboard_url)
                     return
                 except (ValueError, requests.exceptions.RequestException):
                     continue
         time.sleep(SERVER_READY_POLL_INTERVAL_SECONDS)
 
-    print("⚠️ Dashboard auto-open timed out. Open the printed portal URL manually.")
+    logger.warning("Dashboard auto-open timed out. Open the printed portal URL manually.")
 
 
 def start_fastapi_server_in_background(get_local_ip, auto_open_dashboard: bool = True):

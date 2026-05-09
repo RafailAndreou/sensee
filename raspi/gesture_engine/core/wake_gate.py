@@ -2,6 +2,9 @@ import threading
 import time
 
 from gesture_engine.core.matching import normalize_name
+from gesture_engine.log import get_logger
+
+logger = get_logger(__name__)
 
 
 class WakeGate:
@@ -114,9 +117,9 @@ class WakeGate:
                     if held_seconds >= self._wake_hold_seconds:
                         self._wake_active_until = now + self._wake_active_window_seconds
                         self._wake_hold_started_at = None
-                        print(
-                            "Wake gesture confirmed. "
-                            f"Active window: {self._wake_active_window_seconds:.1f}s"
+                        logger.info(
+                            "Wake gesture confirmed. Active window: %.1fs",
+                            self._wake_active_window_seconds,
                         )
                 return False
 
@@ -127,6 +130,6 @@ class WakeGate:
 
             if self._wake_active_until != 0.0:
                 self._wake_active_until = 0.0
-                print("Active window ended. Waiting for wake gesture.")
+                logger.info("Active window ended. Waiting for wake gesture.")
 
             return False

@@ -1,3 +1,0 @@
-from gesture_engine.core.confirmation import TouchConfirmation
-from gesture_engine.core.movement import start_hand_movement_monitor
-from gesture_engine.geometry import get_screen_metrics, touching, translate_coords

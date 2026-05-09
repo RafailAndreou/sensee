@@ -7,10 +7,13 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, List
 
-from server import file
+from gesture_engine.log import get_logger
+from server import config_cache, file
 from server import homeassistant
 from server.config_validation import validate_configuration_payload
 from server.events import send_msg
+
+logger = get_logger(__name__)
 from server.models import (
     CameraSettings,
     Configuration,
@@ -40,13 +43,13 @@ def _validate_configuration_or_raise(configs: list[dict[str, Any]]) -> None:
 
 def _persist_configuration(configs: list[dict[str, Any]]) -> None:
     file.save_configure_json(configs)
-    file.set_loaded_config(configs)
+    config_cache.set_loaded_config(configs)
 
 
 def _log_received_configurations(configs: list[dict[str, Any]]) -> None:
-    print(f"\nReceived {len(configs)} configurations:")
+    logger.info("Received %s configurations:", len(configs))
     for conf in configs:
-        print(f"  - ID {conf['id']}: {conf['brand']} {conf['action']} ({conf['gesture']})")
+        logger.info("  - ID %s: %s %s (%s)", conf["id"], conf["brand"], conf["action"], conf["gesture"])
 
 
 def _mask_token(token: str) -> str:
@@ -65,13 +68,13 @@ async def lifespan(app: FastAPI):
     yield
     mdns_task = getattr(app.state, "mdns_task", None)
     if mdns_task:
-        print("Stopping mDNS service...")
+        logger.info("Stopping mDNS service...")
         mdns_task.cancel()
         try:
             await mdns_task
         except asyncio.CancelledError:
             pass
-        print("mDNS service stopped.")
+        logger.info("mDNS service stopped.")
 
 app = FastAPI(lifespan=lifespan)
 
@@ -112,7 +115,7 @@ def configure(settings: List[Configuration]):
 
 @app.get("/configuration")
 def get_configuration():
-    return file.get_active_configs()
+    return config_cache.get_active_configs()
 
 @app.get("/current")
 def get_current_config():
@@ -171,7 +174,7 @@ def post_event(name: str):
 
 @app.post("/gesture-settings")
 def post_gesture_settings(settings: GestureSettings):
-    print(f"\nReceived gesture settings: {settings.model_dump()}")
+    logger.info("Received gesture settings: %s", settings.model_dump())
     app.state.sensee.gesture_settings = settings.model_dump()
     
     if not settings.wakeEnabled:

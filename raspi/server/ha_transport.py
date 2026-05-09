@@ -8,9 +8,13 @@ import time
 
 import requests
 
+from gesture_engine.log import get_logger
+
 from .ha_client import HAClient
 from .ha_config import get_ha_config
 from .ha_services import get_domain_from_entity, parse_action_to_service
+
+logger = get_logger(__name__)
 
 MOCK_MODE = False
 
@@ -59,9 +63,9 @@ def _try_tv_wake_fallback(url_base: str, token: str, target_entity_id: str) -> b
             )
             if response.status_code == 200:
                 return True
-            print(f"⚠️ TV wake script failed ({response.status_code}): {response.text}")
+            logger.warning("TV wake script failed (%s): %s", response.status_code, response.text)
         except requests.exceptions.RequestException as e:
-            print(f"⚠️ TV wake script request failed: {e}")
+            logger.warning("TV wake script request failed: %s", e)
 
     if TV_WAKE_SWITCH_ENTITY:
         attempted = True
@@ -75,9 +79,9 @@ def _try_tv_wake_fallback(url_base: str, token: str, target_entity_id: str) -> b
             )
             if response.status_code == 200:
                 return True
-            print(f"⚠️ TV wake switch failed ({response.status_code}): {response.text}")
+            logger.warning("TV wake switch failed (%s): %s", response.status_code, response.text)
         except requests.exceptions.RequestException as e:
-            print(f"⚠️ TV wake switch request failed: {e}")
+            logger.warning("TV wake switch request failed: %s", e)
 
     if TV_WAKE_MAC:
         attempted = True
@@ -91,12 +95,12 @@ def _try_tv_wake_fallback(url_base: str, token: str, target_entity_id: str) -> b
             )
             if response.status_code == 200:
                 return True
-            print(f"⚠️ TV WOL failed ({response.status_code}): {response.text}")
+            logger.warning("TV WOL failed (%s): %s", response.status_code, response.text)
         except requests.exceptions.RequestException as e:
-            print(f"⚠️ TV WOL request failed: {e}")
+            logger.warning("TV WOL request failed: %s", e)
 
     if not attempted:
-        print("⚠️ No TV wake fallback configured. Set SENSEE_TV_WAKE_SCRIPT, SENSEE_TV_WAKE_SWITCH, or SENSEE_TV_WAKE_MAC.")
+        logger.warning("No TV wake fallback configured. Set SENSEE_TV_WAKE_SCRIPT, SENSEE_TV_WAKE_SWITCH, or SENSEE_TV_WAKE_MAC.")
 
     return False
 
@@ -104,7 +108,7 @@ def _try_tv_wake_fallback(url_base: str, token: str, target_entity_id: str) -> b
 def trigger_ha_action(entity_id: str, action_type: str) -> bool:
     """Send a Home Assistant service request for the configured entity."""
     if not entity_id:
-        print("❌ Home Assistant Trigger Failed: No entity_id provided.")
+        logger.error("Home Assistant trigger failed: no entity_id provided.")
         return False
 
     service = parse_action_to_service(action_type)
@@ -112,7 +116,7 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
     url_base, token = get_ha_config()
 
     if not _has_valid_runtime_config(url_base, token):
-        print("❌ Home Assistant config missing. Save URL and token from the mobile app or set SENSEE_HA_URL/SENSEE_HA_TOKEN.")
+        logger.error("Home Assistant config missing. Save URL and token from the mobile app or set SENSEE_HA_URL/SENSEE_HA_TOKEN.")
         return False
 
     if service in ("volume_up", "volume_down"):
@@ -127,44 +131,54 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
     data = {"entity_id": entity_id}
 
     if MOCK_MODE:
-        print("\n" + "=" * 50)
-        print("🌐 MOCK HOME ASSISTANT TRIGGERED 🌐")
-        print(f"📡 Target Device : {entity_id}")
-        print(f"⚡  Action        : {action_type} (mapped to '{service}')")
-        print("=" * 50 + "\n")
+        logger.info("MOCK HA: %s -> %s (mapped to '%s')", entity_id, action_type, service)
         return True
 
     try:
         response, elapsed_ms = _http_client.post_service(url_base, token, domain, service, data)
         if response.status_code == 200:
             if DEBUG_HA_TIMING:
-                print(f"✅ Home Assistant accepted {entity_id} -> {service} in {elapsed_ms:.1f}ms")
+                logger.info("HA accepted %s -> %s in %.1fms", entity_id, service, elapsed_ms)
             else:
-                print(f"✅ Home Assistant accepted: {entity_id} -> {service}")
+                logger.info("HA accepted: %s -> %s", entity_id, service)
 
             if domain == "media_player" and service == "turn_on":
-                time.sleep(TURN_ON_VERIFY_DELAY_SECONDS)
-                try:
-                    state = _http_client.get_entity_state(url_base, token, entity_id)
-                except requests.exceptions.RequestException:
-                    state = None
-                if state is None or not _entity_is_on(state):
-                    print(f"⚠️ TV state after turn_on is '{state}'. Trying wake fallback...")
-                    wake_ok = _try_tv_wake_fallback(url_base, token, entity_id)
-                    if wake_ok:
-                        return True
+                _schedule_tv_wake_verify(url_base, token, entity_id)
 
             return True
 
-        print(f"❌ Home Assistant error {response.status_code}: {response.text}")
+        logger.error("HA error %s: %s", response.status_code, response.text)
 
         if domain == "media_player" and service == "turn_on":
-            print("⚠️ turn_on failed. Trying wake fallback...")
-            wake_ok = _try_tv_wake_fallback(url_base, token, entity_id)
-            if wake_ok:
-                return True
+            logger.warning("turn_on failed. Trying wake fallback...")
+            _schedule_tv_wake_fallback(url_base, token, entity_id)
 
         return False
     except requests.exceptions.RequestException as e:
-        print(f"❌ Failed to reach Home Assistant at {url_base}: {e}")
+        logger.error("Failed to reach Home Assistant at %s: %s", url_base, e)
         return False
+
+
+def _schedule_tv_wake_verify(url_base: str, token: str, entity_id: str) -> None:
+    """Verify TV state after a delay and run fallback if still off; non-blocking."""
+    def _run() -> None:
+        time.sleep(TURN_ON_VERIFY_DELAY_SECONDS)
+        try:
+            state = _http_client.get_entity_state(url_base, token, entity_id)
+        except requests.exceptions.RequestException:
+            state = None
+        if state is None or not _entity_is_on(state):
+            logger.warning("TV state after turn_on is '%s'. Trying wake fallback...", state)
+            _try_tv_wake_fallback(url_base, token, entity_id)
+
+    threading.Thread(target=_run, name="tv-wake-verify", daemon=True).start()
+
+
+def _schedule_tv_wake_fallback(url_base: str, token: str, entity_id: str) -> None:
+    """Run TV wake fallback in a background thread."""
+    threading.Thread(
+        target=_try_tv_wake_fallback,
+        args=(url_base, token, entity_id),
+        name="tv-wake-fallback",
+        daemon=True,
+    ).start()

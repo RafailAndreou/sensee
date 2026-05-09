@@ -2,8 +2,12 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
+from gesture_engine.log import get_logger
+
 if TYPE_CHECKING:
     from gesture_engine.runtime import GestureRuntime
+
+logger = get_logger(__name__)
 
 MAX_LATENCY_MS = 100
 MIN_CONFIDENCE_DEFAULT = 0.70
@@ -89,16 +93,19 @@ def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> Non
                 continue
 
             if can_log_detected_gesture(runtime):
-                print(f"Detected gesture: {gesture_name} ({handedness} Hand, conf: {confidence:.2f})")
-            
+                logger.info(
+                    "Detected gesture: %s (%s Hand, conf: %.2f)",
+                    gesture_name, handedness, confidence,
+                )
+
             runtime.send_msg(f"Gesture: {gesture_name} ({handedness})")
             runtime.take_action(gesture_name, handedness)
-            
+
         except IndexError:
             # deque is empty (handled safely)
             continue
         except Exception as e:
-            print(f"Error processing gesture: {e}")
+            logger.error("Error processing gesture: %s", e)
 def process_action_queue_loop(runtime: "GestureRuntime") -> None:
     """Serialize queued actions through a single worker thread.
 
@@ -110,7 +117,7 @@ def process_action_queue_loop(runtime: "GestureRuntime") -> None:
             entity_id, action = runtime.action_queue.get()
             runtime.trigger_ha_action(entity_id, action)
         except Exception as e:
-            print(f"Error processing action queue item: {e}")
+            logger.error("Error processing action queue item: %s", e)
 
 
 def process_volume_loop(runtime: "GestureRuntime") -> None:
@@ -121,7 +128,7 @@ def process_volume_loop(runtime: "GestureRuntime") -> None:
             entity_id, action = runtime.volume_queue.get()
             runtime.trigger_ha_action(entity_id, action)
         except Exception as e:
-            print(f"Error processing volume action: {e}")
+            logger.error("Error processing volume action: %s", e)
             
             
 def start_workers(

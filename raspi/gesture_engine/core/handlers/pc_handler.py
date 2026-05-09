@@ -3,7 +3,11 @@ from typing import Final
 
 import pyautogui
 
+from gesture_engine.log import get_logger
+
 from ..matching import normalize_name
+
+logger = get_logger(__name__)
 
 SPOTIFY_URL: Final[str] = "https://open.spotify.com/"
 YOUTUBE_URL: Final[str] = "https://www.youtube.com/"
@@ -23,7 +27,7 @@ def _open_url(url: str) -> bool:
         webbrowser.open_new_tab(url)
         return True
     except Exception as error:
-        print(f"Failed to open URL {url}: {error}")
+        logger.error("Failed to open URL %s: %s", url, error)
         return False
 
 
@@ -52,8 +56,8 @@ def execute_pc_action(action_name: str) -> bool:
             pyautogui.hotkey("alt", "f4")
             return True
         except Exception as error:
-            print(f"Failed to close active window: {error}")
+            logger.error("Failed to close active window: %s", error)
             return False
 
-    print(f"Unsupported PC action: {action_name}")
+    logger.warning("Unsupported PC action: %s", action_name)
     return False

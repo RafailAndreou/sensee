@@ -1,9 +1,5 @@
 from .runtime import GestureRuntime
-from .camera import (
-    get_screen_metrics,
-    start_hand_movement_monitor,
-    TouchConfirmation,
-    touching,
-    translate_coords,
-)
+from .core.confirmation import TouchConfirmation
+from .core.movement import start_hand_movement_monitor
+from .geometry import get_screen_metrics, touching, translate_coords
 from .server_runner import start_fastapi_server_in_background

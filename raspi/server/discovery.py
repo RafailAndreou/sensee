@@ -3,6 +3,10 @@ import json
 import socket
 from zeroconf.asyncio import AsyncZeroconf, AsyncServiceBrowser, AsyncServiceInfo
 
+from gesture_engine.log import get_logger
+
+logger = get_logger(__name__)
+
 SERVICE_TYPE = "_sensee._tcp.local."
 _DISCOVERY_PORT = 54321
 _DISCOVERY_TOKEN = "SENSEE_DISCOVER"
@@ -57,11 +61,11 @@ async def register_mdns_service(port: int):
     zc = AsyncZeroconf()
     try:
         await zc.async_register_service(info)
-        print(f"✅ mDNS service registered as sensee.local at {ip_str}:{port}")
+        logger.info("mDNS service registered as sensee.local at %s:%s", ip_str, port)
         # Keep it registered (block indefinitely)
         await asyncio.Event().wait()
     except Exception as e:
-        print(f"❌ Failed to register mDNS service: {e}")
+        logger.error("Failed to register mDNS service: %s", e)
     finally:
         await zc.async_unregister_service(info)
         await zc.async_close()
@@ -74,7 +78,7 @@ async def start_udp_discovery_service(port: int):
         local_addr=("0.0.0.0", _DISCOVERY_PORT),
         allow_broadcast=True,
     )
-    print(f"✅ UDP discovery listening on port {_DISCOVERY_PORT}")
+    logger.info("UDP discovery listening on port %s", _DISCOVERY_PORT)
     try:
         await asyncio.Event().wait()
     finally:

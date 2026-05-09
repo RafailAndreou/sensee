@@ -11,74 +11,35 @@ from types import SimpleNamespace
 
 import cv2
 import mediapipe as mp
-from gesture_engine.camera import (
-    TouchConfirmation,
-    start_hand_movement_monitor,
-    touching,
+from gesture_engine.log import configure_logging, get_logger
+from gesture_engine.core.confirmation import TouchConfirmation
+from gesture_engine.core.matching import find_matched_config
+from gesture_engine.core.movement import start_hand_movement_monitor
+from gesture_engine.core.touch_gestures import (
+    TOUCH_CONFIRM_FRAMES,
+    action_requires_confirmation,
+    detect_touch_gestures,
+    resolve_detected_hand,
+    snapshot_to_multi_hand_landmarks,
 )
-from gesture_engine.capture import open_camera_capture
-from gesture_engine.core.matching import find_matched_config, normalize_name
 from gesture_engine.core.wake_gate import WakeGate
+from gesture_engine.capture import open_camera_capture
 from gesture_engine.overlay import OVERLAY_DURATION_SECONDS, draw_action_overlay
 from gesture_engine.runtime import GestureRuntime
 from gesture_engine.server_runner import start_fastapi_server_in_background
-from mediapipe.framework.formats import landmark_pb2
-from server import file, homeassistant
+from server import config_cache, file, homeassistant
 from server.discovery import get_local_ip
 from server.events import send_msg
 from server.streamer import set_frame_from_bgr
 
+configure_logging()
+logger = get_logger(__name__)
+
 MIRROR_PREVIEW = True
-TOUCH_XY_THRESHOLD = 0.05
-TOUCH_Z_THRESHOLD = 0.02
-TOUCH_CONFIRM_FRAMES = 2
-CONFIRMATION_ACTION_KEYWORDS = (
-    "turn on",
-    "turn off",
-    "open",
-    "close",
-    "toggle",
-)
-
-
-def action_requires_confirmation(action_name):
-    normalized_action = normalize_name(action_name)
-    if "volume" in normalized_action:
-        return False
-    return any(keyword in normalized_action for keyword in CONFIRMATION_ACTION_KEYWORDS)
-
-
-def snapshot_to_multi_hand_landmarks(snapshot):
-    if not snapshot or not snapshot.hand_landmarks:
-        return None
-
-    multi_hand_landmarks = []
-    for hand in snapshot.hand_landmarks:
-        proto = landmark_pb2.NormalizedLandmarkList()  # type: ignore
-        proto.landmark.extend(
-            [landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in hand]  # type: ignore
-        )
-        multi_hand_landmarks.append(proto)
-
-    return multi_hand_landmarks if multi_hand_landmarks else None
-
-
-def resolve_detected_hand(snapshot, hand_idx):
-    if (
-        snapshot
-        and snapshot.handedness
-        and hand_idx < len(snapshot.handedness)
-        and snapshot.handedness[hand_idx]
-    ):
-        return snapshot.handedness[hand_idx][0].category_name
-    return "Unknown"
 
 
 class GestureApp:
     def __init__(self):
-        # Preserve startup config-load side effects/logging from pre-refactor flow.
-        self.loaded_configuration = file.load_configure_json()
-
         self.latest_frame_ts = 0
         self.latest_frame_lock = threading.Lock()
         self.latest_result = None
@@ -86,7 +47,7 @@ class GestureApp:
 
         self.runtime = GestureRuntime(
             send_msg=send_msg,
-            get_active_configs=file.get_active_configs,
+            get_active_configs=config_cache.get_active_configs,
             trigger_ha_action=homeassistant.trigger_ha_action,
         )
         self.touch_confirmation = TouchConfirmation(confirm_frames=TOUCH_CONFIRM_FRAMES)
@@ -136,33 +97,7 @@ class GestureApp:
     def process_touch_gestures_for_hand(
         self, hand_idx, hand_landmarks, detected_hand, timestamp_ms
     ):
-        thumb = hand_landmarks.landmark[4]
-        index = hand_landmarks.landmark[8]
-        middle = hand_landmarks.landmark[12]
-
-        middle_touching = touching(
-            thumb,
-            middle,
-            threshold=TOUCH_XY_THRESHOLD,
-            z_threshold=TOUCH_Z_THRESHOLD,
-        )
-        index_touching = (
-            False
-            if middle_touching
-            else touching(
-                thumb,
-                index,
-                threshold=TOUCH_XY_THRESHOLD,
-                z_threshold=TOUCH_Z_THRESHOLD,
-            )
-        )
-
-        gesture_candidates = (
-            ("Thumb+Middle", middle_touching),
-            ("Thumb+Index", index_touching),
-        )
-
-        for gesture_name, is_touching in gesture_candidates:
+        for gesture_name, is_touching in detect_touch_gestures(hand_landmarks):
             matched_config = find_matched_config(
                 self.runtime.get_active_configs(),
                 gesture_name,
@@ -212,7 +147,7 @@ class GestureApp:
 
         cap, source_label = open_camera_capture(file.load_camera_settings())
         if not cap.isOpened():
-            print(f"❌ Failed to open camera ({source_label}).")
+            logger.error("Failed to open camera (%s).", source_label)
             cap.release()
             recognizer.close()
             return
@@ -251,7 +186,7 @@ class GestureApp:
                             wrist = hand_landmarks.landmark[0]
                             self.wrist_queue.put(wrist)
                         except Exception as e:
-                            print(f"[warn] Hand processing error: {e}")
+                            logger.warning("Hand processing error: %s", e)
 
                     for draw_hand_landmarks in multi_hand_landmarks:
                         mp_drawing.draw_landmarks(
@@ -272,7 +207,7 @@ class GestureApp:
                 cv2.imshow("MediaPipe Hands", frame)
 
         finally:
-            print("Shutting down gracefully...")
+            logger.info("Shutting down gracefully...")
             cap.release()
             recognizer.close()
             cv2.destroyAllWindows()

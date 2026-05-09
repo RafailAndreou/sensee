@@ -1,5 +1,9 @@
 import threading
 
+from gesture_engine.log import get_logger
+
+logger = get_logger(__name__)
+
 
 def _check_hand_movement(wrist_queue, send_msg, movement_threshold=0.02):
     prev_pos = None
@@ -23,7 +27,7 @@ def _check_hand_movement(wrist_queue, send_msg, movement_threshold=0.02):
 
             prev_pos = current_pos
         except Exception as e:
-            print(f"Error in hand movement monitor: {e}")
+            logger.error("Error in hand movement monitor: %s", e)
 
 
 def start_hand_movement_monitor(wrist_queue, send_msg, movement_threshold=0.02):

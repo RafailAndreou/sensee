@@ -1,6 +1,8 @@
 import time
 from typing import TYPE_CHECKING, Any, Mapping
 
+from gesture_engine.log import get_logger
+
 from .handlers.ha_handler import handle_smart_device_action
 from .handlers.ir_handler import handle_ir_device_action
 from .handlers.pc_handler import execute_pc_action
@@ -8,6 +10,8 @@ from .matching import normalize_name, normalized_parts, find_matched_config
 
 if TYPE_CHECKING:
     from gesture_engine.runtime import GestureRuntime
+
+logger = get_logger(__name__)
 
 CONTROL_ACTION_COOLDOWN_SECONDS = 1.5
 
@@ -148,7 +152,7 @@ def execute_configured_action(
         return
 
     runtime.send_msg(f"{gesture_name} touch detected")
-    print(f"Executing action: {device_name} {action}")
+    logger.info("Executing action: %s %s", device_name, action)
     with runtime.overlay_lock:
         runtime.overlay_label = f"{device_name}  {action}" if device_name else action
         runtime.overlay_ts = time.monotonic()
@@ -161,14 +165,14 @@ def execute_configured_action(
         try:
             handle_smart_device_action(runtime, entity_id, action, is_volume)
         except Exception as e:
-            print(f"Error queueing Home Assistant action: {e}")
+            logger.error("Error queueing Home Assistant action: %s", e)
         return
 
     # Handle IR devices (volume and non-volume actions)
     try:
         handle_ir_device_action(runtime, entity_id, action)
     except Exception as e:
-        print(f"Error queueing IR action: {e}")
+        logger.error("Error queueing IR action: %s", e)
 
 
 def take_action(
