@@ -95,7 +95,8 @@ _IRONMAN_DEFAULTS = {
     "scroll": 10,
     "gesture_map": {
         "move_cursor": "Open Palm",
-        "scroll": "Victory",
+        "scroll_up": "Victory",
+        "scroll_down": "",
         "left_click": "Thumb+Index",
         "right_click": "Thumb+Middle",
         "tab_forward": "Thumb+Ring",
@@ -111,16 +112,41 @@ _IRONMAN_DEFAULTS = {
 }
 
 
+def _copy_ironman_defaults() -> dict:
+    return {
+        **_IRONMAN_DEFAULTS,
+        "gesture_map": dict(_IRONMAN_DEFAULTS["gesture_map"]),
+    }
+
+
 def load_ironman_params() -> dict:
     try:
         if not os.path.exists(IRONMAN_PARAMS_PATH):
-            return dict(_IRONMAN_DEFAULTS)
+            return _copy_ironman_defaults()
         with open(IRONMAN_PARAMS_PATH, "r") as f:
             data = json.load(f)
-            return {**_IRONMAN_DEFAULTS, **data}
+            merged = _copy_ironman_defaults()
+            merged.update(data)
+
+            raw_map = data.get("gesture_map")
+            if isinstance(raw_map, dict):
+                gesture_map = {
+                    **_IRONMAN_DEFAULTS["gesture_map"],
+                    **raw_map,
+                }
+            else:
+                gesture_map = dict(_IRONMAN_DEFAULTS["gesture_map"])
+
+            legacy_scroll = gesture_map.pop("scroll", "")
+            if legacy_scroll and not gesture_map.get("scroll_up"):
+                gesture_map["scroll_up"] = legacy_scroll
+            gesture_map.setdefault("scroll_down", "")
+
+            merged["gesture_map"] = gesture_map
+            return merged
     except Exception as e:
         logger.warning("Error loading Ironman params: %s", e)
-        return dict(_IRONMAN_DEFAULTS)
+        return _copy_ironman_defaults()
 
 
 def save_ironman_params(params: dict) -> None:

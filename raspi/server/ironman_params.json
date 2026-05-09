@@ -1,16 +1,25 @@
 {
     "enabled": true,
     "gain": 5800,
-    "damp": 7,
-    "sensitivity": 3,
+    "damp": 70,
+    "sensitivity": 9,
     "steps": 10,
-    "delay": 0.001,
-    "scroll": 33,
+    "delay": 0.0001,
+    "scroll": 50,
     "gesture_map": {
         "move_cursor": "Open Palm",
-        "browser_search": "Closed Fist",
-        "left_click": "Thumb+Pinky",
-        "scroll": "Thumb+Middle",
-        "right_click": ""
+        "scroll_up": "ILoveYou",
+        "scroll_down": "Closed Fist",
+        "left_click": "Thumb Down",
+        "right_click": "",
+        "tab_forward": "",
+        "tab_backward": "",
+        "new_tab": "Thumb Up",
+        "task_view": "",
+        "browser_forward": "",
+        "browser_back": "",
+        "browser_search": "",
+        "screenshot": "",
+        "close_tab": "Thumb+Middle"
     }
 }

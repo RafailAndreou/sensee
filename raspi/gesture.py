@@ -16,7 +16,7 @@ from gesture_engine.core.confirmation import TouchConfirmation
 from gesture_engine.core.cursor_control import CursorController
 from voice_engine.voice_controller import VoiceController
 from gesture_engine.core.handlers.pc_handler import execute_pc_action
-from gesture_engine.core.matching import find_matched_config, normalize_name
+from gesture_engine.core.matching import find_matched_config
 from gesture_engine.core.movement import start_hand_movement_monitor
 from gesture_engine.core.touch_gestures import (
     TOUCH_CONFIRM_FRAMES,
@@ -116,17 +116,9 @@ class GestureApp:
                         (hand_idx, gesture_name), False
                     )
                 else:
-                    # No regular config — check ironman gesture_map
-                    params = self.cursor_controller._get_params()
-                    if params.get("enabled", False):
-                        gmap = params.get("gesture_map", {})
-                        n = normalize_name(gesture_name)
-                        for action_key, gname in gmap.items():
-                            if action_key in ("move_cursor", "scroll"):
-                                continue
-                            if gname and normalize_name(gname) == n:
-                                self._fire_ironman_action(action_key)
-                                break
+                    action_key = self.cursor_controller.resolve_action(gesture_name)
+                    if action_key and action_key not in ("move_cursor", "scroll", "scroll_up", "scroll_down"):
+                        self._fire_ironman_action(action_key)
                 continue
 
             action_name = str(matched_config.get("action", ""))
@@ -150,38 +142,28 @@ class GestureApp:
         execute_pc_action(action_key.replace("_", " "))
 
     def _feed_ironman_mode(self, snapshot, multi_hand_landmarks) -> None:
-        """Drive cursor/scroll and dispatch one-shot actions using ironman gesture_map."""
-        params = self.cursor_controller._get_params()
-        if not params.get("enabled", False):
+        if not snapshot or not snapshot.gestures or not multi_hand_landmarks:
             return
-
-        gesture_map: dict = params.get("gesture_map", {})
-        if not gesture_map or not snapshot or not snapshot.gestures or not multi_hand_landmarks:
-            return
-
-        # Build reverse lookup: normalized_gesture → action_key (skip empty assignments)
-        reverse: dict[str, str] = {}
-        for action_key, gname in gesture_map.items():
-            n = normalize_name(gname) if gname else ""
-            if n:
-                reverse[n] = action_key
-
         for hand_idx, gesture_list in enumerate(snapshot.gestures):
             if not gesture_list or hand_idx >= len(multi_hand_landmarks):
                 continue
-            detected = normalize_name(gesture_list[0].category_name)
-            action_key = reverse.get(detected)
+            action_key = self.cursor_controller.resolve_action(gesture_list[0].category_name)
             if action_key is None:
                 continue
             if action_key == "move_cursor":
                 tip = multi_hand_landmarks[hand_idx].landmark[8]
                 self.cursor_controller.feed(tip.x, tip.y)
                 return
+            if action_key == "scroll_up":
+                self.cursor_controller.feed_scroll_up()
+                return
+            if action_key == "scroll_down":
+                self.cursor_controller.feed_scroll_down()
+                return
             if action_key == "scroll":
                 wrist = multi_hand_landmarks[hand_idx].landmark[0]
                 self.cursor_controller.feed_scroll(wrist.x, wrist.y)
                 return
-            # One-shot action (e.g. task_view, browser_forward …)
             self._fire_ironman_action(action_key)
             return
 

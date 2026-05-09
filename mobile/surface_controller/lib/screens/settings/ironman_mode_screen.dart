@@ -21,7 +21,8 @@ const _kGestures = [
 
 const _kActions = [
   ('move_cursor',     'Move Cursor'),
-  ('scroll',          'Scroll'),
+  ('scroll_up',       'Scroll Up'),
+  ('scroll_down',     'Scroll Down'),
   ('left_click',      'Left Click'),
   ('right_click',     'Right Click'),
   ('tab_forward',     'Tab Forward'),
@@ -82,6 +83,11 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
         final raw = data['gesture_map'];
         if (raw is Map) {
           _gestureMap = raw.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+          final legacyScroll = _gestureMap.remove('scroll');
+          if ((_gestureMap['scroll_up'] ?? '').isEmpty && (legacyScroll ?? '').isNotEmpty) {
+            _gestureMap['scroll_up'] = legacyScroll!;
+          }
+          _gestureMap.putIfAbsent('scroll_down', () => '');
         }
       }
     });

@@ -99,11 +99,22 @@ class VoiceController:
             return
 
         logger.info("VoiceController started")
+        _was_enabled = False
         while True:
             p = self._params()
-            if not p.get("enabled", False):
+            enabled = p.get("enabled", False)
+            if not enabled:
+                if _was_enabled:
+                    logger.info("Voice Control disabled")
+                    _was_enabled = False
+                else:
+                    logger.debug("Voice Control is disabled — enable it from the app/web settings")
                 time.sleep(1.0)
                 continue
+            if not _was_enabled:
+                logger.info("Voice Control enabled — listening for speech (model: %s, lang: %s)",
+                            p.get("model", "tiny"), p.get("language", "en"))
+                _was_enabled = True
 
             try:
                 audio = self._record_utterance(sd)

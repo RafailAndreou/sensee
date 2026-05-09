@@ -215,7 +215,10 @@ def get_voice_settings():
 
 @app.post("/voice-settings")
 def post_voice_settings(settings: VoiceSettings):
-    file.save_voice_settings(settings.model_dump())
+    # Merge with existing so a partial update never wipes unset fields
+    current = file.load_voice_settings()
+    merged = {**current, **settings.model_dump()}
+    file.save_voice_settings(merged)
     voice_status.request_preload(settings.model)
     return {"status": "saved"}
 

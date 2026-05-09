@@ -26,6 +26,7 @@ class VoiceSettingsScreen extends StatefulWidget {
 class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
   String _model = 'tiny';
   String _language = 'en';
+  bool _enabled = false;
   bool _loading = true;
   bool _saving = false;
   Timer? _saveDebounce;
@@ -56,6 +57,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
       if (data != null) {
         _model = data['model'] as String? ?? 'tiny';
         _language = data['language'] as String? ?? 'en';
+        _enabled = data['enabled'] as bool? ?? false;
       }
     });
     _refreshStatus();
@@ -95,9 +97,8 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
   Future<void> _save() async {
     if (_saving) return;
     setState(() => _saving = true);
-    final current = await loadVoiceSettings() ?? {};
     await saveVoiceSettings({
-      ...current,
+      'enabled': _enabled,
       'model': _model,
       'language': _language,
     });

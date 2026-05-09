@@ -276,7 +276,8 @@ const _IM_GESTURES = [
 
 const _IM_ACTIONS = [
   ['move_cursor',    'Move Cursor'],
-  ['scroll',         'Scroll'],
+  ['scroll_up',      'Scroll Up'],
+  ['scroll_down',    'Scroll Down'],
   ['left_click',     'Left Click'],
   ['right_click',    'Right Click'],
   ['tab_forward',    'Tab Forward'],
@@ -300,7 +301,10 @@ export async function renderIronmanSettings() {
   try { const d = await api.get('/ironman-params'); if (d && typeof d === 'object') Object.assign(s, d); } catch {}
 
   const delayMs = +(s.delay * 1000).toFixed(1);
-  const gmap = s.gesture_map || {};
+  const gmap = { ...(s.gesture_map || {}) };
+  if (!gmap.scroll_up && gmap.scroll) gmap.scroll_up = gmap.scroll;
+  if (!Object.prototype.hasOwnProperty.call(gmap, 'scroll_down')) gmap.scroll_down = '';
+  delete gmap.scroll;
 
   const gestureSelectsHtml = _IM_ACTIONS.map(([key, label]) => {
     const cur = gmap[key] || '';
