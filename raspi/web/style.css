@@ -753,6 +753,34 @@ input[type=range]::-webkit-slider-thumb {
 .im-gesture-label { font-size: 13px; font-weight: 500; flex: 1; }
 
 /* ─── Voice Control ──────────────────────────────────────────────────────── */
+.vc-model-status { margin-top: 6px; min-height: 22px; }
+.vc-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.vc-status-loading {
+  background: rgba(251,146,60,.15);
+  color: #fb923c;
+  border: 1px solid rgba(251,146,60,.3);
+}
+.vc-status-ready {
+  background: rgba(34,197,94,.12);
+  color: #22c55e;
+  border: 1px solid rgba(34,197,94,.25);
+}
+.spinner-xs {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border: 2px solid rgba(251,146,60,.3);
+  border-top-color: #fb923c;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
 .vc-how-it-works {
   display: flex;
   flex-direction: column;

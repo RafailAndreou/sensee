@@ -5,7 +5,7 @@
     "sensitivity": 3,
     "steps": 10,
     "delay": 0.001,
-    "scroll": 50,
+    "scroll": 33,
     "gesture_map": {
         "move_cursor": "Open Palm",
         "browser_search": "Closed Fist",

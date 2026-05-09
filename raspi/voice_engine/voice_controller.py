@@ -4,6 +4,7 @@ import time
 import numpy as np
 import pyautogui
 
+import voice_engine.status as voice_status
 from gesture_engine.log import get_logger
 
 logger = get_logger(__name__)
@@ -23,29 +24,66 @@ class VoiceController:
         self._load_params = load_params_fn
         self._cache: dict = {}
         self._cache_ts: float = 0.0
-        self._lock = threading.Lock()
+        self._params_lock = threading.Lock()
+
         self._model = None
         self._model_name: str | None = None
+        # Serializes loading so only one thread downloads/loads at a time.
+        self._model_load_lock = threading.Lock()
 
+        voice_status.register_preload(self.preload)
         threading.Thread(target=self._run, daemon=True, name="VoiceController").start()
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
+    # ── Params cache ──────────────────────────────────────────────────────────
 
     def _params(self) -> dict:
         now = time.monotonic()
-        with self._lock:
+        with self._params_lock:
             if now - self._cache_ts > _PARAMS_TTL:
                 self._cache = self._load_params()
                 self._cache_ts = now
             return self._cache
 
+    # ── Model loading ─────────────────────────────────────────────────────────
+
+    def preload(self, model_name: str) -> None:
+        """Start loading model in the background; no-op if already loaded/loading."""
+        if self._model is not None and self._model_name == model_name:
+            return
+        if self._model_load_lock.locked():
+            return  # already loading something
+        threading.Thread(
+            target=self._load_model,
+            args=(model_name,),
+            daemon=True,
+            name=f"WhisperPreload-{model_name}",
+        ).start()
+
+    def _load_model(self, model_name: str) -> None:
+        with self._model_load_lock:
+            if self._model is not None and self._model_name == model_name:
+                return  # loaded by the time we got the lock
+            try:
+                import whisper
+                voice_status.set_loading(model_name)
+                logger.info("Loading Whisper model '%s' …", model_name)
+                model = whisper.load_model(model_name)
+                self._model = model
+                self._model_name = model_name
+                voice_status.set_ready(model_name)
+                logger.info("Whisper '%s' ready", model_name)
+            except Exception as e:
+                logger.warning("Whisper model load failed: %s", e)
+                voice_status.set_idle()
+
     def _get_whisper(self, model_name: str):
-        if self._model is None or self._model_name != model_name:
-            import whisper
-            logger.info("Loading Whisper model '%s' …", model_name)
-            self._model = whisper.load_model(model_name)
-            self._model_name = model_name
-            logger.info("Whisper '%s' ready", model_name)
+        """Return the loaded model, blocking until it is ready."""
+        if self._model is not None and self._model_name == model_name:
+            return self._model
+        # Kick off loading (or wait if already in progress)
+        self._load_model(model_name)
+        if self._model is None:
+            raise RuntimeError(f"Failed to load Whisper model '{model_name}'")
         return self._model
 
     # ── Main loop ─────────────────────────────────────────────────────────────
@@ -107,7 +145,6 @@ class VoiceController:
             pyautogui.hotkey("ctrl", "v", _pause=False)
             logger.info("Typed via clipboard: %r", text)
         except ImportError:
-            # Fallback: pyautogui write (ASCII only, slower)
             try:
                 pyautogui.write(text, interval=0.02, _pause=False)
             except Exception as e:

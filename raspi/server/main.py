@@ -24,6 +24,7 @@ from server.models import (
     IronmanParams,
     VoiceSettings,
 )
+import voice_engine.status as voice_status
 from server.startup import run_uvicorn_with_port_retry
 from server.streamer import frame_hub
 from server.discovery import register_mdns_service, get_local_ip
@@ -215,7 +216,12 @@ def get_voice_settings():
 @app.post("/voice-settings")
 def post_voice_settings(settings: VoiceSettings):
     file.save_voice_settings(settings.model_dump())
+    voice_status.request_preload(settings.model)
     return {"status": "saved"}
+
+@app.get("/voice-status")
+def get_voice_status():
+    return voice_status.get()
 
 # -------------- Main --------------
 if __name__ == "__main__":

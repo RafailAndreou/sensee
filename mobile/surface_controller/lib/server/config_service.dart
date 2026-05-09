@@ -265,6 +265,22 @@ Future<Map<String, dynamic>?> loadVoiceSettings() async {
   }
 }
 
+Future<Map<String, dynamic>?> loadVoiceStatus() async {
+  try {
+    final client = await getServerClient();
+    if (client == null) return null;
+    final response = await http
+        .get(client.voiceStatusUri)
+        .timeout(const Duration(seconds: 3));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 Future<bool> saveVoiceSettings(Map<String, dynamic> settings) async {
   try {
     final client = await getServerClient();

@@ -28,7 +28,12 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
   String _language = 'en';
   bool _loading = true;
   bool _saving = false;
-  Timer? _debounce;
+  Timer? _saveDebounce;
+
+  // Model download status
+  String _modelStatus = 'idle'; // idle | loading | ready
+  String? _loadedModel;
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -38,7 +43,8 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _saveDebounce?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
@@ -52,11 +58,38 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
         _language = data['language'] as String? ?? 'en';
       }
     });
+    _refreshStatus();
+  }
+
+  Future<void> _refreshStatus() async {
+    final status = await loadVoiceStatus();
+    if (!mounted) return;
+    setState(() {
+      _modelStatus = status?['status'] as String? ?? 'idle';
+      _loadedModel = status?['model'] as String?;
+    });
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      final status = await loadVoiceStatus();
+      if (!mounted) return;
+      final s = status?['status'] as String? ?? 'idle';
+      final m = status?['model'] as String?;
+      setState(() {
+        _modelStatus = s;
+        _loadedModel = m;
+      });
+      if (s == 'ready' && m == _model) {
+        _pollTimer?.cancel();
+      }
+    });
   }
 
   void _scheduleSave() {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), _save);
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(const Duration(milliseconds: 400), _save);
   }
 
   Future<void> _save() async {
@@ -69,7 +102,15 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
       'language': _language,
     });
     if (mounted) setState(() => _saving = false);
+    // Server triggers preload on POST; start polling until ready
+    _startPolling();
   }
+
+  bool get _isModelDownloading =>
+      _modelStatus == 'loading' && _loadedModel == _model;
+
+  bool get _isModelReady =>
+      _modelStatus == 'ready' && _loadedModel == _model;
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +147,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
                   children: [
                     _sectionHeader(t('voice_section_model')),
                     const SizedBox(height: 12),
+                    // ── Model picker ──────────────────────────────
                     _DropdownRow(
                       label: t('voice_model_label'),
                       value: _model,
@@ -116,11 +158,20 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
                               ))
                           .toList(),
                       onChanged: (v) {
-                        if (v != null) setState(() => _model = v);
+                        if (v == null) return;
+                        setState(() => _model = v);
                         _scheduleSave();
                       },
                     ),
+                    // ── Download status badge ─────────────────────
+                    const SizedBox(height: 10),
+                    _ModelStatusBadge(
+                      isDownloading: _isModelDownloading,
+                      isReady: _isModelReady,
+                      modelName: _model,
+                    ),
                     const SizedBox(height: 8),
+                    // ── Language picker ───────────────────────────
                     _DropdownRow(
                       label: t('voice_language_label'),
                       value: _language,
@@ -139,21 +190,21 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
                     _sectionHeader('HOW IT WORKS'),
                     const SizedBox(height: 12),
                     _InfoCard(
+                      icon: Icons.mouse,
+                      text:
+                          'Click inside any text field (search bar, address bar, chat…)',
+                    ),
+                    const SizedBox(height: 8),
+                    _InfoCard(
                       icon: Icons.mic,
                       text:
-                          'Click inside any text field (search bar, browser address bar, chat…), then speak.',
+                          'Speak — Whisper transcribes after you stop talking',
                     ),
                     const SizedBox(height: 8),
                     _InfoCard(
                       icon: Icons.keyboard,
                       text:
-                          'When you stop talking, Whisper transcribes your speech and types it at the cursor position.',
-                    ),
-                    const SizedBox(height: 8),
-                    _InfoCard(
-                      icon: Icons.speed,
-                      text:
-                          'Tiny is fastest and works well for short phrases. Use Small for longer, complex sentences.',
+                          'The transcribed text is pasted at the cursor position',
                     ),
                     const SizedBox(height: 32),
                   ],
@@ -171,6 +222,73 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
         fontWeight: FontWeight.w700,
         color: Colors.green,
         letterSpacing: 0.8,
+      ),
+    );
+  }
+}
+
+class _ModelStatusBadge extends StatelessWidget {
+  final bool isDownloading;
+  final bool isReady;
+  final String modelName;
+
+  const _ModelStatusBadge({
+    required this.isDownloading,
+    required this.isReady,
+    required this.modelName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isDownloading && !isReady) return const SizedBox.shrink();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isDownloading ? Colors.orange : Colors.green;
+    final bg = isDownloading
+        ? (isDark ? const Color(0xFF2D1F00) : const Color(0xFFFFF3E0))
+        : (isDark ? const Color(0xFF0D2A1A) : const Color(0xFFE8F5E9));
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isDownloading) ...[
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Downloading $modelName…',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.orange,
+              ),
+            ),
+          ] else ...[
+            Icon(Icons.check_circle, size: 16, color: Colors.green),
+            const SizedBox(width: 6),
+            Text(
+              '$modelName ready',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.green,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

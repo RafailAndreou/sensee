@@ -413,6 +413,9 @@ export async function renderVoiceSettings() {
   let s = { enabled: false, model: 'tiny', language: 'en' };
   try { const d = await api.get('/voice-settings'); if (d && typeof d === 'object') Object.assign(s, d); } catch {}
 
+  let vs = { status: 'idle', model: null };
+  try { vs = await api.get('/voice-status'); } catch {}
+
   main.innerHTML = `
     <div class="view">
       <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
@@ -434,6 +437,7 @@ export async function renderVoiceSettings() {
             <option value="base"  ${s.model === 'base'  ? 'selected' : ''}>${escHtml(t('Base (~74 MB)'))}</option>
             <option value="small" ${s.model === 'small' ? 'selected' : ''}>${escHtml(t('Small — best accuracy (~244 MB)'))}</option>
           </select>
+          <div id="vc-model-status" class="vc-model-status"></div>
         </div>
 
         <div class="field-group">
@@ -455,6 +459,43 @@ export async function renderVoiceSettings() {
 
   document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
 
+  // ── Model status badge ─────────────────────────────────────────────────────
+  function updateStatusBadge(status, model) {
+    const el = document.getElementById('vc-model-status');
+    if (!el) return;
+    const selected = document.getElementById('vc-model')?.value;
+    if (status === 'loading' && model === selected) {
+      el.innerHTML = `<span class="vc-status-badge vc-status-loading"><span class="spinner-xs"></span> ${escHtml(t('Downloading'))} ${escHtml(model)}…</span>`;
+    } else if (status === 'ready' && model === selected) {
+      el.innerHTML = `<span class="vc-status-badge vc-status-ready">✓ ${escHtml(model)} ${escHtml(t('ready'))}</span>`;
+    } else {
+      el.innerHTML = '';
+    }
+  }
+
+  updateStatusBadge(vs.status, vs.model);
+
+  // ── Poll while loading ─────────────────────────────────────────────────────
+  let pollInterval = null;
+  function startPolling() {
+    stopPolling();
+    pollInterval = setInterval(async () => {
+      try {
+        const st = await api.get('/voice-status');
+        updateStatusBadge(st.status, st.model);
+        if (st.status === 'ready' && st.model === document.getElementById('vc-model')?.value) {
+          stopPolling();
+        }
+      } catch {}
+    }, 2000);
+  }
+  function stopPolling() {
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  }
+
+  if (vs.status === 'loading') startPolling();
+
+  // ── Save ───────────────────────────────────────────────────────────────────
   let saveTimer = null;
   function scheduleSave() {
     clearTimeout(saveTimer);
@@ -465,6 +506,8 @@ export async function renderVoiceSettings() {
           model:    document.getElementById('vc-model').value,
           language: document.getElementById('vc-lang').value,
         });
+        // Server triggers preload on POST — start polling
+        startPolling();
       } catch {}
     }, 400);
   }
