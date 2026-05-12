@@ -87,6 +87,7 @@ def delete_gesture_settings() -> None:
 
 _IRONMAN_DEFAULTS = {
     "enabled": False,
+    "always_track": False,
     "gain": 5000,
     "damp": 50,
     "sensitivity": 3,

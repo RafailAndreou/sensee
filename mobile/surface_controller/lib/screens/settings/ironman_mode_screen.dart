@@ -50,6 +50,7 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
   double _steps = 10;
   double _delayMs = 1.0;
   double _scroll = 10;
+  bool _alwaysTrack = false;
   Map<String, String> _gestureMap = {};
 
   bool _loading = true;
@@ -80,6 +81,7 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
         _steps       = (data['steps'] as num?)?.toDouble() ?? 10;
         _delayMs     = ((data['delay'] as num?)?.toDouble() ?? 0.001) * 1000;
         _scroll      = (data['scroll'] as num?)?.toDouble() ?? 10;
+        _alwaysTrack = (data['always_track'] as bool?) ?? false;
         final raw = data['gesture_map'];
         if (raw is Map) {
           _gestureMap = raw.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
@@ -110,6 +112,7 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
       'steps':       _steps.round(),
       'delay':       double.parse((_delayMs / 1000).toStringAsFixed(4)),
       'scroll':      _scroll.round(),
+      'always_track': _alwaysTrack,
       'gesture_map': _gestureMap,
     });
     if (mounted) setState(() => _saving = false);
@@ -148,6 +151,16 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
                   children: [
                     _sectionHeader(t('ironman_section_motion')),
                     const SizedBox(height: 12),
+                    _AlwaysTrackTile(
+                      value: _alwaysTrack,
+                      label: t('ironman_always_track_label'),
+                      hint: t('ironman_always_track_hint'),
+                      onChanged: (v) {
+                        setState(() => _alwaysTrack = v);
+                        _scheduleSave();
+                      },
+                    ),
+                    const SizedBox(height: 8),
                     _ParamSlider(
                       label: t('ironman_gain_label'),
                       hint: t('ironman_gain_hint'),
@@ -282,6 +295,57 @@ class _ParamSlider extends StatelessWidget {
               activeColor: Colors.blue,
               onChanged: onChanged,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AlwaysTrackTile extends StatelessWidget {
+  final bool value;
+  final String label;
+  final String hint;
+  final ValueChanged<bool> onChanged;
+
+  const _AlwaysTrackTile({
+    required this.value,
+    required this.label,
+    required this.hint,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF7F9FC),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(hint,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).textTheme.bodySmall?.color)),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            activeColor: Colors.blue,
+            onChanged: onChanged,
           ),
         ],
       ),

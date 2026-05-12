@@ -130,30 +130,42 @@ class GestureApp:
             self.enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms)
 
     def _feed_ironman_mode(self, snapshot, multi_hand_landmarks) -> None:
-        if not snapshot or not snapshot.gestures or not multi_hand_landmarks:
+        if not multi_hand_landmarks:
             return
-        for hand_idx, gesture_list in enumerate(snapshot.gestures):
-            if not gesture_list or hand_idx >= len(multi_hand_landmarks):
-                continue
-            action_key = self.cursor_controller.resolve_action(gesture_list[0].category_name)
-            if action_key is None:
-                continue
-            if action_key == "move_cursor":
-                tip = multi_hand_landmarks[hand_idx].landmark[8]
-                self.cursor_controller.feed(tip.x, tip.y)
-                return
-            if action_key == "scroll_up":
-                self.cursor_controller.feed_scroll_up()
-                return
-            if action_key == "scroll_down":
-                self.cursor_controller.feed_scroll_down()
-                return
-            if action_key == "scroll":
-                wrist = multi_hand_landmarks[hand_idx].landmark[0]
-                self.cursor_controller.feed_scroll(wrist.x, wrist.y)
-                return
-            self.cursor_controller.fire_action(action_key)
+
+        params = self.cursor_controller.get_params()
+        if not params.get("enabled", False):
             return
+
+        always_track = params.get("always_track", False)
+
+        if snapshot and snapshot.gestures:
+            for hand_idx, gesture_list in enumerate(snapshot.gestures):
+                if not gesture_list or hand_idx >= len(multi_hand_landmarks):
+                    continue
+                action_key = self.cursor_controller.resolve_action(gesture_list[0].category_name)
+                if action_key is None:
+                    continue
+                if action_key == "move_cursor":
+                    tip = multi_hand_landmarks[hand_idx].landmark[8]
+                    self.cursor_controller.feed(tip.x, tip.y)
+                    return
+                if action_key == "scroll_up":
+                    self.cursor_controller.feed_scroll_up()
+                    return
+                if action_key == "scroll_down":
+                    self.cursor_controller.feed_scroll_down()
+                    return
+                if action_key == "scroll":
+                    wrist = multi_hand_landmarks[hand_idx].landmark[0]
+                    self.cursor_controller.feed_scroll(wrist.x, wrist.y)
+                    return
+                self.cursor_controller.fire_action(action_key)
+                break
+
+        if always_track:
+            tip = multi_hand_landmarks[0].landmark[8]
+            self.cursor_controller.feed(tip.x, tip.y)
 
     def run(self):
         self.wake_gate.prime()

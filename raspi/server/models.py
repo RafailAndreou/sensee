@@ -40,6 +40,7 @@ class CameraSettings(BaseModel):
 
 class IronmanParams(BaseModel):
     enabled: bool = False
+    always_track: bool = False
     gain: int = 5000
     damp: int = 50
     sensitivity: int = 3

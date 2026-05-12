@@ -43,6 +43,9 @@ const Map<String, Map<String, String>> _strings = {
     'ironman_scroll_hint': 'Scroll sensitivity',
     'ironman_section_motion': 'MOTION PARAMETERS',
     'ironman_section_gestures': 'GESTURE ASSIGNMENTS',
+    'ironman_always_track_label': 'Always Track Hand',
+    'ironman_always_track_hint':
+        'Cursor follows your hand without needing a gesture',
     'ironman_configure': 'Configure parameters & gestures',
     'voice_title': 'Voice Control',
     'voice_description': 'Whisper-powered voice commands',
@@ -201,6 +204,9 @@ const Map<String, Map<String, String>> _strings = {
     'ironman_scroll_hint': 'Ευαισθησία κύλισης',
     'ironman_section_motion': 'ΠΑΡΑΜΕΤΡΟΙ ΚΙΝΗΣΗΣ',
     'ironman_section_gestures': 'ΑΝΑΘΕΣΕΙΣ ΧΕΙΡΟΝΟΜΙΩΝ',
+    'ironman_always_track_label': 'Συνεχής Παρακολούθηση Χεριού',
+    'ironman_always_track_hint':
+        'Ο κέρσορας ακολουθεί το χέρι χωρίς χειρονομία',
     'ironman_configure': 'Διαμόρφωση παραμέτρων & χειρονομιών',
     'voice_title': 'Φωνητικός Έλεγχος',
     'voice_description': 'Φωνητικές εντολές με Whisper',
