@@ -191,7 +191,10 @@ class GestureApp:
 
         _hand_thread = start_hand_movement_monitor(self.wrist_queue, send_msg)
 
-        cap, source_label = open_camera_capture(file.load_camera_settings())
+        camera_settings = file.load_camera_settings()
+        show_preview = bool(camera_settings.get("showPreview", True))
+
+        cap, source_label = open_camera_capture(camera_settings)
         if not cap.isOpened():
             logger.error("Failed to open camera (%s).", source_label)
             cap.release()
@@ -215,7 +218,7 @@ class GestureApp:
                 snapshot = self._get_latest_snapshot()
                 multi_hand_landmarks = snapshot_to_multi_hand_landmarks(snapshot)
 
-                if cv2.waitKey(1) & 0xFF in (ord("q"), ord("Q")):
+                if show_preview and cv2.waitKey(1) & 0xFF in (ord("q"), ord("Q")):
                     break
 
                 if multi_hand_landmarks:
@@ -255,13 +258,15 @@ class GestureApp:
 
                 set_frame_from_bgr(frame)
                 self._update_latest_frame_ts(timestamp_ms)
-                cv2.imshow("MediaPipe Hands", frame)
+                if show_preview:
+                    cv2.imshow("MediaPipe Hands", frame)
 
         finally:
             logger.info("Shutting down gracefully...")
             cap.release()
             recognizer.close()
-            cv2.destroyAllWindows()
+            if show_preview:
+                cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

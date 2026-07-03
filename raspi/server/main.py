@@ -193,7 +193,9 @@ def get_gesture_settings():
 
 @app.post("/camera-settings")
 def post_camera_settings(settings: CameraSettings):
-    file.save_camera_settings(settings.model_dump())
+    current = file.load_camera_settings()
+    incoming = settings.model_dump(exclude_unset=True)
+    file.save_camera_settings({**current, **incoming})
     return {"status": "saved"}
 
 @app.get("/camera-settings")

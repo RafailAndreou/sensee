@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import sys
 
 from gesture_engine.log import get_logger
@@ -21,6 +22,22 @@ GESTURE_SETTINGS_PATH = os.path.join(_data_dir(), "gesture_settings.json")
 CAMERA_SETTINGS_PATH = os.path.join(_data_dir(), "camera_settings.json")
 IRONMAN_PARAMS_PATH = os.path.join(_data_dir(), "ironman_params.json")
 VOICE_SETTINGS_PATH = os.path.join(_data_dir(), "voice_settings.json")
+
+
+def _default_show_preview() -> bool:
+    return platform.system().lower() == "windows"
+
+
+def _default_camera_settings() -> dict:
+    return {
+        "useNetwork": False,
+        "streamUrl": "",
+        "cameraIndex": 0,
+        "width": 640,
+        "height": 480,
+        "fps": 30,
+        "showPreview": _default_show_preview(),
+    }
 
 def save_configure_json(configuration: list):
     with open(CONFIG_FILE_PATH, "w+") as f:
@@ -188,11 +205,15 @@ def save_camera_settings(settings: dict) -> None:
 
 
 def load_camera_settings() -> dict:
+    defaults = _default_camera_settings()
     try:
         if not os.path.exists(CAMERA_SETTINGS_PATH):
-            return {"useNetwork": False, "streamUrl": ""}
+            return defaults
         with open(CAMERA_SETTINGS_PATH, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+            if not isinstance(data, dict):
+                return defaults
+            return {**defaults, **data}
     except Exception as e:
         logger.warning("Error loading camera settings: %s", e)
-        return {"useNetwork": False, "streamUrl": ""}
+        return defaults

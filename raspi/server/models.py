@@ -36,6 +36,11 @@ class GestureSettings(BaseModel):
 class CameraSettings(BaseModel):
     useNetwork: bool = False
     streamUrl: str = ""
+    cameraIndex: int = 0
+    width: int = 640
+    height: int = 480
+    fps: int = 30
+    showPreview: bool | None = None
 
 
 class IronmanParams(BaseModel):
