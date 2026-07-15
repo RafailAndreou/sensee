@@ -192,7 +192,7 @@ class GestureApp:
         _hand_thread = start_hand_movement_monitor(self.wrist_queue, send_msg)
 
         camera_settings = file.load_camera_settings()
-        show_preview = bool(camera_settings.get("showPreview", True))
+        show_preview = bool(camera_settings.get("showPreview", False))
 
         cap, source_label = open_camera_capture(camera_settings)
         if not cap.isOpened():
