@@ -3,7 +3,7 @@ import { api } from './api.js';
 import { escHtml, escAttr } from './utils.js';
 import { showModal, toast } from './ui.js';
 
-export async function showPairingWizard(draft) {
+export async function showPairingWizard(draft, onNoPendingFlows) {
   showModal(close => {
     const modal = document.createElement('div');
     modal.className = 'modal';
@@ -20,7 +20,13 @@ export async function showPairingWizard(draft) {
     api.get('/ha/discovered').then(({ flows }) => {
       const body = modal.querySelector('.modal-body');
       if (!flows || flows.length === 0) {
-        body.innerHTML = `<div class="banner banner-warn">${escHtml(t('No devices discovered. Make sure devices are in pairing mode.'))}</div>`;
+        body.innerHTML = `
+          <div class="banner banner-warn">${escHtml(t('No new devices are waiting for pairing.'))}</div>
+          <button class="btn btn-primary" id="use-existing-device">${escHtml(t('Use Existing HA Device'))}</button>`;
+        body.querySelector('#use-existing-device').addEventListener('click', () => {
+          close();
+          onNoPendingFlows?.();
+        });
         return;
       }
       body.innerHTML = `

@@ -177,7 +177,9 @@ class GestureApp:
             sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))
         )
         model_path = os.path.join(script_dir, "assets", "gesture_recognizer.task")
-        base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
+        # Python supports Unicode paths that MediaPipe's Windows file loader cannot open.
+        with open(model_path, "rb") as model_file:
+            base_options = mp.tasks.BaseOptions(model_asset_buffer=model_file.read())
 
         options = mp.tasks.vision.GestureRecognizerOptions(
             base_options=base_options,

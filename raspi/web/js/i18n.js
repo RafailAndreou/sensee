@@ -90,6 +90,8 @@ export const TRANSLATIONS_EL = {
   'Select brand from library': 'Επιλογή μάρκας από τη βιβλιοθήκη',
   'Pair New TV': 'Σύζευξη νέας TV',
   'Discover and pair via Home Assistant': 'Ανακάλυψη και σύζευξη μέσω Home Assistant',
+  'No new devices are waiting for pairing.': 'Δεν υπάρχουν νέες συσκευές σε αναμονή για σύζευξη.',
+  'Use Existing HA Device': 'Χρήση υπάρχουσας συσκευής HA',
 
   'Select HA Device': 'Επιλογή Συσκευής HA',
   'Loading devices…': 'Φόρτωση συσκευών…',

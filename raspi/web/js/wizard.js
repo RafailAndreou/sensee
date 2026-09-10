@@ -129,7 +129,7 @@ function showConnectionMethodStep(draft, editing) {
       draft.connectionType = 'ir'; close(); showBrandStep(draft, editing);
     });
     modal.querySelector('#method-pair')?.addEventListener('click', () => {
-      close(); showPairingWizard(draft);
+      close(); showPairingWizard(draft, () => showSmartDeviceStep(draft, editing));
     });
     return modal;
   });
