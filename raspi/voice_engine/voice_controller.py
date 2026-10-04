@@ -236,7 +236,7 @@ class VoiceController:
             elif recording:
                 chunks.append(data)
                 silence_count += 1
-                if silence_count >= _SILENCE_CHUNKS or len(chunks) >= _MAX_CHUNKS:
-                    break
+            if silence_count >= _SILENCE_CHUNKS or len(chunks) >= _MAX_CHUNKS:
+                break
 
         return np.concatenate(chunks) if chunks else None

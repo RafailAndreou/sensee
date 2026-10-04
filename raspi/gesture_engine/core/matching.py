@@ -31,12 +31,27 @@ def normalized_parts(value):
 
 @lru_cache(maxsize=128)
 def _canonical_from_normalized(normalized: str):
-    return _GESTURE_ALIAS_MAP.get(normalized, normalized)
+    parts = _normalized_parts_tuple(normalized)
+    compact = " ".join(parts)
+    ordered = " ".join(sorted(parts))
+    return _GESTURE_ALIAS_MAP.get(compact, _GESTURE_ALIAS_MAP.get(ordered, ordered))
 
 
 def canonical_gesture_name(value):
     normalized = normalize_name(value)
     return _canonical_from_normalized(normalized)
+
+
+@lru_cache(maxsize=128)
+def canonical_hand_name(value: str) -> str:
+    normalized = str(value).strip().lower()
+    if not normalized or "both" in normalized:
+        return "both hands"
+    if "left" in normalized:
+        return "left hand"
+    if "right" in normalized:
+        return "right hand"
+    return normalized
 
 
 def gesture_matches(
@@ -72,7 +87,7 @@ def find_matched_config(active_configs, gesture_name, detected_hand="Unknown"):
     detected_parts_sorted = tuple(sorted(detected_parts)) if len(detected_parts) > 1 else None
 
     for config_item in active_configs:
-        config_hand = str(config_item.get("hand", "")).strip().lower()
+        config_hand = canonical_hand_name(str(config_item.get("hand", "")))
 
         hand_match = False
         if "both" in config_hand or not config_hand:

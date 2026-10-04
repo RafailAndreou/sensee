@@ -109,7 +109,7 @@ export async function renderHASettings() {
     const btn = document.getElementById('ha-save');
     btn.disabled = true; btn.textContent = t('Saving…');
     try {
-      await api.post('/ha/config', { url, token: token || cfg.token });
+      await api.post('/ha/config', { url, ...(token ? { token } : {}) });
       toast(t('Home Assistant configured'), 'success');
       navigate('settings');
     } catch (e) { toast(t('Failed') + ': ' + e.message, 'error'); btn.disabled = false; btn.textContent = t('Save Configuration'); }

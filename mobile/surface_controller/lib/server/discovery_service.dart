@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:multicast_dns/multicast_dns.dart';
+import 'first_success.dart';
 
 const int _discoveryPort = 54321;
 const String _discoveryToken = 'SENSEE_DISCOVER';
@@ -72,7 +73,9 @@ Future<bool> _probeClient(ServerClient client, {int timeoutMs = 900}) async {
     final response = await http
         .get(client.pingUri)
         .timeout(Duration(milliseconds: timeoutMs));
-    return response.statusCode == 200;
+    if (response.statusCode != 200) return false;
+    final body = jsonDecode(response.body);
+    return body is Map && body['status'] == 'ok' && body['service'] == 'sensee';
   } catch (_) {
     return false;
   }
@@ -129,7 +132,7 @@ Future<String?> discoverServer({int timeoutMs = 3000}) async {
       }
     });
 
-    return completer.future;
+    return await completer.future;
   } catch (_) {
     socket?.close();
     return null;
@@ -138,9 +141,9 @@ Future<String?> discoverServer({int timeoutMs = 3000}) async {
 
 Future<String?> discoverServerMDNS({int timeoutMs = 3000}) async {
   final client = MDnsClient();
-  await client.start();
 
   try {
+    await client.start();
     await for (final PtrResourceRecord ptr
         in client
             .lookup<PtrResourceRecord>(
@@ -193,7 +196,10 @@ Future<String?> _discoverServerSmartInternal() async {
   // 2. The "Smart" part: Try mDNS first (Fast & Reliable)
   debugPrint("Attempting mDNS discovery...");
   final mdnsResult = await discoverServerMDNS(timeoutMs: 1500);
-  if (mdnsResult != null) {
+  if (mdnsResult != null &&
+      await _probeClient(
+        ServerClient.fromConfigurationUri(Uri.parse(mdnsResult)),
+      )) {
     _cachedClient = ServerClient.fromConfigurationUri(Uri.parse(mdnsResult));
     _lastProbeOk = DateTime.now();
     debugPrint("Found via mDNS: $mdnsResult");
@@ -203,7 +209,10 @@ Future<String?> _discoverServerSmartInternal() async {
   // 3. Try UDP broadcast discovery before falling back to port scanning.
   debugPrint("mDNS failed, trying UDP discovery...");
   final udpResult = await discoverServer(timeoutMs: 1200);
-  if (udpResult != null) {
+  if (udpResult != null &&
+      await _probeClient(
+        ServerClient.fromConfigurationUri(Uri.parse(udpResult)),
+      )) {
     _cachedClient = ServerClient.fromConfigurationUri(Uri.parse(udpResult));
     _lastProbeOk = DateTime.now();
     debugPrint("Found via UDP discovery: $udpResult");
@@ -223,16 +232,16 @@ Future<String?> _discoverServerSmartInternal() async {
 
   // Fire them all concurrently and catch the first one that responds
   try {
-    final winningClient = await Future.any(
+    final winningClient = await firstSuccessful<ServerClient>(
       candidates.map((candidate) async {
         if (await _probeClient(candidate)) {
           return candidate;
         }
-        // Throwing an error removes this failed future from Future.any()
-        throw Exception('Probe failed');
+        return null;
       }),
     );
 
+    if (winningClient == null) return null;
     _cachedClient = winningClient;
     _lastProbeOk = DateTime.now();
     debugPrint("Found via fallback: ${winningClient.configUri}");
@@ -254,15 +263,20 @@ Future<bool> isServerReachable({
       return true;
     }
 
-    for (final host in _commonServerHosts) {
-      for (final port in _commonServerPorts) {
-        final candidate = ServerClient('http://$host:$port');
-        if (await _probeClient(candidate, timeoutMs: timeoutMs)) {
-          _cachedClient = candidate;
-          _lastProbeOk = DateTime.now();
-          return true;
-        }
-      }
+    final winner = await firstSuccessful<ServerClient>([
+      for (final host in _commonServerHosts)
+        for (final port in _commonServerPorts)
+          (() async {
+            final candidate = ServerClient('http://$host:$port');
+            return await _probeClient(candidate, timeoutMs: timeoutMs)
+                ? candidate
+                : null;
+          })(),
+    ]);
+    if (winner != null) {
+      _cachedClient = winner;
+      _lastProbeOk = DateTime.now();
+      return true;
     }
 
     if (!discoverIfUnknown) {

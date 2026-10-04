@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
@@ -12,6 +12,7 @@ from server import config_cache, file
 from server import homeassistant
 from server.config_validation import validate_configuration_payload
 from server.events import send_msg
+from server.access import COOKIE_NAME, PairingLimiter, load_pairing_key, matches_key
 
 logger = get_logger(__name__)
 from server.models import (
@@ -23,6 +24,7 @@ from server.models import (
     GestureSettings,
     IronmanParams,
     VoiceSettings,
+    PairRequest,
 )
 import voice_engine.status as voice_status
 from server.startup import run_uvicorn_with_port_retry
@@ -65,7 +67,11 @@ def _mask_token(token: str) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.sensee = AppState()
+    app.state.sensee = AppState(current_config=config_cache.get_loaded_config())
+    app.state.pairing_key = load_pairing_key()
+    app.state.pairing_limiter = PairingLimiter()
+    # Show only on the local console, never in application log files or URLs.
+    print(f"Sensee pairing key: {app.state.pairing_key}", flush=True)
     port = int(os.environ.get("SENSEE_PORT", 8000))
     app.state.mdns_task = asyncio.create_task(register_mdns_service(port))
     yield
@@ -80,6 +86,43 @@ async def lifespan(app: FastAPI):
         logger.info("mDNS service stopped.")
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def require_paired_client(request: Request, call_next):
+    path = request.url.path
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        origin = request.headers.get("origin")
+        expected_origin = f"{request.url.scheme}://{request.url.netloc}"
+        if origin is not None and origin != expected_origin:
+            return JSONResponse({"detail": "Cross-origin writes are not allowed"}, status_code=403)
+    public = path in ("/", "/ping", "/auth/pair") or path.startswith("/web/") or path == "/web"
+    if not public:
+        authorization = request.headers.get("authorization", "")
+        candidate = authorization[7:] if authorization.startswith("Bearer ") else request.cookies.get(COOKIE_NAME, "")
+        if not matches_key(candidate, request.app.state.pairing_key):
+            return JSONResponse({"detail": "Pair this client with Sensee first"}, status_code=401)
+    response = await call_next(request)
+    if not public or path == "/auth/pair":
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.post("/auth/pair")
+def pair_client(payload: PairRequest, request: Request):
+    if not app.state.pairing_limiter.allow():
+        raise HTTPException(status_code=429, detail="Too many pairing attempts; wait a minute")
+    if not matches_key(payload.key, app.state.pairing_key):
+        raise HTTPException(status_code=401, detail="Incorrect pairing key")
+    response = JSONResponse({"status": "paired"})
+    response.set_cookie(COOKIE_NAME, app.state.pairing_key, httponly=True,
+                        samesite="strict", secure=request.url.scheme == "https", max_age=30 * 24 * 3600)
+    return response
+
+
+@app.get("/auth/status")
+def pairing_status():
+    return {"status": "paired"}
 
 # Serve web dashboard (web folder lives one level above the server package)
 _web_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "web"))
@@ -104,16 +147,17 @@ def index():
 
 @app.get("/ping")
 def ping():
-    return {"status": "ok"}
+    return {"status": "ok", "service": "sensee"}
 
 @app.post("/configuration")
 def configure(settings: List[Configuration]):
     incoming_config = [s.model_dump() for s in settings]
     _validate_configuration_or_raise(incoming_config)
 
-    app.state.sensee.current_config = incoming_config
     _log_received_configurations(incoming_config)
-    _persist_configuration(incoming_config)
+    with file.PERSISTENCE_LOCK:
+        _persist_configuration(incoming_config)
+        app.state.sensee.current_config = incoming_config
     return {"status": "configured", "count": len(incoming_config)}
 
 @app.get("/configuration")
@@ -144,7 +188,13 @@ def get_ha_config():
 
 @app.post("/ha/config")
 def post_ha_config(req: HAConfigRequest):
-    file.save_ha_config({"url": req.url, "token": req.token})
+    with file.PERSISTENCE_LOCK:
+        current = file.load_ha_config()
+        token = (req.token or "").strip()
+        # Also protect against older clients posting the displayed mask.
+        if not token or token == _mask_token(current.get("token", "")):
+            token = current.get("token", "")
+        file.save_ha_config({"url": req.url, "token": token})
     homeassistant.refresh_ha_config_cache()
     return {"status": "success"}
 
@@ -169,6 +219,12 @@ def video():
         frame_hub.mjpeg_generator(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+
+@app.get("/preview")
+def preview():
+    return HTMLResponse('<html><body style="margin:0;background:#000"><img src="/video" '
+                        'style="width:100vw;height:100vh;object-fit:contain" alt="Sensee live preview"></body></html>')
 
 @app.post("/event/{name}")
 def post_event(name: str):

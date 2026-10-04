@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
+import 'auth_http.dart' as http;
 import 'package:surface_controller/server/discovery_service.dart';
 
 Future<Map<String, dynamic>?> getHAConfig() async {
@@ -24,7 +24,10 @@ Future<bool> saveHAConfig(String url, String token) async {
     final response = await http.post(
       client.haConfigUri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'url': url, 'token': token}),
+      body: jsonEncode({
+        'url': url,
+        if (token.trim().isNotEmpty) 'token': token.trim(),
+      }),
     );
 
     return response.statusCode == 200;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../../server/auth_http.dart' as http;
 import 'dart:convert';
 import 'package:surface_controller/globals/locale.dart';
 import '../../server/server.dart' as server_sync;

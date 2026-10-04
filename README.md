@@ -63,6 +63,7 @@ The long-term direction is a seamless hardware + software experience where setup
 2. Extract the zip
 3. Run the executable (`sensee.exe`)
 4. The web dashboard will auto-open in your browser, or navigate to `http://sensee.local:8000`
+   Enter the **pairing key** printed in the Sensee engine window. Each browser or mobile app must pair before it can view the camera or change settings. In the mobile app, tap **Pair** on the dashboard banner and enter the same key.
 5. Open Settings and put your Home Assistant URL and token (Home Assistant URL is `http://localhost:8123` by default)
    **If you don't know how to setup Home Assistant check [raspi/docker/dockertutorial.md](raspi/docker/dockertutorial.md) or https://www.home-assistant.io/docs/**
 
@@ -106,12 +107,16 @@ Create a `ha_config.json` file in the server folder with the following format (c
 
 ```json
 {
-  "host": "http://localhost:8123",
+  "url": "http://localhost:8123",
   "token": "YOUR_LONG_LIVED_ACCESS_TOKEN"
 }
 ```
 
-**Don't forget the `http://` or you will get an error — normalization will be added in the future.**
+The engine adds `http://` when the scheme is omitted. Leaving the token field blank in the dashboard or app preserves the saved token.
+
+The pairing key is stored in `raspi/server/access_config.json` during development, or beside the Windows executable. To revoke all paired clients, stop Sensee, delete both `access_config.json` and its `.bak` file, and restart; enter the new key on each client. Keep these files private. Authentication protects access, but plain HTTP does not encrypt traffic; use Sensee on your trusted local network or put it behind HTTPS.
+
+Settings are written atomically and the previous valid save is kept in a `.bak` file. The engine falls back to that backup if the main JSON file is damaged. `SENSEE_DATA_DIR` can override the settings directory.
 
 ### Optional: Home Assistant Container
 
@@ -172,6 +177,7 @@ Run the tests to make sure nothing is broken:
 
 ```powershell
 cd raspi
+pip install -r requirements-test.txt
 python -m unittest discover -s tests -p "test_*.py"
 ```
 

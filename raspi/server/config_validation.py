@@ -1,23 +1,15 @@
-def _normalize_config_value(value: str) -> str:
-    return str(value).strip().lower()
+from gesture_engine.core.matching import canonical_gesture_name, canonical_hand_name
 
 
 def _normalize_hand_value(value: str) -> str:
-    normalized = _normalize_config_value(value)
-    if "both" in normalized:
-        return "both hands"
-    if "left" in normalized:
-        return "left hand"
-    if "right" in normalized:
-        return "right hand"
-    return normalized
+    return canonical_hand_name(str(value))
 
 
 def _find_duplicate_gesture_hand(configs: list[dict]):
     seen: dict[tuple[str, str], dict] = {}
     for config in configs:
-        gesture = _normalize_config_value(config.get("gesture", ""))
-        hand = _normalize_config_value(config.get("hand", ""))
+        gesture = canonical_gesture_name(config.get("gesture", ""))
+        hand = _normalize_hand_value(config.get("hand", ""))
         key = (gesture, hand)
 
         if key in seen:
@@ -31,7 +23,7 @@ def _find_duplicate_gesture_hand(configs: list[dict]):
 def _find_invalid_hand_combination(configs: list[dict]):
     gesture_to_hands: dict[str, set[str]] = {}
     for config in configs:
-        gesture = _normalize_config_value(config.get("gesture", ""))
+        gesture = canonical_gesture_name(config.get("gesture", ""))
         hand = _normalize_hand_value(config.get("hand", ""))
         if not gesture or not hand:
             continue

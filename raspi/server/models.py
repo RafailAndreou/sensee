@@ -1,4 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class PairRequest(BaseModel):
+    key: str = Field(min_length=1, max_length=256)
 
 
 class Configuration(BaseModel):
@@ -14,7 +18,7 @@ class Configuration(BaseModel):
 
 class HAConfigRequest(BaseModel):
     url: str
-    token: str
+    token: str | None = None
 
 
 class HAPairStartRequest(BaseModel):

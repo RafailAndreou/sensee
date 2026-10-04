@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:surface_controller/screens/dashboard/widgets/dashboardnavigation.dart';
 import 'package:surface_controller/server/server.dart' as server_discovery;
+import 'auth_http.dart' as auth;
 
 class VideoPage extends StatefulWidget {
   const VideoPage({super.key});
@@ -22,6 +23,7 @@ class _VideoPageState extends State<VideoPage> {
 
   Future<void> _initControllerAndLoad() async {
     final client = await server_discovery.getServerClient();
+    if (!mounted) return;
     if (client == null) {
       setState(() {
         _loadingMessage = 'Could not discover the Sensee server.';
@@ -29,48 +31,34 @@ class _VideoPageState extends State<VideoPage> {
       return;
     }
 
-    final pageUrl = client.videoUri.toString();
-    final html = _buildVideoPageHtml(pageUrl);
+    final baseUri = Uri.parse(client.baseUrl);
+    final key = await auth.getPairingKey(baseUri);
+    if (!mounted) return;
+    if (key == null || !await auth.isPaired(baseUri)) {
+      if (mounted) {
+        setState(
+          () => _loadingMessage =
+              'Pair with Sensee on the dashboard to view the camera.',
+        );
+      }
+      return;
+    }
+    await WebViewCookieManager().setCookie(
+      WebViewCookie(
+        name: 'sensee_access',
+        value: key,
+        domain: baseUri.host,
+        path: '/',
+      ),
+    );
+    if (!mounted) return;
 
     setState(() {
-      _loadingMessage = 'Loading video from $pageUrl';
+      _loadingMessage = 'Loading video...';
       _controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..loadHtmlString(html);
+        ..setJavaScriptMode(JavaScriptMode.disabled)
+        ..loadRequest(baseUri.resolve('/preview'));
     });
-  }
-
-  String _buildVideoPageHtml(String streamUrl) {
-    return '''
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-    <style>
-      html, body {
-        margin: 0;
-        width: 100%;
-        height: 100%;
-        background: #000;
-        overflow: hidden;
-      }
-      img {
-        width: 100vw;
-        height: 100vh;
-        object-fit: contain;
-        display: block;
-      }
-    </style>
-  </head>
-  <body>
-    <img src="$streamUrl" alt="Sensee live preview" />
-  </body>
-</html>
-''';
   }
 
   @override

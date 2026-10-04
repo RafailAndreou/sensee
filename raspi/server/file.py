@@ -1,10 +1,14 @@
 import json
 import os
 import sys
+import copy
+import tempfile
+import threading
 
 from gesture_engine.log import get_logger
 
 logger = get_logger(__name__)
+PERSISTENCE_LOCK = threading.RLock()
 
 
 # When running as a PyInstaller EXE the bundle root is read-only.
@@ -13,7 +17,7 @@ logger = get_logger(__name__)
 def _data_dir() -> str:
     if getattr(sys, "frozen", False):
         return os.environ.get("SENSEE_DATA_DIR", os.path.dirname(sys.executable))
-    return os.path.dirname(os.path.abspath(__file__))
+    return os.environ.get("SENSEE_DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
 
 HA_CONFIG_PATH = os.path.join(_data_dir(), "ha_config.json")
 CONFIG_FILE_PATH = os.path.join(_data_dir(), "configure.json")
@@ -21,42 +25,78 @@ GESTURE_SETTINGS_PATH = os.path.join(_data_dir(), "gesture_settings.json")
 CAMERA_SETTINGS_PATH = os.path.join(_data_dir(), "camera_settings.json")
 IRONMAN_PARAMS_PATH = os.path.join(_data_dir(), "ironman_params.json")
 VOICE_SETTINGS_PATH = os.path.join(_data_dir(), "voice_settings.json")
+ACCESS_CONFIG_PATH = os.path.join(_data_dir(), "access_config.json")
+
+def _atomic_write(path: str, content: str) -> None:
+    directory = os.path.dirname(os.path.abspath(path))
+    os.makedirs(directory, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=".sensee-", dir=directory)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.remove(temporary)
+
+
+def _save_json(path: str, value) -> None:
+    # Serialize before touching disk: invalid input cannot damage a saved file.
+    content = json.dumps(value, indent=4, ensure_ascii=False, allow_nan=False)
+    with PERSISTENCE_LOCK:
+        try:
+            with open(path, encoding="utf-8") as stream:
+                previous = stream.read()
+            if isinstance(json.loads(previous), type(value)):
+                _atomic_write(path + ".bak", previous)
+        except FileNotFoundError:
+            pass
+        except (json.JSONDecodeError, UnicodeError) as error:
+            logger.warning("Keeping existing backup of damaged %s: %s", path, error)
+        _atomic_write(path, content)
+    logger.info("Settings saved to %s", path)
+
+
+def _load_json(path: str, default):
+    with PERSISTENCE_LOCK:
+        for candidate in (path, path + ".bak"):
+            try:
+                with open(candidate, encoding="utf-8") as stream:
+                    value = json.load(stream)
+                if not isinstance(value, type(default)):
+                    raise ValueError("Unexpected JSON structure")
+                if candidate != path:
+                    logger.warning("Recovered settings from %s", candidate)
+                return value
+            except FileNotFoundError:
+                continue
+            except (OSError, ValueError, UnicodeError) as error:
+                logger.warning("Cannot load %s: %s", candidate, error)
+        return copy.deepcopy(default)
+
 
 def save_configure_json(configuration: list):
-    with open(CONFIG_FILE_PATH, "w+") as f:
-        json.dump(configuration, f)
-        logger.info("Configuration saved to %s", CONFIG_FILE_PATH)
+    _save_json(CONFIG_FILE_PATH, configuration)
+
 
 def load_configure_json() -> list:
-    try:
-        with open(CONFIG_FILE_PATH, "r") as f:
-            content = f.read()
-            configuration = json.loads(content)
-            logger.info("Configuration loaded from %s", CONFIG_FILE_PATH)
-            return configuration
-    except FileNotFoundError:
-        logger.warning("Configuration file not found, returning empty configuration.")
-        return []
+    return _load_json(CONFIG_FILE_PATH, [])
+
 
 def save_ha_config(config: dict):
-    with open(HA_CONFIG_PATH, "w+") as f:
-        json.dump(config, f, indent=4)
-        logger.info("HA configuration saved to %s", HA_CONFIG_PATH)
+    _save_json(HA_CONFIG_PATH, config)
 
 def load_ha_config() -> dict:
     try:
-        if not os.path.exists(HA_CONFIG_PATH):
-            return {"url": "", "token": ""}
-        with open(HA_CONFIG_PATH, "r") as f:
-            return json.load(f)
+        return _load_json(HA_CONFIG_PATH, {"url": "", "token": ""})
     except Exception as e:
         logger.warning("Error loading HA config: %s", e)
         return {"url": "", "token": ""}
 
 def save_gesture_settings(settings: dict) -> None:
-    with open(GESTURE_SETTINGS_PATH, "w+") as f:
-        json.dump(settings, f, indent=4)
-        logger.info("Gesture settings saved to %s", GESTURE_SETTINGS_PATH)
+    _save_json(GESTURE_SETTINGS_PATH, settings)
 
 
 def load_gesture_settings() -> dict:
@@ -67,22 +107,20 @@ def load_gesture_settings() -> dict:
         "selectedGesture": "Open Hand",
     }
     try:
-        if not os.path.exists(GESTURE_SETTINGS_PATH):
-            return defaults
-        with open(GESTURE_SETTINGS_PATH, "r") as f:
-            return json.load(f)
+        return _load_json(GESTURE_SETTINGS_PATH, defaults)
     except Exception as e:
         logger.warning("Error loading gesture settings: %s", e)
         return defaults
 
 
 def delete_gesture_settings() -> None:
-    try:
-        if os.path.exists(GESTURE_SETTINGS_PATH):
-            os.remove(GESTURE_SETTINGS_PATH)
-            logger.info("Gesture settings deleted from %s", GESTURE_SETTINGS_PATH)
-    except Exception as e:
-        logger.warning("Error deleting gesture settings: %s", e)
+    # Removing both files prevents recovery from re-enabling the wake gate.
+    with PERSISTENCE_LOCK:
+        for path in (GESTURE_SETTINGS_PATH, GESTURE_SETTINGS_PATH + ".bak"):
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                continue
 
 
 _IRONMAN_DEFAULTS = {
@@ -122,38 +160,33 @@ def _copy_ironman_defaults() -> dict:
 
 def load_ironman_params() -> dict:
     try:
-        if not os.path.exists(IRONMAN_PARAMS_PATH):
-            return _copy_ironman_defaults()
-        with open(IRONMAN_PARAMS_PATH, "r") as f:
-            data = json.load(f)
-            merged = _copy_ironman_defaults()
-            merged.update(data)
+        data = _load_json(IRONMAN_PARAMS_PATH, {})
+        merged = _copy_ironman_defaults()
+        merged.update(data)
 
-            raw_map = data.get("gesture_map")
-            if isinstance(raw_map, dict):
-                gesture_map = {
-                    **_IRONMAN_DEFAULTS["gesture_map"],
-                    **raw_map,
-                }
-            else:
-                gesture_map = dict(_IRONMAN_DEFAULTS["gesture_map"])
+        raw_map = data.get("gesture_map")
+        if isinstance(raw_map, dict):
+            gesture_map = {
+                **_IRONMAN_DEFAULTS["gesture_map"],
+                **raw_map,
+            }
+        else:
+            gesture_map = dict(_IRONMAN_DEFAULTS["gesture_map"])
 
-            legacy_scroll = gesture_map.pop("scroll", "")
-            if legacy_scroll and not gesture_map.get("scroll_up"):
-                gesture_map["scroll_up"] = legacy_scroll
-            gesture_map.setdefault("scroll_down", "")
+        legacy_scroll = gesture_map.pop("scroll", "")
+        if legacy_scroll and not gesture_map.get("scroll_up"):
+            gesture_map["scroll_up"] = legacy_scroll
+        gesture_map.setdefault("scroll_down", "")
 
-            merged["gesture_map"] = gesture_map
-            return merged
+        merged["gesture_map"] = gesture_map
+        return merged
     except Exception as e:
         logger.warning("Error loading Ironman params: %s", e)
         return _copy_ironman_defaults()
 
 
 def save_ironman_params(params: dict) -> None:
-    with open(IRONMAN_PARAMS_PATH, "w+") as f:
-        json.dump(params, f, indent=4)
-        logger.info("Ironman params saved to %s", IRONMAN_PARAMS_PATH)
+    _save_json(IRONMAN_PARAMS_PATH, params)
 
 
 _VOICE_DEFAULTS: dict = {
@@ -165,34 +198,24 @@ _VOICE_DEFAULTS: dict = {
 
 def load_voice_settings() -> dict:
     try:
-        if not os.path.exists(VOICE_SETTINGS_PATH):
-            return dict(_VOICE_DEFAULTS)
-        with open(VOICE_SETTINGS_PATH, "r") as f:
-            data = json.load(f)
-            return {**_VOICE_DEFAULTS, **data}
+        data = _load_json(VOICE_SETTINGS_PATH, {})
+        return {**_VOICE_DEFAULTS, **data}
     except Exception as e:
         logger.warning("Error loading voice settings: %s", e)
         return dict(_VOICE_DEFAULTS)
 
 
 def save_voice_settings(settings: dict) -> None:
-    with open(VOICE_SETTINGS_PATH, "w+") as f:
-        json.dump(settings, f, indent=4)
-        logger.info("Voice settings saved to %s", VOICE_SETTINGS_PATH)
+    _save_json(VOICE_SETTINGS_PATH, settings)
 
 
 def save_camera_settings(settings: dict) -> None:
-    with open(CAMERA_SETTINGS_PATH, "w+") as f:
-        json.dump(settings, f, indent=4)
-        logger.info("Camera settings saved to %s", CAMERA_SETTINGS_PATH)
+    _save_json(CAMERA_SETTINGS_PATH, settings)
 
 
 def load_camera_settings() -> dict:
     try:
-        if not os.path.exists(CAMERA_SETTINGS_PATH):
-            return {"useNetwork": False, "streamUrl": ""}
-        with open(CAMERA_SETTINGS_PATH, "r") as f:
-            return json.load(f)
+        return _load_json(CAMERA_SETTINGS_PATH, {"useNetwork": False, "streamUrl": ""})
     except Exception as e:
         logger.warning("Error loading camera settings: %s", e)
         return {"useNetwork": False, "streamUrl": ""}

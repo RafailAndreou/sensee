@@ -4,6 +4,25 @@ from server.config_validation import validate_configuration_payload  # noqa: E40
 
 
 class ConfigurationValidationTests(unittest.TestCase):
+    def test_aliases_and_hand_variants_cannot_duplicate_mapping(self):
+        for gesture in ('Middle Thumb', 'Thumb+Middle', ' Thumb / Middle '):
+            with self.subTest(gesture=gesture):
+                self.assertIsNotNone(validate_configuration_payload([
+                    {'gesture': 'Thumb Middle', 'hand': 'Left Hand'},
+                    {'gesture': gesture, 'hand': 'Left'},
+                ]))
+
+    def test_fist_aliases_cannot_mix_both_and_one_hand(self):
+        self.assertIsNotNone(validate_configuration_payload([
+            {'gesture': 'Closed Fist', 'hand': 'Both Hands'},
+            {'gesture': 'Fist', 'hand': 'Right Hand'},
+        ]))
+
+    def test_empty_hand_is_the_same_wildcard_as_both_hands(self):
+        self.assertIsNotNone(validate_configuration_payload([
+            {'gesture': 'Open Palm', 'hand': ''},
+            {'gesture': 'Open Palm', 'hand': 'Both Hands'},
+        ]))
     def test_validate_configuration_payload_accepts_valid_config(self):
         payload = [
             {"gesture": "Open Palm", "hand": "Both Hands"},

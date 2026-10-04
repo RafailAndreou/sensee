@@ -1,0 +1,9 @@
+# The unit/API suite does not require MediaPipe, camera hardware, or Whisper.
+fastapi
+httpx
+uvicorn
+zeroconf
+requests
+opencv-python
+numpy
+pyautogui

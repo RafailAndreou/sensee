@@ -1,7 +1,6 @@
 import asyncio
 import json
 import socket
-from zeroconf.asyncio import AsyncZeroconf, AsyncServiceBrowser, AsyncServiceInfo
 
 from gesture_engine.log import get_logger
 
@@ -46,6 +45,8 @@ def get_local_ip():
 
 async def register_mdns_service(port: int):
     """Register this server as sensee.local on the network."""
+    from zeroconf.asyncio import AsyncZeroconf, AsyncServiceInfo
+
     ip_str, ip_bytes = get_local_ip()
     
     # Create service info

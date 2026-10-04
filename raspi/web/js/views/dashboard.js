@@ -139,7 +139,7 @@ function renderGestureCard(cfg) {
       : (cfg.brand || dtype);
 
   return `
-    <div class="gesture-card" data-id="${cfg.id}"
+    <div class="gesture-card" data-id="${escAttr(cfg.id)}"
       style="--card-accent:${meta.accent}">
       <div class="card-header">
         <div class="card-device-icon" style="background:${meta.bg}">${meta.emoji}</div>

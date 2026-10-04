@@ -55,6 +55,7 @@ a = Analysis(
         'pyautogui',
         'server',
         'server.main',
+        'server.access',
         'server.file',
         'server.models',
         'server.startup',

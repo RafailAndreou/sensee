@@ -61,3 +61,5 @@ CLAUDE.md
 instructions.md
 raspi/server/ironman_params.json
 raspi/server/voice_settings.json
+raspi/server/access_config.json
+raspi/server/*.json.bak
