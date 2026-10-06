@@ -7,7 +7,7 @@ import 'widgets/voice_mode_card.dart';
 import 'widgets/settingsbutton.dart';
 import 'widgets/theme_toggle_card.dart';
 import '../setup/ha_settings.dart';
-import '../gestureSettings/gesture_settings.dart';
+import '../gesturesettings/gesture_settings.dart';
 import '../cameraSettings/camera_settings.dart';
 
 class Settings extends StatelessWidget {
@@ -196,4 +196,3 @@ class _LangPill extends StatelessWidget {
     );
   }
 }
-
