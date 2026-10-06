@@ -9,6 +9,9 @@ from gesture_engine.log import get_logger
 
 logger = get_logger(__name__)
 PERSISTENCE_LOCK = threading.RLock()
+_settings_cache = {}
+_settings_revisions = {}
+_settings_lock = threading.Lock()
 
 
 # When running as a PyInstaller EXE the bundle root is read-only.
@@ -56,6 +59,9 @@ def _save_json(path: str, value) -> None:
         except (json.JSONDecodeError, UnicodeError) as error:
             logger.warning("Keeping existing backup of damaged %s: %s", path, error)
         _atomic_write(path, content)
+        with _settings_lock:
+            _settings_cache.pop(path, None)
+            _settings_revisions[path] = _settings_revisions.get(path, 0) + 1
     logger.info("Settings saved to %s", path)
 
 
@@ -85,6 +91,27 @@ def load_configure_json() -> list:
     return _load_json(CONFIG_FILE_PATH, [])
 
 
+def settings_revision(path):
+    with _settings_lock:
+        return _settings_revisions.get(path, 0)
+
+
+def _load_settings(path, default):
+    """API saves invalidate these snapshots; manual file edits need a restart."""
+    with _settings_lock:
+        cached = _settings_cache.get(path)
+    if cached is not None:
+        return copy.deepcopy(cached)
+    with PERSISTENCE_LOCK:
+        with _settings_lock:
+            cached = _settings_cache.get(path)
+        if cached is None:
+            cached = _load_json(path, default)
+            with _settings_lock:
+                _settings_cache[path] = cached
+    return copy.deepcopy(cached)
+
+
 def save_ha_config(config: dict):
     _save_json(HA_CONFIG_PATH, config)
 
@@ -107,7 +134,7 @@ def load_gesture_settings() -> dict:
         "selectedGesture": "Open Hand",
     }
     try:
-        return _load_json(GESTURE_SETTINGS_PATH, defaults)
+        return _load_settings(GESTURE_SETTINGS_PATH, defaults)
     except Exception as e:
         logger.warning("Error loading gesture settings: %s", e)
         return defaults
@@ -121,6 +148,9 @@ def delete_gesture_settings() -> None:
                 os.remove(path)
             except FileNotFoundError:
                 continue
+        with _settings_lock:
+            _settings_cache.pop(GESTURE_SETTINGS_PATH, None)
+            _settings_revisions[GESTURE_SETTINGS_PATH] = _settings_revisions.get(GESTURE_SETTINGS_PATH, 0) + 1
 
 
 _IRONMAN_DEFAULTS = {
@@ -160,7 +190,7 @@ def _copy_ironman_defaults() -> dict:
 
 def load_ironman_params() -> dict:
     try:
-        data = _load_json(IRONMAN_PARAMS_PATH, {})
+        data = _load_settings(IRONMAN_PARAMS_PATH, {})
         merged = _copy_ironman_defaults()
         merged.update(data)
 
@@ -198,7 +228,7 @@ _VOICE_DEFAULTS: dict = {
 
 def load_voice_settings() -> dict:
     try:
-        data = _load_json(VOICE_SETTINGS_PATH, {})
+        data = _load_settings(VOICE_SETTINGS_PATH, {})
         return {**_VOICE_DEFAULTS, **data}
     except Exception as e:
         logger.warning("Error loading voice settings: %s", e)
@@ -215,7 +245,7 @@ def save_camera_settings(settings: dict) -> None:
 
 def load_camera_settings() -> dict:
     try:
-        return _load_json(CAMERA_SETTINGS_PATH, {"useNetwork": False, "streamUrl": ""})
+        return _load_settings(CAMERA_SETTINGS_PATH, {"useNetwork": False, "streamUrl": ""})
     except Exception as e:
         logger.warning("Error loading camera settings: %s", e)
         return {"useNetwork": False, "streamUrl": ""}

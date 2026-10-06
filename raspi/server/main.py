@@ -29,7 +29,7 @@ from server.models import (
 import voice_engine.status as voice_status
 from server.startup import run_uvicorn_with_port_retry
 from server.streamer import frame_hub
-from server.discovery import register_mdns_service, get_local_ip
+from server.discovery import register_mdns_service, start_udp_discovery_service, get_local_ip
 
 
 @dataclass
@@ -73,17 +73,17 @@ async def lifespan(app: FastAPI):
     # Show only on the local console, never in application log files or URLs.
     print(f"Sensee pairing key: {app.state.pairing_key}", flush=True)
     port = int(os.environ.get("SENSEE_PORT", 8000))
+    frame_hub.start()
     app.state.mdns_task = asyncio.create_task(register_mdns_service(port))
-    yield
-    mdns_task = getattr(app.state, "mdns_task", None)
-    if mdns_task:
-        logger.info("Stopping mDNS service...")
-        mdns_task.cancel()
-        try:
-            await mdns_task
-        except asyncio.CancelledError:
-            pass
-        logger.info("mDNS service stopped.")
+    app.state.udp_task = asyncio.create_task(start_udp_discovery_service(port))
+    try:
+        yield
+    finally:
+        for task in (app.state.mdns_task, app.state.udp_task):
+            task.cancel()
+        await asyncio.gather(app.state.mdns_task, app.state.udp_task, return_exceptions=True)
+        frame_hub.close()
+        homeassistant.get_http_client().close()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -216,7 +216,7 @@ def post_ha_pair_submit(req: HAPairSubmitRequest):
 @app.get("/video")
 def video():
     return StreamingResponse(
-        frame_hub.mjpeg_generator(),
+        frame_hub.async_mjpeg_generator(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
 
@@ -294,4 +294,3 @@ if __name__ == "__main__":
         ip=ip,
         context_label="Server running at",
     )
-

@@ -43,7 +43,7 @@ def get_device_family(value: str) -> str:
     return parts[0]
 
 
-def build_action_cooldown_key(action_name: str, device_name: str) -> str:
+def build_action_cooldown_key(action_name: str, device_name: str, target_id: str = "") -> str:
     """Build a stable key for per-device/per-action cooldown tracking.
 
     Args:
@@ -53,7 +53,7 @@ def build_action_cooldown_key(action_name: str, device_name: str) -> str:
     Returns:
         Normalized cooldown key.
     """
-    return f"{normalize_name(device_name)}:{normalize_name(action_name)}"
+    return f"{target_id or normalize_name(device_name)}:{normalize_name(action_name)}"
 
 
 def action_cooldown_seconds(
@@ -90,6 +90,7 @@ def should_execute_action(
     runtime: "GestureRuntime",
     action_name: str,
     device_name: str,
+    target_id: str = "",
 ) -> bool:
     """Apply cooldown checks to prevent repeated action bursts.
 
@@ -105,15 +106,13 @@ def should_execute_action(
     if cooldown_seconds <= 0:
         return True
 
-    key = build_action_cooldown_key(action_name, device_name)
+    key = build_action_cooldown_key(action_name, device_name, target_id)
     now = time.monotonic()
 
     with runtime.action_trigger_lock:
-        last_trigger_time = runtime.action_trigger_times.get(key, 0)
-        if now - last_trigger_time < cooldown_seconds:
+        last_trigger_time = runtime.action_trigger_times.get(key)
+        if last_trigger_time is not None and now - last_trigger_time < cooldown_seconds:
             return False
-
-        runtime.action_trigger_times[key] = now
         return True
 
 
@@ -138,6 +137,7 @@ def execute_configured_action(
     runtime: "GestureRuntime",
     matched_config: Mapping[str, Any],
     gesture_name: str,
+    event_ts_ms=None,
 ) -> None:
     """Run a matched configuration through cooldown and routing checks.
 
@@ -148,37 +148,48 @@ def execute_configured_action(
     """
     action, device_name, connection_type, entity_id, is_volume = _extract_action_context(matched_config)
 
-    if not should_execute_action(runtime, action, device_name):
+    target_id = entity_id or str(matched_config.get("id", device_name))
+    if event_ts_ms is not None and not runtime.command_is_fresh(event_ts_ms):
+        return
+    if not should_execute_action(runtime, action, device_name, target_id):
         return
 
-    runtime.send_msg(f"{gesture_name} touch detected")
-    logger.info("Executing action: %s %s", device_name, action)
-    with runtime.overlay_lock:
-        runtime.overlay_label = f"{device_name}  {action}" if device_name else action
-        runtime.overlay_ts = time.monotonic()
-
-    if get_device_family(device_name) == "pc":
-        execute_pc_action(action)
-        return
-
-    if connection_type == "smart":
-        try:
-            handle_smart_device_action(runtime, entity_id, action, is_volume)
-        except Exception as e:
-            logger.error("Error queueing Home Assistant action: %s", e)
-        return
-
-    # Handle IR devices (volume and non-volume actions)
     try:
-        handle_ir_device_action(runtime, entity_id, action)
+        if get_device_family(device_name) == "pc":
+            accepted = execute_pc_action(action)
+        elif connection_type == "smart":
+            accepted = handle_smart_device_action(runtime, entity_id, action, is_volume,
+                                                  event_ts_ms=event_ts_ms)
+        else:
+            accepted = handle_ir_device_action(runtime, entity_id, action, event_ts_ms=event_ts_ms)
     except Exception as e:
-        logger.error("Error queueing IR action: %s", e)
+        logger.error("Error dispatching action: %s", e)
+        return
+    if not accepted:
+        return
+
+    now = time.monotonic()
+    key = build_action_cooldown_key(action, device_name, target_id)
+    with runtime.action_trigger_lock:
+        runtime.action_trigger_times[key] = now  # Cooldown begins on accepted dispatch.
+    if is_volume:
+        logger.debug("Queued volume action: %s %s", device_name, action)
+    else:
+        logger.info("Dispatched action: %s %s", device_name, action)
+    # Feedback is sampled separately from action delivery.
+    if now - runtime.last_action_feedback.get(key, float("-inf")) >= 0.25:
+        runtime.last_action_feedback[key] = now
+        runtime.send_msg(f"{gesture_name} touch detected")
+        with runtime.overlay_lock:
+            runtime.overlay_label = f"{device_name}  {action}" if device_name else action
+            runtime.overlay_ts = now
 
 
 def take_action(
     runtime: "GestureRuntime",
     gesture_name: str,
     detected_hand: str = "Unknown",
+    event_ts_ms=None,
 ) -> None:
     """Resolve gesture-hand mapping and dispatch the configured action.
 
@@ -187,10 +198,12 @@ def take_action(
         gesture_name: Gesture name to resolve.
         detected_hand: Handedness associated with the detection.
     """
-    active_configs = runtime.get_active_configs()
-    matched_config = find_matched_config(active_configs, gesture_name, detected_hand)
+    if runtime.find_config is not None:
+        matched_config = runtime.find_config(gesture_name, detected_hand)
+    else:
+        matched_config = find_matched_config(runtime.get_active_configs(), gesture_name, detected_hand)
 
     if matched_config is None:
         return
 
-    execute_configured_action(runtime, matched_config, gesture_name)
+    execute_configured_action(runtime, matched_config, gesture_name, event_ts_ms=event_ts_ms)

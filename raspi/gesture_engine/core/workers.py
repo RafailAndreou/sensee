@@ -1,5 +1,6 @@
 import threading
 import time
+from queue import Empty
 from typing import TYPE_CHECKING
 
 from gesture_engine.log import get_logger
@@ -70,19 +71,22 @@ def minimum_confidence_for_gesture(gesture_name: str) -> float:
 
 def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> None:
     """Consume gesture events and dispatch only fresh, confident detections."""
-    while True:
+    while not runtime.stop_event.is_set():
         try:
             # Wait for incoming gesture events without polling.
-            if not runtime.gesture_event.wait(timeout=0.1):
+            if not runtime.gesture_event.wait():
                 continue
+            if runtime.stop_event.is_set():
+                return
 
             latest_gesture = runtime.pop_latest_gesture()
             if latest_gesture is None:
                 continue
 
-            gesture, handedness, event_ts_ms = latest_gesture
+            gesture, handedness, event_ts_ms, _one_shot = latest_gesture
 
-            latest_frame_ts_ms = get_latest_frame_ts()
+            latest_frame_ts_ms = max(get_latest_frame_ts(), time.monotonic_ns() // 1_000_000)
+            # Every camera command expires, including confirmed one-shot gestures.
             if is_stale_gesture(runtime, event_ts_ms, latest_frame_ts_ms):
                 continue
 
@@ -99,7 +103,7 @@ def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> Non
                 )
 
             runtime.send_msg(f"Gesture: {gesture_name} ({handedness})")
-            runtime.take_action(gesture_name, handedness)
+            runtime.take_action(gesture_name, handedness, event_ts_ms=event_ts_ms)
 
         except IndexError:
             # deque is empty (handled safely)
@@ -112,21 +116,28 @@ def process_action_queue_loop(runtime: "GestureRuntime") -> None:
     Args:
         runtime: Shared runtime that owns the action queue.
     """
-    while True:
+    while not runtime.stop_event.is_set():
         try:
-            entity_id, action = runtime.action_queue.get()
-            runtime.trigger_ha_action(entity_id, action)
+            entity_id, action, event_ts_ms = runtime.action_queue.get(timeout=0.1)
+            # Use the inference timestamp; queuing never extends command freshness.
+            if runtime.command_is_fresh(event_ts_ms):
+                runtime.trigger_ha_action(entity_id, action)
+        except Empty:
+            continue
         except Exception as e:
             logger.error("Error processing action queue item: %s", e)
 
 
 def process_volume_loop(runtime: "GestureRuntime") -> None:
     """Dedicated worker loop for high-frequency volume actions."""
-    while True:
+    while not runtime.stop_event.is_set():
         try:
             # This will wait quietly without using CPU until a volume action arrives
-            entity_id, action = runtime.volume_queue.get()
-            runtime.trigger_ha_action(entity_id, action)
+            entity_id, action, event_ts_ms = runtime.volume_queue.get(timeout=0.1)
+            if runtime.command_is_fresh(event_ts_ms):
+                runtime.trigger_ha_action(entity_id, action)
+        except Empty:
+            continue
         except Exception as e:
             logger.error("Error processing volume action: %s", e)
             
@@ -142,7 +153,7 @@ def start_workers(
         get_latest_frame_ts: Callback returning the latest camera frame timestamp.
 
     Returns:
-        Pair of started worker threads `(gesture_thread, action_thread)`.
+        Started gesture, action, and volume worker threads.
     """
     
     gesture_thread = threading.Thread(
@@ -159,7 +170,6 @@ def start_workers(
     )
     action_thread.start()
 
-    # ADD THE NEW VOLUME THREAD:
     volume_thread = threading.Thread(
         target=process_volume_loop,
         args=(runtime,),

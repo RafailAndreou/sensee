@@ -33,6 +33,14 @@ def notify_settings_changed() -> None:
         _settings_changed_fn()
 
 
+def unregister(preload, settings_changed):
+    global _preload_fn, _settings_changed_fn
+    if _preload_fn == preload:
+        _preload_fn = None
+    if _settings_changed_fn == settings_changed:
+        _settings_changed_fn = None
+
+
 def set_loading(model_name: str) -> None:
     global _status, _model
     with _lock:

@@ -16,19 +16,22 @@ _SILENCE_RMS = 0.015      # energy gate — below this is treated as silence
 _SILENCE_CHUNKS = 25      # ~750 ms of silence ends the utterance
 _MAX_CHUNKS = 200         # 6 s hard cap per utterance
 _PARAMS_TTL = 1.0         # seconds between config reloads
-# 15 s of buffered audio. If transcription falls behind, oldest chunks are
-# dropped at the producer (callback) side — see _audio_callback.
-_AUDIO_QUEUE_MAX = 500
+_MAX_AUDIO_AGE_SECONDS = 1.0
+_AUDIO_QUEUE_MAX = 34  # About one second; stale dictation must not accumulate.
 
 
 class VoiceController:
     """Daemon thread: captures mic audio, transcribes with Whisper, types the result."""
 
-    def __init__(self, load_params_fn):
+    def __init__(self, load_params_fn, *, start_thread=True):
         self._load_params = load_params_fn
         self._cache: dict = {}
         self._cache_ts: float = 0.0
         self._params_lock = threading.Lock()
+        self._generation = 0
+        self._stop = threading.Event()
+        self._audio_sequence = 0
+        self._last_audio_sequence = 0
 
         self._model = None
         self._model_name: str | None = None
@@ -45,12 +48,26 @@ class VoiceController:
 
         voice_status.register_preload(self.preload)
         voice_status.register_settings_changed(self._on_settings_changed)
-        threading.Thread(target=self._run, daemon=True, name="VoiceController").start()
+        self._thread = threading.Thread(target=self._run, daemon=True, name="VoiceController")
+        if start_thread:
+            self._thread.start()
 
     def _on_settings_changed(self) -> None:
         with self._params_lock:
             self._cache_ts = 0.0  # force fresh disk read on next _params()
+            self._generation += 1
         self._wake.set()
+
+    def stop(self):
+        self._stop.set()
+        self._on_settings_changed()
+        if self._thread.is_alive():
+            self._thread.join(timeout=3)
+        voice_status.unregister(self.preload, self._on_settings_changed)
+
+    def _current_generation(self):
+        with self._params_lock:
+            return self._generation
 
     # ── Params cache ──────────────────────────────────────────────────────────
 
@@ -66,7 +83,7 @@ class VoiceController:
 
     def preload(self, model_name: str) -> None:
         """Start loading model in the background; no-op if already loaded/loading."""
-        if self._model is not None and self._model_name == model_name:
+        if self._stop.is_set() or self._model is not None and self._model_name == model_name:
             return
         if self._model_load_lock.locked():
             return  # already loading something
@@ -79,6 +96,8 @@ class VoiceController:
 
     def _load_model(self, model_name: str) -> None:
         with self._model_load_lock:
+            if self._stop.is_set():
+                return
             if self._model is not None and self._model_name == model_name:
                 return  # loaded by the time we got the lock
             try:
@@ -86,6 +105,8 @@ class VoiceController:
                 voice_status.set_loading(model_name)
                 logger.info("Loading Whisper model '%s' …", model_name)
                 model = whisper.load_model(model_name)
+                if self._stop.is_set():
+                    return
                 self._model = model
                 self._model_name = model_name
                 voice_status.set_ready(model_name)
@@ -100,23 +121,37 @@ class VoiceController:
             return self._model
         # Kick off loading (or wait if already in progress)
         self._load_model(model_name)
-        if self._model is None:
+        if self._model is None or self._model_name != model_name:
             raise RuntimeError(f"Failed to load Whisper model '{model_name}'")
         return self._model
 
     # ── Main loop ─────────────────────────────────────────────────────────────
 
     def _audio_callback(self, indata, frames, time_info, status) -> None:
-        """sounddevice audio thread → push raw mono PCM to queue. Drops on overflow."""
+        """Keep recent PCM; sequence gaps let the collector discard split speech."""
+        if self._stop.is_set():
+            return
+        self._audio_sequence += 1
+        if status:
+            self._audio_sequence += 1  # Device overflow is a discontinuity too.
+        item = (self._audio_sequence, time.monotonic(), indata[:, 0].copy())
         try:
-            self._audio_queue.put_nowait(indata[:, 0].copy())
+            self._audio_queue.put_nowait(item)
         except queue.Full:
-            pass  # transcription is falling behind; oldest stays, newest dropped
-
-    def _drain_audio_queue(self) -> None:
-        while True:
             try:
                 self._audio_queue.get_nowait()
+            except queue.Empty:
+                pass
+            try:
+                self._audio_queue.put_nowait(item)
+            except queue.Full:
+                logger.debug("Audio queue remained full; dropping chunk")
+
+    def _drain_audio_queue(self) -> None:
+        while not self._stop.is_set():
+            try:
+                sequence, _, _ = self._audio_queue.get_nowait()
+                self._last_audio_sequence = sequence
             except queue.Empty:
                 return
 
@@ -132,7 +167,7 @@ class VoiceController:
 
         logger.info("VoiceController started")
         _was_enabled = False
-        while True:
+        while not self._stop.is_set():
             p = self._params()
             enabled = p.get("enabled", False)
             if not enabled:
@@ -166,11 +201,15 @@ class VoiceController:
 
     def _listen_until_disabled(self) -> None:
         """Inner loop: collect utterances and transcribe them while voice is enabled."""
-        while self._params().get("enabled", False):
+        while not self._stop.is_set() and self._params().get("enabled", False):
+            generation = self._current_generation()
             audio = self._collect_utterance()
             if audio is None:
                 return  # voice was disabled mid-utterance — caller closes the stream
             if len(audio) < _SAMPLE_RATE * 0.3:
+                continue
+
+            if self._current_generation() != generation:
                 continue
 
             p = self._params()
@@ -179,8 +218,10 @@ class VoiceController:
 
             try:
                 model = self._get_whisper(model_name)
+                if self._stop.is_set() or self._current_generation() != generation:
+                    continue
                 result = model.transcribe(
-                    audio.astype(np.float32),
+                    audio.astype(np.float32, copy=False),
                     language=None if language == "auto" else language,
                     fp16=False,
                 )
@@ -190,8 +231,10 @@ class VoiceController:
                 logger.warning("Whisper transcription error: %s", e)
                 continue
 
-            if text:
-                self._type_text(text)
+            if text and self._params().get("enabled", False):
+                with self._params_lock:
+                    if not self._stop.is_set() and generation == self._generation:
+                        self._type_text(text)
 
     def _type_text(self, text: str) -> None:
         """Paste transcribed text at the current cursor position via clipboard."""
@@ -219,16 +262,35 @@ class VoiceController:
         chunks: list[np.ndarray] = []
         silence_count = 0
         recording = False
+        generation = self._current_generation()
+        last_sequence = self._last_audio_sequence
+        discard_until_silence = False
+        recovery_silence = 0
 
-        while True:
-            if not self._params().get("enabled", False):
+        while not self._stop.is_set():
+            if not self._params().get("enabled", False) or self._current_generation() != generation:
                 return None
             try:
-                data = self._audio_queue.get(timeout=0.1)
+                sequence, captured_at, data = self._audio_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
 
+            if (sequence != last_sequence + 1
+                    or time.monotonic() - captured_at > _MAX_AUDIO_AGE_SECONDS):
+                chunks.clear()
+                recording, silence_count = False, 0
+                discard_until_silence, recovery_silence = True, 0
+                self._last_audio_sequence = last_sequence = sequence
+                if time.monotonic() - captured_at > _MAX_AUDIO_AGE_SECONDS:
+                    continue
+            self._last_audio_sequence = last_sequence = sequence
+
             rms = float(np.sqrt(np.mean(data ** 2)))
+            if discard_until_silence:
+                recovery_silence = recovery_silence + 1 if rms <= _SILENCE_RMS else 0
+                if recovery_silence >= _SILENCE_CHUNKS:
+                    discard_until_silence = False
+                continue
             if rms > _SILENCE_RMS:
                 recording = True
                 silence_count = 0
@@ -239,4 +301,4 @@ class VoiceController:
             if silence_count >= _SILENCE_CHUNKS or len(chunks) >= _MAX_CHUNKS:
                 break
 
-        return np.concatenate(chunks) if chunks else None
+        return np.concatenate(chunks) if chunks and not self._stop.is_set() else None

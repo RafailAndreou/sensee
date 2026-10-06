@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from gesture_engine.runtime import GestureRuntime
 
 
-def handle_ir_device_action(runtime: "GestureRuntime", entity_id: str, action: str) -> None:
+def handle_ir_device_action(runtime: "GestureRuntime", entity_id: str, action: str, event_ts_ms=None) -> bool:
     """Route IR actions through the serialized queue used by non-PC actions.
 
     Args:
@@ -14,4 +14,4 @@ def handle_ir_device_action(runtime: "GestureRuntime", entity_id: str, action: s
         entity_id: Device/entity id from config.
         action: Action to execute.
     """
-    queue_latest_action(runtime, entity_id, action)
+    return queue_latest_action(runtime, entity_id, action, event_ts_ms=event_ts_ms)

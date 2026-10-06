@@ -74,11 +74,15 @@ async def register_mdns_service(port: int):
 
 async def start_udp_discovery_service(port: int):
     loop = asyncio.get_running_loop()
-    transport, _ = await loop.create_datagram_endpoint(
-        lambda: _DiscoveryResponder(port),
-        local_addr=("0.0.0.0", _DISCOVERY_PORT),
-        allow_broadcast=True,
-    )
+    try:
+        transport, _ = await loop.create_datagram_endpoint(
+            lambda: _DiscoveryResponder(port),
+            local_addr=("0.0.0.0", _DISCOVERY_PORT),
+            allow_broadcast=True,
+        )
+    except OSError as error:
+        logger.warning("UDP discovery unavailable: %s", error)
+        return
     logger.info("UDP discovery listening on port %s", _DISCOVERY_PORT)
     try:
         await asyncio.Event().wait()

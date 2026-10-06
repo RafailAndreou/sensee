@@ -1,6 +1,6 @@
 import queue
 import unittest
-from types import SimpleNamespace
+import time
 
 import numpy as np
 
@@ -10,10 +10,12 @@ from voice_engine.voice_controller import VoiceController, _MAX_CHUNKS, _CHUNK_S
 class VoiceLimitTests(unittest.TestCase):
     def collect(self, chunks):
         audio_queue = queue.Queue()
-        for volume in chunks:
-            audio_queue.put(np.full(_CHUNK_SAMPLES, volume, dtype=np.float32))
-        worker = SimpleNamespace(_params=lambda: {"enabled": True}, _audio_queue=audio_queue)
-        return VoiceController._collect_utterance(worker), audio_queue
+        for sequence, volume in enumerate(chunks, start=1):
+            audio_queue.put((sequence, time.monotonic(), np.full(_CHUNK_SAMPLES, volume, dtype=np.float32)))
+        worker = VoiceController(lambda: {"enabled": True}, start_thread=False)
+        self.addCleanup(worker.stop)
+        worker._audio_queue = audio_queue
+        return worker._collect_utterance(), audio_queue
 
     def test_continuous_speech_stops_at_six_seconds(self):
         audio, remaining = self.collect([1] * (_MAX_CHUNKS + 20))
@@ -25,5 +27,6 @@ class VoiceLimitTests(unittest.TestCase):
         self.assertEqual(len(audio), 35 * _CHUNK_SAMPLES)
 
     def test_disabled_voice_does_not_consume_audio(self):
-        worker = SimpleNamespace(_params=lambda: {"enabled": False}, _audio_queue=queue.Queue())
-        self.assertIsNone(VoiceController._collect_utterance(worker))
+        worker = VoiceController(lambda: {"enabled": False}, start_thread=False)
+        self.addCleanup(worker.stop)
+        self.assertIsNone(worker._collect_utterance())

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from mediapipe.framework.formats import landmark_pb2
-
 from gesture_engine.core.matching import normalize_name
 from gesture_engine.geometry import touching
 
@@ -32,11 +30,8 @@ def detect_touch_gestures(hand_landmarks) -> list[tuple[str, bool]]:
     Priority chain: Pinky > Ring > Middle > Index. Each higher-priority touch
     suppresses lower-priority ones to prevent co-firing as the thumb sweeps.
     """
-    thumb = hand_landmarks.landmark[4]
-    index = hand_landmarks.landmark[8]
-    middle = hand_landmarks.landmark[12]
-    ring = hand_landmarks.landmark[16]
-    pinky = hand_landmarks.landmark[20]
+    landmarks = getattr(hand_landmarks, "landmark", hand_landmarks)
+    thumb, index, middle, ring, pinky = (landmarks[i] for i in (4, 8, 12, 16, 20))
 
     pinky_touching = touching(
         thumb, pinky, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
@@ -50,14 +45,14 @@ def detect_touch_gestures(hand_landmarks) -> list[tuple[str, bool]]:
     )
     middle_touching = (
         False
-        if ring_touching
+        if pinky_touching or ring_touching
         else touching(
             thumb, middle, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
         )
     )
     index_touching = (
         False
-        if middle_touching
+        if pinky_touching or ring_touching or middle_touching
         else touching(
             thumb, index, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
         )
@@ -71,6 +66,8 @@ def detect_touch_gestures(hand_landmarks) -> list[tuple[str, bool]]:
 
 
 def snapshot_to_multi_hand_landmarks(snapshot):
+    from mediapipe.framework.formats import landmark_pb2
+
     if not snapshot or not snapshot.hand_landmarks:
         return None
 

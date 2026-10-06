@@ -14,3 +14,11 @@ class TouchConfirmation:
             state["streak"] = 0
             state["active"] = False
         return False
+
+    def retry(self, state_key):
+        """Allow a confirmed transition to retry a rejected bounded enqueue."""
+        if state_key in self._state:
+            self._state[state_key]["active"] = False
+
+    def reset(self):
+        self._state.clear()

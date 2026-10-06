@@ -1,4 +1,5 @@
 import time
+import threading
 
 import requests
 
@@ -6,7 +7,36 @@ import requests
 class HAClient:
     def __init__(self, timeout=(0.8, 2.2), session=None):
         self.timeout = timeout
-        self.session = session or requests.Session()
+        self._provided_session = session
+        self._local = threading.local()
+        self._sessions = []
+        self._lock = threading.Lock()
+
+    @property
+    def session(self):
+        if self._provided_session is not None:
+            return self._provided_session
+        with self._lock:
+            if not hasattr(self._local, "session"):
+                self._local.session = requests.Session()
+                self._sessions.append(self._local.session)
+            return self._local.session
+
+    def close(self):
+        with self._lock:
+            for session in self._sessions:
+                session.close()
+            self._sessions.clear()
+            self._local = threading.local()
+
+    def close_thread_session(self):
+        """Release pools owned by short-lived TV wake threads."""
+        with self._lock:
+            session = getattr(self._local, "session", None)
+            if session is not None:
+                session.close()
+                self._sessions.remove(session)
+                del self._local.session
 
     @staticmethod
     def _headers(token: str, include_json=False):

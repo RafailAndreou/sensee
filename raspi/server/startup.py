@@ -1,50 +1,52 @@
+import errno
 import os
+import socket
+import threading
 
 from gesture_engine.log import get_logger
 
 logger = get_logger(__name__)
 
 
-def run_uvicorn_with_port_retry(
-    app_import_path,
-    ip,
-    host="0.0.0.0",
-    ports_to_try=None,
-    log_level=None,
-    context_label="Server running at",
-):
+def run_uvicorn_with_port_retry(app_import_path, ip, host="0.0.0.0", ports_to_try=None,
+                                log_level=None, context_label="Server running at", stop_event=None):
+    """Reserve the socket before startup so only bind failures trigger retries."""
     import uvicorn
 
-    if ports_to_try is None:
-        ports_to_try = [8000, 8001, 8002, 8003, 8004]
-
-    for attempt_port in ports_to_try:
+    ports = [8000, 8001, 8002, 8003, 8004] if ports_to_try is None else ports_to_try
+    for port in ports:
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            logger.info("%s: http://%s:%s", context_label, ip, attempt_port)
-            os.environ["SENSEE_PORT"] = str(attempt_port)
-
-            run_kwargs = {
-                "app": app_import_path,
-                "host": host,
-                "port": attempt_port,
-            }
-            if log_level is not None:
-                run_kwargs["log_level"] = log_level
-
-            uvicorn.run(**run_kwargs)
-            return attempt_port
-        except OSError as e:
-            error_str = str(e)
-            if "10048" in error_str or "Address already in use" in error_str:
-                if attempt_port == ports_to_try[-1]:
-                    logger.error("All ports %s are already in use!", ports_to_try)
-                    logger.error("Please kill the background process or restart your system.")
-                    raise SystemExit(1)
-                logger.warning("Port %s in use, trying %s...", attempt_port, attempt_port + 1)
-            else:
+            listener.bind((host, port))
+        except OSError as error:
+            listener.close()
+            if error.errno != errno.EADDRINUSE:
                 raise
-        except Exception as e:
-            logger.error("Unexpected error: %s", e)
-            raise
-
-    raise SystemExit(1)
+            logger.warning("Port %s is in use; trying the next candidate.", port)
+            continue
+        try:
+            actual_port = listener.getsockname()[1]
+            listener.listen(128)
+            listener.setblocking(False)
+            os.environ["SENSEE_PORT"] = str(actual_port)
+            config = uvicorn.Config(app_import_path, host=host, port=actual_port,
+                                    log_level=log_level or "info")
+            server = uvicorn.Server(config)
+            monitor = None
+            if stop_event is not None:
+                def monitor_shutdown():
+                    stop_event.wait()
+                    server.should_exit = True
+                monitor = threading.Thread(target=monitor_shutdown, daemon=True)
+                monitor.start()
+            logger.info("%s: http://%s:%s", context_label, ip, actual_port)
+            try:
+                server.run(sockets=[listener])
+            finally:
+                if monitor is not None:
+                    stop_event.set()
+                    monitor.join(timeout=1)
+            return actual_port
+        finally:
+            listener.close()
+    raise OSError(errno.EADDRINUSE, f"All candidate ports are in use: {ports}")

@@ -7,6 +7,7 @@ import pyautogui
 from gesture_engine.log import get_logger
 from gesture_engine.core.matching import normalize_name
 from gesture_engine.core.handlers.pc_handler import execute_pc_action
+from server.models import IronmanParams
 
 logger = get_logger(__name__)
 
@@ -29,7 +30,7 @@ class CursorController:
       - DELAY : sleep between each interpolation step (seconds)
     """
 
-    def __init__(self, load_params_fn):
+    def __init__(self, load_params_fn, *, start_thread=True):
         self._load_params_fn = load_params_fn
         self._params_cache: dict = {}
         self._params_cache_ts: float = 0.0
@@ -40,9 +41,22 @@ class CursorController:
         self._action_lock = threading.Lock()
 
         self.cursor_queue: Queue = Queue(maxsize=2)
+        self._stop = threading.Event()
+        self._tracking_generation = 0
+        self._residual_x = self._residual_y = 0.0
 
         self._thread = threading.Thread(target=self._run, daemon=True, name="CursorController")
-        self._thread.start()
+        if start_thread:
+            self._thread.start()
+
+    def stop(self):
+        self._stop.set()
+        if self._thread.is_alive():
+            self._thread.join(timeout=1)
+
+    def reset_tracking(self):
+        self._tracking_generation += 1
+        self._enqueue_latest((0.0, 0.0, "reset"))
 
     def feed(self, x: float, y: float) -> None:
         """Push a normalized (0–1) landmark position. Drops oldest if full."""
@@ -78,7 +92,11 @@ class CursorController:
         now = time.monotonic()
         with self._params_lock:
             if now - self._params_cache_ts > _PARAMS_CACHE_TTL:
-                self._params_cache = self._load_params_fn()
+                try:
+                    self._params_cache = IronmanParams.model_validate(self._load_params_fn()).model_dump()
+                except (ValueError, TypeError) as error:
+                    logger.warning("Invalid cursor settings; disabling cursor control: %s", error)
+                    self._params_cache = IronmanParams().model_dump()
                 self._params_cache_ts = now
                 gesture_map = self._params_cache.get("gesture_map", {})
                 self._reverse_map = {
@@ -111,7 +129,7 @@ class CursorController:
         scroll_accum: float = 0.0
         last_scroll_tick: float = 0.0
 
-        while True:
+        while not self._stop.is_set():
             try:
                 x, y, mode = self.cursor_queue.get(timeout=0.15)
             except Empty:
@@ -119,6 +137,7 @@ class CursorController:
                 # For scroll, keep the accumulator alive across brief recognition gaps
                 # (MediaPipe may skip frames on slow hardware); for cursor, full reset.
                 prev_x = prev_y = None
+                self._residual_x = self._residual_y = 0.0
                 if prev_mode != "scroll":
                     prev_mode = None
                     scroll_accum = 0.0
@@ -128,36 +147,32 @@ class CursorController:
                 logger.error("CursorController queue error: %s", e)
                 continue
 
-            params = self.get_params()
-            if not params.get("enabled", False):
+            try:
+                params = self.get_params()
+                if mode == "reset" or not params.get("enabled", False):
+                    prev_x = prev_y = prev_mode = None
+                    self._residual_x = self._residual_y = 0.0
+                    scroll_accum = last_scroll_tick = 0.0
+                    continue
+                if prev_mode != mode:
+                    prev_x, prev_y, prev_mode = x, y, mode
+                    self._residual_x = self._residual_y = 0.0
+                    scroll_accum = last_scroll_tick = 0.0
+                    continue
+                if prev_x is None:
+                    prev_x, prev_y = x, y
+                    continue
+                if mode == "scroll":
+                    scroll_accum = self._do_scroll(y, prev_y, params, scroll_accum)
+                elif mode in ("scroll_up", "scroll_down"):
+                    last_scroll_tick = self._do_directional_scroll(mode, params, last_scroll_tick)
+                else:
+                    self._do_cursor(x, y, prev_x, prev_y, params)
                 prev_x, prev_y = x, y
-                continue
-
-            if prev_mode != mode:
-                # Mode changed: full reset.
-                prev_x, prev_y = x, y
-                prev_mode = mode
-                scroll_accum = 0.0
-                last_scroll_tick = 0.0
-                continue
-
-            if prev_x is None:
-                # Re-entering after a gap: re-anchor position but keep scroll accum.
-                prev_x, prev_y = x, y
-                continue
-
-            if mode == "scroll":
-                scroll_accum = self._do_scroll(y, prev_y, params, scroll_accum)
-            elif mode in ("scroll_up", "scroll_down"):
-                last_scroll_tick = self._do_directional_scroll(
-                    mode=mode,
-                    params=params,
-                    last_tick=last_scroll_tick,
-                )
-            else:
-                self._do_cursor(x, y, prev_x, prev_y, params)
-
-            prev_x, prev_y = x, y
+            except Exception:
+                logger.exception("Cursor processing failed; resetting tracking")
+                prev_x = prev_y = prev_mode = None
+                self._residual_x = self._residual_y = 0.0
 
     def _do_cursor(self, x, y, prev_x, prev_y, params):
         gain = params.get("gain", 5000)
@@ -175,16 +190,29 @@ class CursorController:
             dx /= damp
             dy /= damp
 
-        step_x = dx / steps
-        step_y = dy / steps
-
-        for _ in range(steps):
+        dx += self._residual_x
+        dy += self._residual_y
+        total_x, total_y = int(dx), int(dy)
+        self._residual_x, self._residual_y = dx - total_x, dy - total_y
+        if total_x == total_y == 0:
+            return
+        steps = min(steps, max(abs(total_x), abs(total_y)))
+        generation = self._tracking_generation
+        sent_x = sent_y = 0
+        # Preserve total integer displacement; retain fractional residual across observations.
+        for step in range(1, steps + 1):
+            if self._stop.is_set() or generation != self._tracking_generation:
+                return
+            target_x, target_y = round(total_x * step / steps), round(total_y * step / steps)
             try:
-                pyautogui.moveRel(step_x, step_y, _pause=False)
+                pyautogui.moveRel(target_x - sent_x, target_y - sent_y, _pause=False)
             except Exception as e:
                 logger.warning("Cursor move error: %s", e)
                 break
-            time.sleep(delay)
+            sent_x, sent_y = target_x, target_y
+            # Bound interpolation latency to 20 ms, even for large UI slider values.
+            if step < steps and self._stop.wait(min(delay, 0.02 / steps)):
+                return
 
     def _do_scroll(self, y, prev_y, params, accum: float) -> float:
         scroll_speed = max(params.get("scroll", 10), 1)

@@ -93,6 +93,28 @@ python gesture.py
 
 Running `gesture.py` starts the FastAPI server and opens the web UI in your browser (`/web`) on the first available port from `8000-8004`.
 
+For operation without the local camera window, set `SENSEE_PREVIEW=0` before
+starting the engine. Recognition continues, and paired clients can still open
+the video stream. Stream JPEGs are encoded only while a client is watching,
+at a maximum of 15 frames per second, independently of recognition.
+
+Camera changes saved through the dashboard or API reopen capture automatically.
+Settings are cached in memory; restart the engine after editing JSON files
+directly. Dashboard and API saves invalidate the cache automatically.
+
+Touch confirmations use distinct, fresh recognition results. Losing tracking
+resets confirmations and interrupts wake holds. Confirmed touch transitions and
+device commands use bounded queues that preserve order; continuous inputs keep
+the latest state. All camera commands expire 100 ms after their original
+inference timestamp, including confirmed touches and commands waiting for a
+device worker. Queuing never resets their age. An action overlay indicates accepted dispatch, rather than
+confirmation that a physical device has responded.
+
+Voice capture keeps about one second of pending audio. If transcription falls
+behind and speech is interrupted by overflow, the engine waits for a pause
+before collecting a new utterance. Disabling voice or changing its settings
+cancels pending transcription output.
+
 ### Run the Surface Controller App (Flutter, Optional)
 
 ```powershell

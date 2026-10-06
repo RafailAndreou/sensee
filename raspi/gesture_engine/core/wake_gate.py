@@ -34,6 +34,7 @@ class WakeGate:
         self._wake_hold_started_at = None
         self._wake_active_until = 0.0
         self._last_settings_tuple = None
+        self._last_observation_at = None
 
     def _gesture_key(self, gesture_name):
         normalized = normalize_name(str(gesture_name)).replace("_", " ")
@@ -99,37 +100,43 @@ class WakeGate:
     def prime(self):
         self._refresh_settings_if_needed(force=True)
 
+    def reset_tracking(self):
+        with self._lock:
+            self._wake_hold_started_at = None
+            self._last_observation_at = None
+
+    def observe(self, gesture_names, timestamp_ms):
+        """Update hold state once per fresh inference, including no-hand results."""
+        self._refresh_settings_if_needed()
+        observed_at = timestamp_ms / 1000.0
+        keys = {self._gesture_key(name) for name in gesture_names}
+        with self._lock:
+            if (self._last_observation_at is None
+                    or observed_at - self._last_observation_at > 0.25):
+                self._wake_hold_started_at = None
+            self._last_observation_at = observed_at
+            if not self._wake_enabled or self._wake_selected_key not in keys:
+                self._wake_hold_started_at = None
+                return
+            if self._wake_active_until > observed_at:
+                return
+            if self._wake_hold_started_at is None:
+                self._wake_hold_started_at = observed_at
+            if observed_at - self._wake_hold_started_at >= self._wake_hold_seconds:
+                self._wake_active_until = observed_at + self._wake_active_window_seconds
+                self._wake_hold_started_at = None
+                logger.info("Wake gesture confirmed. Active window: %.1fs",
+                            self._wake_active_window_seconds)
+
+    def is_active(self):
+        self._refresh_settings_if_needed()
+        with self._lock:
+            return not self._wake_enabled or time.monotonic() < self._wake_active_until
+
     def allows(self, gesture_name):
         self._refresh_settings_if_needed()
-        now = time.monotonic()
-        gesture_key = self._gesture_key(gesture_name)
-
         with self._lock:
             if not self._wake_enabled:
                 return True
-
-            if gesture_key == self._wake_selected_key:
-                if self._wake_active_until <= now:
-                    if self._wake_hold_started_at is None:
-                        self._wake_hold_started_at = now
-
-                    held_seconds = now - self._wake_hold_started_at
-                    if held_seconds >= self._wake_hold_seconds:
-                        self._wake_active_until = now + self._wake_active_window_seconds
-                        self._wake_hold_started_at = None
-                        logger.info(
-                            "Wake gesture confirmed. Active window: %.1fs",
-                            self._wake_active_window_seconds,
-                        )
-                return False
-
-            self._wake_hold_started_at = None
-
-            if now <= self._wake_active_until:
-                return True
-
-            if self._wake_active_until != 0.0:
-                self._wake_active_until = 0.0
-                logger.info("Active window ended. Waiting for wake gesture.")
-
-            return False
+            return (self._gesture_key(gesture_name) != self._wake_selected_key
+                    and time.monotonic() < self._wake_active_until)

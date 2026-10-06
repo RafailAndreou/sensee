@@ -53,7 +53,9 @@ class ApiAccessTests(unittest.TestCase):
     def test_mobile_bearer_key_and_video_are_accepted(self):
         headers = {'Authorization': f'Bearer {TEST_KEY}'}
         self.assertEqual(self.client.get('/auth/status', headers=headers).status_code, 200)
-        with patch.object(main.frame_hub, 'mjpeg_generator', return_value=iter([b'frame'])):
+        async def frames():
+            yield b'frame'
+        with patch.object(main.frame_hub, 'async_mjpeg_generator', return_value=frames()):
             self.assertEqual(self.client.get('/video', headers=headers).content, b'frame')
 
     def test_cross_origin_pairing_and_writes_are_rejected(self):

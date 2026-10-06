@@ -16,7 +16,7 @@ def parse_action_to_service(action: str) -> str:
         return "volume_down"
     if "toggle" in action_lower:
         return "toggle"
-    return "turn_on"
+    raise ValueError(f"Unsupported Home Assistant action: {action}")
 
 
 def get_domain_from_entity(entity_id: str) -> str:

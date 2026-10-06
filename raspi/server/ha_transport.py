@@ -111,8 +111,15 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
         logger.error("Home Assistant trigger failed: no entity_id provided.")
         return False
 
-    service = parse_action_to_service(action_type)
+    try:
+        service = parse_action_to_service(action_type)
+    except ValueError as error:
+        logger.warning("%s", error)
+        return False
     domain = get_domain_from_entity(entity_id)
+    if service in ("volume_up", "volume_down") and domain != "media_player":
+        logger.warning("Volume action is unsupported for domain %s", domain)
+        return False
     url_base, token = get_ha_config()
 
     if not _has_valid_runtime_config(url_base, token):
@@ -140,7 +147,8 @@ def trigger_ha_action(entity_id: str, action_type: str) -> bool:
             if DEBUG_HA_TIMING:
                 logger.info("HA accepted %s -> %s in %.1fms", entity_id, service, elapsed_ms)
             else:
-                logger.info("HA accepted: %s -> %s", entity_id, service)
+                log = logger.debug if service in ("volume_up", "volume_down") else logger.info
+                log("HA accepted: %s -> %s", entity_id, service)
 
             if domain == "media_player" and service == "turn_on":
                 _schedule_tv_wake_verify(url_base, token, entity_id)
@@ -164,21 +172,29 @@ def _schedule_tv_wake_verify(url_base: str, token: str, entity_id: str) -> None:
     def _run() -> None:
         time.sleep(TURN_ON_VERIFY_DELAY_SECONDS)
         try:
-            state = _http_client.get_entity_state(url_base, token, entity_id)
-        except requests.exceptions.RequestException:
-            state = None
-        if state is None or not _entity_is_on(state):
-            logger.warning("TV state after turn_on is '%s'. Trying wake fallback...", state)
-            _try_tv_wake_fallback(url_base, token, entity_id)
+            try:
+                state = _http_client.get_entity_state(url_base, token, entity_id)
+            except requests.exceptions.RequestException:
+                state = None
+            if state is None or not _entity_is_on(state):
+                logger.warning("TV state after turn_on is '%s'. Trying wake fallback...", state)
+                _try_tv_wake_fallback(url_base, token, entity_id)
+        finally:
+            _http_client.close_thread_session()
 
     threading.Thread(target=_run, name="tv-wake-verify", daemon=True).start()
 
 
 def _schedule_tv_wake_fallback(url_base: str, token: str, entity_id: str) -> None:
     """Run TV wake fallback in a background thread."""
+    def _run():
+        try:
+            _try_tv_wake_fallback(url_base, token, entity_id)
+        finally:
+            _http_client.close_thread_session()
+
     threading.Thread(
-        target=_try_tv_wake_fallback,
-        args=(url_base, token, entity_id),
+        target=_run,
         name="tv-wake-fallback",
         daemon=True,
     ).start()

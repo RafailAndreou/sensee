@@ -32,8 +32,8 @@ class HAPairSubmitRequest(BaseModel):
 
 class GestureSettings(BaseModel):
     wakeEnabled: bool
-    holdDurationSeconds: float
-    activeWindowSeconds: float
+    holdDurationSeconds: float = Field(ge=0, le=60, allow_inf_nan=False)
+    activeWindowSeconds: float = Field(ge=0, le=3600, allow_inf_nan=False)
     selectedGesture: str
 
 
@@ -45,13 +45,13 @@ class CameraSettings(BaseModel):
 class IronmanParams(BaseModel):
     enabled: bool = False
     always_track: bool = False
-    gain: int = 5000
-    damp: int = 50
-    sensitivity: int = 3
-    steps: int = 10
-    delay: float = 0.001
-    scroll: int = 10
-    gesture_map: dict = {}
+    gain: int = Field(default=5000, ge=1, le=20000)
+    damp: int = Field(default=50, ge=1, le=1000)
+    sensitivity: int = Field(default=3, ge=0, le=1000)
+    steps: int = Field(default=10, ge=1, le=100)
+    delay: float = Field(default=0.001, ge=0, le=0.01, allow_inf_nan=False)
+    scroll: int = Field(default=10, ge=1, le=50)
+    gesture_map: dict[str, str] = Field(default_factory=dict)
 
 
 class VoiceSettings(BaseModel):

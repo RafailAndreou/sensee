@@ -1,7 +1,6 @@
-import pyautogui
-
-
 def get_screen_metrics():
+    import pyautogui
+
     screen_w, screen_h = pyautogui.size()
     mouse_x, mouse_y = pyautogui.position()
     return screen_w, screen_h, mouse_x, mouse_y

@@ -41,7 +41,7 @@ def _open_dashboard_when_ready(ip: str, ports_to_try: list[int]) -> None:
     logger.warning("Dashboard auto-open timed out. Open the printed portal URL manually.")
 
 
-def start_fastapi_server_in_background(get_local_ip, auto_open_dashboard: bool = True):
+def start_fastapi_server_in_background(get_local_ip, auto_open_dashboard: bool = True, stop_event=None):
     ip, _ = get_local_ip()
     ports_to_try = list(DEFAULT_SERVER_PORTS)
 
@@ -52,6 +52,7 @@ def start_fastapi_server_in_background(get_local_ip, auto_open_dashboard: bool =
             ports_to_try=ports_to_try,
             log_level="info",
             context_label="Access the configuration portal at",
+            stop_event=stop_event,
         )
 
     server_thread = threading.Thread(target=_run_server, daemon=True)
