@@ -83,11 +83,13 @@ def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> Non
             if latest_gesture is None:
                 continue
 
-            gesture, handedness, event_ts_ms, _one_shot = latest_gesture
+            gesture, handedness, event_ts_ms, source = latest_gesture
 
             latest_frame_ts_ms = max(get_latest_frame_ts(), time.monotonic_ns() // 1_000_000)
             # Every camera command expires, including confirmed one-shot gestures.
             if is_stale_gesture(runtime, event_ts_ms, latest_frame_ts_ms):
+                continue
+            if not runtime.command_is_fresh(event_ts_ms, source):
                 continue
 
             gesture_name = gesture.category_name
@@ -103,7 +105,7 @@ def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> Non
                 )
 
             runtime.send_msg(f"Gesture: {gesture_name} ({handedness})")
-            runtime.take_action(gesture_name, handedness, event_ts_ms=event_ts_ms)
+            runtime.take_action(gesture_name, handedness, event_ts_ms=event_ts_ms, source=source)
 
         except IndexError:
             # deque is empty (handled safely)
@@ -118,10 +120,10 @@ def process_action_queue_loop(runtime: "GestureRuntime") -> None:
     """
     while not runtime.stop_event.is_set():
         try:
-            entity_id, action, event_ts_ms = runtime.action_queue.get(timeout=0.1)
+            entity_id, action, event_ts_ms, source = runtime.action_queue.get(timeout=0.1)
             # Use the inference timestamp; queuing never extends command freshness.
-            if runtime.command_is_fresh(event_ts_ms):
-                runtime.trigger_ha_action(entity_id, action)
+            if runtime.command_is_fresh(event_ts_ms, source):
+                runtime.send_queued_action(entity_id, action, event_ts_ms, source)
         except Empty:
             continue
         except Exception as e:
@@ -133,9 +135,9 @@ def process_volume_loop(runtime: "GestureRuntime") -> None:
     while not runtime.stop_event.is_set():
         try:
             # This will wait quietly without using CPU until a volume action arrives
-            entity_id, action, event_ts_ms = runtime.volume_queue.get(timeout=0.1)
-            if runtime.command_is_fresh(event_ts_ms):
-                runtime.trigger_ha_action(entity_id, action)
+            entity_id, action, event_ts_ms, source = runtime.volume_queue.get(timeout=0.1)
+            if runtime.command_is_fresh(event_ts_ms, source):
+                runtime.send_queued_action(entity_id, action, event_ts_ms, source)
         except Empty:
             continue
         except Exception as e:

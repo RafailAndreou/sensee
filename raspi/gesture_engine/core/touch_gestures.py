@@ -8,6 +8,7 @@ from gesture_engine.geometry import touching
 TOUCH_XY_THRESHOLD = 0.05
 TOUCH_Z_THRESHOLD = 0.02
 TOUCH_CONFIRM_FRAMES = 2
+TOUCH_RELEASE_MARGIN = 1.2
 CONFIRMATION_ACTION_KEYWORDS = (
     "turn on",
     "turn off",
@@ -80,6 +81,16 @@ def snapshot_to_multi_hand_landmarks(snapshot):
         multi_hand_landmarks.append(proto)
 
     return multi_hand_landmarks if multi_hand_landmarks else None
+
+
+def clear_touch_releases(hand_landmarks):
+    """Separate definite releases from small contact-threshold fluctuations."""
+    landmarks = getattr(hand_landmarks, "landmark", hand_landmarks)
+    return [name for name, index in (("Thumb+Pinky", 20), ("Thumb+Ring", 16),
+                                     ("Thumb+Middle", 12), ("Thumb+Index", 8))
+            if not touching(landmarks[4], landmarks[index],
+                            threshold=TOUCH_XY_THRESHOLD * TOUCH_RELEASE_MARGIN,
+                            z_threshold=TOUCH_Z_THRESHOLD * TOUCH_RELEASE_MARGIN)]
 
 
 def resolve_detected_hand(snapshot, hand_idx: int) -> str:

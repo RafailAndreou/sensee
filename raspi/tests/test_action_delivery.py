@@ -22,7 +22,9 @@ def config(entity):
 class ActionDeliveryTests(unittest.TestCase):
     def test_builtin_update_does_not_overwrite_confirmed_transition(self):
         engine = runtime()
+        engine.agreement.observe({'Right': 'Thumb+Index'}, 1000)
         engine.enqueue_gesture(SimpleNamespace(category_name='Thumb+Index'), 'Right', 1000, one_shot=True)
+        engine.agreement.observe({'Right': 'Open_Palm'}, 1001)
         engine.enqueue_gesture(SimpleNamespace(category_name='Open_Palm'), 'Right', 1001)
         self.assertEqual(engine.pop_latest_gesture()[0].category_name, 'Thumb+Index')
         self.assertEqual(engine.pop_latest_gesture()[0].category_name, 'Open_Palm')
@@ -31,14 +33,18 @@ class ActionDeliveryTests(unittest.TestCase):
     def test_transition_queue_is_bounded_and_fifo(self):
         engine = runtime()
         engine.max_transitions = 2
+        engine.agreement.observe({'Right': 'first'}, 1000)
         self.assertTrue(engine.enqueue_gesture('first', 'Right', 1000, one_shot=True))
+        engine.agreement.observe({'Right': 'second'}, 1001)
         self.assertTrue(engine.enqueue_gesture('second', 'Right', 1001, one_shot=True))
+        engine.agreement.observe({'Right': 'overflow'}, 1002)
         self.assertFalse(engine.enqueue_gesture('overflow', 'Right', 1002, one_shot=True))
         self.assertEqual([engine.pop_latest_gesture()[0] for _ in range(2)], ['first', 'second'])
 
     def test_worker_delay_expires_confirmed_and_continuous_gestures(self):
         engine = runtime()
         gesture = SimpleNamespace(category_name='Thumb+Index', score=1.0)
+        engine.agreement.observe({'Right': 'Thumb+Index'}, 1000)
         engine.enqueue_gesture(gesture, 'Right', 1000, one_shot=True)
         engine.enqueue_gesture(gesture, 'Right', 1000)
         pop = engine.pop_latest_gesture
@@ -58,8 +64,8 @@ class ActionDeliveryTests(unittest.TestCase):
                                    (process_volume_loop, 'volume_queue')):
             with self.subTest(worker=worker.__name__):
                 engine = runtime()
-                events = iter([('light.stale', 'Turn on', 1000),
-                               ('light.fresh', 'Turn on', 1150)])
+                events = iter([('light.stale', 'Turn on', 1000, None),
+                               ('light.fresh', 'Turn on', 1150, None)])
                 def consume(**kwargs):
                     try:
                         return next(events)
@@ -74,9 +80,12 @@ class ActionDeliveryTests(unittest.TestCase):
     def test_original_inference_timestamp_is_retained_through_action_routing(self):
         engine = runtime()
         engine.get_active_configs = lambda: [dict(config('light.first'), gesture='Thumb+Index', hand='Right Hand')]
+        engine.agreement.observe({'Right': 'Thumb+Index'}, 1000)
         with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1080000000):
             engine.take_action('Thumb+Index', 'Right', event_ts_ms=1000)
-        self.assertEqual(engine.action_queue.get_nowait(), ('light.first', 'Turn on', 1000))
+        command = engine.action_queue.get_nowait()
+        self.assertEqual(command[:3], ('light.first', 'Turn on', 1000))
+        self.assertIsNotNone(command[3])
         # The same observation cannot become fresh again by entering another queue.
         with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1120000000):
             self.assertFalse(engine.enqueue_action('light.first', 'Turn on', event_ts_ms=1000))

@@ -8,11 +8,12 @@ from typing import Any, Callable, Mapping, Sequence, Tuple
 from collections import deque
 
 from gesture_engine.core.actions import take_action
+from gesture_engine.core.agreement import GestureAgreement, GestureSource
 from gesture_engine.core.workers import start_workers
 
 SendMessageFn = Callable[[str], None]
 GetActiveConfigsFn = Callable[[], Sequence[Mapping[str, Any]]]
-TriggerHaActionFn = Callable[[str, str], bool]
+TriggerHaActionFn = Callable[..., bool]
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ class RuntimePolicy:
     )
     gesture_log_interval_seconds: float = 1.0
     stale_gesture_ms: int = 100
+    agreement_grace_ms: int = 50
 
 
 class GestureRuntime:
@@ -73,15 +75,17 @@ class GestureRuntime:
         self.stop_event = threading.Event()
         self._threads = ()
         self._get_latest_frame_ts = lambda: 0
+        self.agreement = GestureAgreement(self.policy.agreement_grace_ms)
+        self.command_guard = None
 
-        self.gesture_queue: deque[tuple[SimpleNamespace, str, int, bool]] = deque(maxlen=1)
+        self.gesture_queue: deque[tuple[SimpleNamespace, str, int, GestureSource]] = deque(maxlen=1)
         self.gesture_queue_lock = threading.Lock()
         self.gesture_event = threading.Event()
         self.transition_queue = deque()
         self.max_transitions = 32
         
         self.action_queue: Queue = Queue(maxsize=32)
-        self.volume_queue: Queue[tuple[str, str, int]] = Queue(maxsize=1)
+        self.volume_queue: Queue[tuple[str, str, int, GestureSource | None]] = Queue(maxsize=1)
         self.action_queue_lock = threading.Lock()
 
         self.action_trigger_times: dict[str, float] = {}
@@ -103,19 +107,22 @@ class GestureRuntime:
         one_shot: bool = False,
     ) -> bool:
         """Keep confirmed transitions in order and coalesce continuous state."""
+        source = self.agreement.capture(getattr(gesture, "category_name", gesture), handedness, one_shot)
+        if source is None:
+            return False
         with self.gesture_queue_lock:
             if self.stop_event.is_set():
                 return False
             if one_shot:
                 if len(self.transition_queue) >= self.max_transitions:
                     return False
-                self.transition_queue.append((gesture, handedness, event_ts_ms, True))
+                self.transition_queue.append((gesture, handedness, event_ts_ms, source))
             else:
-                self.gesture_queue.append((gesture, handedness, event_ts_ms, False))
+                self.gesture_queue.append((gesture, handedness, event_ts_ms, source))
             self.gesture_event.set()
             return True
 
-    def pop_latest_gesture(self) -> tuple[SimpleNamespace, str, int, bool] | None:
+    def pop_latest_gesture(self) -> tuple[SimpleNamespace, str, int, GestureSource] | None:
         """Consume a pending transition first, then the latest continuous event."""
         with self.gesture_queue_lock:
             if not self.gesture_queue and not self.transition_queue:
@@ -128,14 +135,16 @@ class GestureRuntime:
                 self.gesture_event.clear()
             return item
 
-    def command_is_fresh(self, event_ts_ms):
+    def command_is_fresh(self, event_ts_ms, source=None):
         now_ms = max(self._get_latest_frame_ts(), time.monotonic_ns() // 1_000_000)
-        return not self.stop_event.is_set() and now_ms - event_ts_ms <= self.policy.stale_gesture_ms
+        return (not self.stop_event.is_set() and now_ms - event_ts_ms <= self.policy.stale_gesture_ms
+                and (source is None or self.agreement.matches(source, now_ms)
+                     and (self.command_guard is None or self.command_guard(source))))
 
-    def enqueue_action(self, entity_id, action, is_volume=False, event_ts_ms=None):
+    def enqueue_action(self, entity_id, action, is_volume=False, event_ts_ms=None, source=None):
         """FIFO transitions, latest-only volume; never block the producer."""
         event_ts_ms = time.monotonic_ns() // 1_000_000 if event_ts_ms is None else event_ts_ms
-        if not self.command_is_fresh(event_ts_ms):
+        if not self.command_is_fresh(event_ts_ms, source):
             return False
         target = self.volume_queue if is_volume else self.action_queue
         with self.action_queue_lock:
@@ -147,7 +156,7 @@ class GestureRuntime:
                 except Empty:
                     pass
             try:
-                target.put_nowait((entity_id, action, event_ts_ms))
+                target.put_nowait((entity_id, action, event_ts_ms, source))
                 return True
             except Full:
                 return False
@@ -158,14 +167,26 @@ class GestureRuntime:
         for thread in self._threads:
             thread.join(timeout=3.5)
 
-    def take_action(self, gesture_name: str, detected_hand: str = "Unknown", event_ts_ms=None) -> None:
+    def send_queued_action(self, entity_id, action, event_ts_ms, source):
+        if not self.command_is_fresh(event_ts_ms, source):
+            return False
+        if source is None:
+            return self.trigger_ha_action(entity_id, action)
+        return self.trigger_ha_action(entity_id, action,
+                                      is_current=lambda: self.command_is_fresh(event_ts_ms, source))
+
+    def take_action(self, gesture_name: str, detected_hand: str = "Unknown", event_ts_ms=None, source=None) -> None:
         """Dispatch a recognized gesture to the action execution layer.
 
         Args:
             gesture_name: Normalized or raw gesture label to resolve.
             detected_hand: Handedness label associated with the detection.
         """
-        take_action(self, gesture_name, detected_hand, event_ts_ms=event_ts_ms)
+        if event_ts_ms is not None and source is None:
+            source = self.agreement.capture(gesture_name, detected_hand)
+            if source is None:
+                return
+        take_action(self, gesture_name, detected_hand, event_ts_ms=event_ts_ms, source=source)
 
     def start_workers(
         self,

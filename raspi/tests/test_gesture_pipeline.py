@@ -99,6 +99,41 @@ class GesturePipelineTests(unittest.TestCase):
         self.app.process_latest_observation(1000)
         self.assertEqual(self.app.runtime.pop_latest_gesture()[0].category_name, 'Thumb+Index')
 
+    def test_definite_touch_release_cancels_confirmed_command_before_age_limit(self):
+        for timestamp in (1000, 1033):
+            self.app.gesture_callback(snapshot(landmarks(8)), None, timestamp)
+            self.app.process_latest_observation(timestamp)
+        event = self.app.runtime.pop_latest_gesture()
+        self.app.gesture_callback(snapshot(landmarks()), None, 1066)
+        self.app.process_latest_observation(1066)
+        with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1066000000):
+            self.assertFalse(self.app.runtime.command_is_fresh(event[2], event[3]))
+
+    def test_near_contact_flicker_has_bounded_one_shot_tolerance(self):
+        for timestamp in (1000, 1033):
+            self.app.gesture_callback(snapshot(landmarks(8)), None, timestamp)
+            self.app.process_latest_observation(timestamp)
+        event = self.app.runtime.pop_latest_gesture()
+        points = landmarks()
+        points[8].x, points[8].y = .055, 0
+        self.app.gesture_callback(snapshot(points), None, 1066)
+        self.app.process_latest_observation(1066)
+        with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1066000000):
+            self.assertTrue(self.app.runtime.command_is_fresh(event[2], event[3]))
+        with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1084000000):
+            self.assertFalse(self.app.runtime.command_is_fresh(event[2], event[3]))
+
+    def test_no_hand_cancels_pending_command_and_return_does_not_revive_it(self):
+        for timestamp in (1000, 1033):
+            self.app.gesture_callback(snapshot(landmarks(8)), None, timestamp)
+            self.app.process_latest_observation(timestamp)
+        event = self.app.runtime.pop_latest_gesture()
+        for points, timestamp in ((None, 1066), (landmarks(8), 1090)):
+            self.app.gesture_callback(snapshot(points), None, timestamp)
+            self.app.process_latest_observation(timestamp)
+        with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1090000000):
+            self.assertFalse(self.app.runtime.command_is_fresh(event[2], event[3]))
+
 
 class RecognitionStateTests(unittest.TestCase):
     def test_touch_priority_suppresses_every_lower_contact(self):

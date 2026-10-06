@@ -107,7 +107,19 @@ resets confirmations and interrupts wake holds. Confirmed touch transitions and
 device commands use bounded queues that preserve order; continuous inputs keep
 the latest state. All camera commands expire 100 ms after their original
 inference timestamp, including confirmed touches and commands waiting for a
-device worker. Queuing never resets their age. An action overlay indicates accepted dispatch, rather than
+device worker. Queuing never resets their age. Before dispatch, a command must
+also agree with the latest processed gesture on the same hand. Changing gestures,
+clearly releasing a touch, or losing tracking cancels pending commands; returning
+to the same gesture does not revive them.
+
+Continuous controls require a current match. Confirmed one-shot touches allow up
+to 50 ms of uncertain recognition while the hand remains visible. For contacts,
+separation beyond 1.2 times the detection threshold counts as a definite release;
+smaller threshold fluctuations can use that grace period. The 100 ms overall limit
+still applies. These defaults need validation on the target camera and hardware.
+Home Assistant requests and TV wake fallbacks check the same guard before sending,
+so delayed wake retries beyond the deadline are skipped. Requests already sent
+cannot be recalled. An action overlay indicates accepted dispatch, rather than
 confirmation that a physical device has responded.
 
 Voice capture keeps about one second of pending audio. If transcription falls

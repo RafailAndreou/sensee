@@ -138,6 +138,7 @@ def execute_configured_action(
     matched_config: Mapping[str, Any],
     gesture_name: str,
     event_ts_ms=None,
+    source=None,
 ) -> None:
     """Run a matched configuration through cooldown and routing checks.
 
@@ -149,19 +150,21 @@ def execute_configured_action(
     action, device_name, connection_type, entity_id, is_volume = _extract_action_context(matched_config)
 
     target_id = entity_id or str(matched_config.get("id", device_name))
-    if event_ts_ms is not None and not runtime.command_is_fresh(event_ts_ms):
+    if event_ts_ms is not None and not runtime.command_is_fresh(event_ts_ms, source):
         return
     if not should_execute_action(runtime, action, device_name, target_id):
         return
 
     try:
         if get_device_family(device_name) == "pc":
+            if source is not None and not runtime.command_is_fresh(event_ts_ms, source):
+                return
             accepted = execute_pc_action(action)
         elif connection_type == "smart":
             accepted = handle_smart_device_action(runtime, entity_id, action, is_volume,
-                                                  event_ts_ms=event_ts_ms)
+                                                  event_ts_ms=event_ts_ms, source=source)
         else:
-            accepted = handle_ir_device_action(runtime, entity_id, action, event_ts_ms=event_ts_ms)
+            accepted = handle_ir_device_action(runtime, entity_id, action, event_ts_ms=event_ts_ms, source=source)
     except Exception as e:
         logger.error("Error dispatching action: %s", e)
         return
@@ -190,6 +193,7 @@ def take_action(
     gesture_name: str,
     detected_hand: str = "Unknown",
     event_ts_ms=None,
+    source=None,
 ) -> None:
     """Resolve gesture-hand mapping and dispatch the configured action.
 
@@ -206,4 +210,4 @@ def take_action(
     if matched_config is None:
         return
 
-    execute_configured_action(runtime, matched_config, gesture_name, event_ts_ms=event_ts_ms)
+    execute_configured_action(runtime, matched_config, gesture_name, event_ts_ms=event_ts_ms, source=source)

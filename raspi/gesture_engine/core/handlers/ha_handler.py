@@ -11,6 +11,7 @@ def handle_smart_device_action(
     action: str,
     is_volume: bool,
     event_ts_ms=None,
+    source=None,
 ) -> bool:
     """Dispatch smart-device actions with low-latency handling for volume."""
-    return runtime.enqueue_action(entity_id, action, is_volume=is_volume, event_ts_ms=event_ts_ms)
+    return runtime.enqueue_action(entity_id, action, is_volume=is_volume, event_ts_ms=event_ts_ms, source=source)

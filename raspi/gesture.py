@@ -15,7 +15,7 @@ from gesture_engine.core.workers import minimum_confidence_for_gesture
 from voice_engine.voice_controller import VoiceController
 from gesture_engine.core.touch_gestures import (
     TOUCH_CONFIRM_FRAMES, action_requires_confirmation, detect_touch_gestures,
-    resolve_detected_hand, snapshot_to_multi_hand_landmarks,
+    resolve_detected_hand, snapshot_to_multi_hand_landmarks, clear_touch_releases,
 )
 from gesture_engine.core.wake_gate import WakeGate
 from gesture_engine.capture import open_camera_capture
@@ -48,6 +48,7 @@ class GestureApp:
         self.touch_confirmation = TouchConfirmation(confirm_frames=TOUCH_CONFIRM_FRAMES)
         self.wrist_queue = Queue(maxsize=1)
         self.wake_gate = WakeGate(file.load_gesture_settings)
+        self.runtime.command_guard = lambda source: self.wake_gate.allows(source.gesture)
         self.cursor_controller = cursor_controller or CursorController(file.load_ironman_params)
         self.voice_controller = voice_controller or VoiceController(file.load_voice_settings)
 
@@ -65,6 +66,7 @@ class GestureApp:
         self.observations.publish(result, timestamp_ms)
 
     def reset_tracking(self):
+        self.runtime.agreement.clear()
         self.touch_confirmation.reset()
         self.wake_gate.reset_tracking()
         self.cursor_controller.reset_tracking()
@@ -117,6 +119,13 @@ class GestureApp:
         names = [category.category_name for _, category in categories]
         names.extend(name for hand_contacts in contacts for name, touching in hand_contacts if touching)
         self.wake_gate.observe(names, timestamp_ms)
+        builtin_by_hand = {i: category.category_name for i, category in categories}
+        observed, releases = {}, []
+        for i, hand in enumerate(hands):
+            observed[identities[i]] = next((name for name, active in contacts[i] if active),
+                                           builtin_by_hand.get(i))
+            releases.extend((identities[i], name) for name in clear_touch_releases(hand))
+        self.runtime.agreement.observe(observed, timestamp_ms, released=releases)
         self.last_result_ts = timestamp_ms
         if not hands:
             self.reset_tracking()
