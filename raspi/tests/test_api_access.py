@@ -23,6 +23,16 @@ class ApiAccessTests(unittest.TestCase):
         self.stack.enter_context(patch.object(main, 'register_mdns_service', idle_mdns))
         self.stack.enter_context(patch('builtins.print'))
         self.client = self.stack.enter_context(TestClient(main.app))
+        original_post = self.client.post
+        def post(path, **kwargs):
+            if path in main._revision_paths:
+                headers = dict(kwargs.pop('headers', {}))
+                response = self.client.get(path, headers=headers)
+                if 'etag' in response.headers:
+                    headers['If-Match'] = response.headers['etag']
+                kwargs['headers'] = headers
+            return original_post(path, **kwargs)
+        self.client.post = post
 
     def test_discovery_and_dashboard_assets_are_public(self):
         self.assertEqual(self.client.get('/ping').json()['service'], 'sensee')

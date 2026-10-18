@@ -3,6 +3,7 @@ import 'package:surface_controller/globals/app_theme.dart';
 import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/globals/sizes.dart';
 import 'widgets/ironman_mode_card.dart';
+import 'engine_tools.dart';
 import 'widgets/voice_mode_card.dart';
 import 'widgets/settingsbutton.dart';
 import 'widgets/theme_toggle_card.dart';
@@ -28,69 +29,80 @@ class Settings extends StatelessWidget {
           body: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Container(
-            width: double.infinity,
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 24),
-                Settingsbutton(
-                  image: const Icon(Icons.dns, size: 32),
-                  title: t('settings_server_title'),
-                  description: t('settings_server_description'),
-                  onTap: () {
-                    Navigator.push(
+              width: double.infinity,
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 24),
+                  Settingsbutton(
+                    image: const Icon(Icons.dns, size: 32),
+                    title: t('settings_server_title'),
+                    description: t('settings_server_description'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HASettings(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Settingsbutton(
+                    image: const Icon(Icons.back_hand, size: 32),
+                    title: t('settings_gesture_title'),
+                    description: t('settings_gesture_description'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const Gesturesettings(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Settingsbutton(
+                    image: const Icon(Icons.videocam, size: 32),
+                    title: t('settings_camera_title'),
+                    description: t('settings_camera_description'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CameraSettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  _LanguageToggleCard(locale: locale),
+                  const SizedBox(height: 24),
+                  ValueListenableBuilder<String>(
+                    valueListenable: appTheme,
+                    builder: (context, theme, _) =>
+                        ThemeToggleCard(theme: theme),
+                  ),
+                  const SizedBox(height: 24),
+                  const IronmanModeCard(),
+                  const SizedBox(height: 24),
+                  const VoiceModeCard(),
+                  ListTile(
+                    leading: const Icon(Icons.tune),
+                    title: const Text('Engine tools'),
+                    subtitle: const Text(
+                      'Performance, calibration, test mode, profiles and diagnostics',
+                    ),
+                    onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const HASettings(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-                Settingsbutton(
-                  image: const Icon(Icons.back_hand, size: 32),
-                  title: t('settings_gesture_title'),
-                  description: t('settings_gesture_description'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const Gesturesettings(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-                Settingsbutton(
-                  image: const Icon(Icons.videocam, size: 32),
-                  title: t('settings_camera_title'),
-                  description: t('settings_camera_description'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CameraSettingsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-                _LanguageToggleCard(locale: locale),
-                const SizedBox(height: 24),
-                ValueListenableBuilder<String>(
-                  valueListenable: appTheme,
-                  builder: (context, theme, _) =>
-                      ThemeToggleCard(theme: theme),
-                ),
-                const SizedBox(height: 24),
-                const IronmanModeCard(),
-                const SizedBox(height: 24),
-                const VoiceModeCard(),
-                const SizedBox(height: 24),
-              ],
+                      MaterialPageRoute(builder: (_) => const EngineTools()),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
-          ),
           ),
         );
       },
@@ -140,9 +152,7 @@ class _LanguageToggleCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFF374151)
-                  : const Color(0xFFDCE3EC),
+              color: isDark ? const Color(0xFF374151) : const Color(0xFFDCE3EC),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(

@@ -43,6 +43,10 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> _pullLatestServerConfigs() async {
+    if (WidgetsBinding.instance.lifecycleState != null &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
     if (_syncInFlight) {
       return;
     }

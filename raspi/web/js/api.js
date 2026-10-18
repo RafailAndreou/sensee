@@ -12,20 +12,33 @@ async function decodeResponse(response, path) {
   return response.json();
 }
 
+const revisions = new Map();
+const writes = new Map();
+
 export const api = {
   base: '',   // same origin
-  async get(path) {
+  async get(path, rememberRevision = true) {
     const r = await fetch(this.base + path, { credentials: 'same-origin', signal: AbortSignal.timeout(10000) });
-    return decodeResponse(r, path);
+    const value = await decodeResponse(r, path);
+    if ((typeof rememberRevision === "function" ? rememberRevision() : rememberRevision) && r.headers?.get("etag")) revisions.set(path, r.headers.get("etag"));
+    return value;
   },
-  async post(path, body) {
-    const r = await fetch(this.base + path, {
-      method: 'POST',
-      credentials: 'same-origin',
-      signal: AbortSignal.timeout(10000),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+  post(path, body) {
+    const snapshot = JSON.stringify(body);
+    const operation = (writes.get(path) || Promise.resolve()).catch(() => {}).then(async () => {
+      if (!revisions.has(path) && ['/configuration','/engine-settings','/profiles','/camera-settings','/gesture-settings','/voice-settings','/ironman-params','/ha/config'].includes(path)) await this.get(path);
+      const revision = revisions.get(path);
+      const r = await fetch(this.base + path, {
+        method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(10000),
+        headers: { 'Content-Type': 'application/json', ...(revision ? {'If-Match': revision} : {}),
+          ...(path === '/profiles' && revisions.has('/configuration') ? {'If-Match-Configuration':revisions.get('/configuration')} : {}) },
+        body: snapshot,
+      });
+      const value = await decodeResponse(r, path);
+      if (r.headers?.get('etag')) revisions.set(path, r.headers.get('etag'));
+      return value;
     });
-    return decodeResponse(r, path);
+    writes.set(path, operation);
+    return operation;
   },
 };

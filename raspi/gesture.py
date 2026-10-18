@@ -18,7 +18,8 @@ from gesture_engine.core.touch_gestures import (
     resolve_detected_hand, snapshot_to_multi_hand_landmarks, clear_touch_releases,
 )
 from gesture_engine.core.wake_gate import WakeGate
-from gesture_engine.capture import open_camera_capture
+from gesture_engine.capture import CaptureWorker
+from gesture_engine import control
 from gesture_engine.overlay import OVERLAY_DURATION_SECONDS, draw_action_overlay
 from gesture_engine.runtime import GestureRuntime
 from gesture_engine.server_runner import start_fastapi_server_in_background
@@ -38,6 +39,11 @@ class GestureApp:
         self.frame_clock = FrameClock()
         self.latest_frame_ts = 0
         self.last_result_ts = None
+        self.aspect_ratio = 4 / 3
+        self._engine_revision = -1
+        self._engine_settings = None
+        self._invalidate_callback = self.invalidate_observations
+        control.register(self._invalidate_callback)
         self.draw_landmarks = None
         self._tracked_hands = ()
         self.runtime = GestureRuntime(
@@ -52,6 +58,21 @@ class GestureApp:
         self.cursor_controller = cursor_controller or CursorController(file.load_ironman_params)
         self.voice_controller = voice_controller or VoiceController(file.load_voice_settings)
 
+    def invalidate_observations(self):
+        self.observations.clear()
+        self.reset_tracking()
+
+    def engine_settings(self):
+        revision = file.settings_revision(file.ENGINE_SETTINGS_PATH)
+        if revision != self._engine_revision:
+            self._engine_settings = file.load_engine_settings()
+            self._engine_revision = revision
+        return self._engine_settings
+
+    def contacts(self, hand, release=False):
+        settings = self.engine_settings()['calibration']
+        return detect_touch_gestures(hand, settings, self.aspect_ratio, release=release)
+
     def enqueue_detected_gesture(self, gesture_name, handedness, timestamp_ms,
                                  score=1.0, one_shot=False):
         if not self.wake_gate.allows(gesture_name):
@@ -63,7 +84,22 @@ class GestureApp:
 
     def gesture_callback(self, result, _output_image, timestamp_ms):
         # The callback only publishes; all recognition paths consume one fresh observation.
-        self.observations.publish(result, timestamp_ms)
+        with control.lock:
+            if timestamp_ms > control.invalidated_ms:
+                # Apply mismatches before workers can dispatch against an older result.
+                # A matching new observation retains the uninterrupted generation.
+                if timestamp_ms > self.observations._latest_timestamp:
+                    observed = {}
+                    for i, hand in enumerate(result.hand_landmarks or []):
+                        contacts = self.contacts(hand)
+                        categories = (result.gestures or [])[i] if i < len(result.gestures or []) else []
+                        category = categories[0] if categories else None
+                        builtin = (category.category_name if category and category.category_name != 'None'
+                                   and category.score >= minimum_confidence_for_gesture(category.category_name) else None)
+                        observed[resolve_detected_hand(result, i)] = next(
+                            (name for name, active in contacts if active), builtin)
+                    self.runtime.agreement.invalidate_mismatches(observed)
+                self.observations.publish(result, timestamp_ms)
 
     def reset_tracking(self):
         self.runtime.agreement.clear()
@@ -76,16 +112,23 @@ class GestureApp:
 
     def process_touch_gestures_for_hand(self, hand_idx, hand_landmarks, detected_hand,
                                        timestamp_ms, contacts=None):
-        contacts = contacts if contacts is not None else detect_touch_gestures(hand_landmarks)
+        contacts = contacts if contacts is not None else self.contacts(hand_landmarks)
+        released = {name for name, active in self.contacts(hand_landmarks, release=True) if not active}
         for gesture_name, is_touching in contacts:
             state_key = (detected_hand, gesture_name)
             if not is_touching or not self.wake_gate.allows(gesture_name):
-                self.touch_confirmation.is_confirmed(state_key, False)
+                if gesture_name in released:
+                    self.touch_confirmation.is_confirmed(state_key, False)
+                else:
+                    self.touch_confirmation.uncertain(state_key)
                 continue
+            source = self.runtime.agreement.capture(gesture_name, detected_hand)
+            self.cursor_controller.command_context = lambda ts=timestamp_ms, src=source: src is not None and self.runtime.command_is_fresh(ts, src)
             matched_config = self.runtime.find_config(gesture_name, detected_hand)
             if matched_config is None:
                 action_key = self.cursor_controller.resolve_action(gesture_name)
-                if action_key and action_key not in ("move_cursor", "scroll", "scroll_up", "scroll_down"):
+                if (action_key and action_key not in ("move_cursor", "scroll", "scroll_up", "scroll_down")
+                        and self.touch_confirmation.is_confirmed(state_key, True)):
                     self.cursor_controller.fire_action(action_key)
                 continue
             one_shot = action_requires_confirmation(str(matched_config.get("action", "")))
@@ -108,7 +151,11 @@ class GestureApp:
                 and timestamp_ms - self.last_result_ts > 250):
             self.reset_tracking()
         self._tracked_hands = identities
-        contacts = [detect_touch_gestures(hand) for hand in hands]
+        contacts = [self.contacts(hand) for hand in hands]
+        control.metric(observation_timestamp_ms=timestamp_ms, recognitionLatencyMs=max(0, now_ms-timestamp_ms))
+        from gesture_engine.calibration import sampler
+        for hand in hands:
+            sampler.observe(hand, self.aspect_ratio)
         categories = []
         for i, gesture_list in enumerate(snapshot.gestures or []):
             if i >= len(hands) or not gesture_list:
@@ -124,7 +171,7 @@ class GestureApp:
         for i, hand in enumerate(hands):
             observed[identities[i]] = next((name for name, active in contacts[i] if active),
                                            builtin_by_hand.get(i))
-            releases.extend((identities[i], name) for name in clear_touch_releases(hand))
+            releases.extend((identities[i], name) for name, active in self.contacts(hand, release=True) if not active)
         self.runtime.agreement.observe(observed, timestamp_ms, released=releases)
         self.last_result_ts = timestamp_ms
         if not hands:
@@ -150,7 +197,14 @@ class GestureApp:
         for i, category in categories:
             if not self.wake_gate.allows(category.category_name):
                 continue
+            source = self.runtime.agreement.capture(category.category_name, self._tracked_hands[i])
+            self.cursor_controller.command_context = lambda ts=self.last_result_ts, src=source: src is not None and self.runtime.command_is_fresh(ts, src)
+            if source is None:
+                continue
             action_key = self.cursor_controller.resolve_action(category.category_name)
+            if control.test_mode and action_key:
+                control.record("test_action", action=action_key)
+                continue
             if action_key == "move_cursor":
                 self.cursor_controller.feed(hands[i][8].x, hands[i][8].y)
                 return
@@ -166,7 +220,9 @@ class GestureApp:
             if action_key:
                 self.cursor_controller.fire_action(action_key)
                 break
-        if params.get("always_track", False):
+        if control.test_mode:
+            return
+        if params.get("always_track", False) and categories:
             self.cursor_controller.feed(hands[0][8].x, hands[0][8].y)
 
     def run(self):
@@ -190,38 +246,32 @@ class GestureApp:
                 get_local_ip, auto_open_dashboard=show_preview, stop_event=self.runtime.stop_event,
             )
             hand_thread = start_hand_movement_monitor(self.wrist_queue, send_msg)
-            camera_revision = file.settings_revision(file.CAMERA_SETTINGS_PATH)
-            cap, source_label = open_camera_capture(file.load_camera_settings())
-            camera_failed = False
+            cap = CaptureWorker(self.runtime.stop_event).start()
+            last_preview = 0.0
             while not self.runtime.stop_event.is_set():
-                revision = file.settings_revision(file.CAMERA_SETTINGS_PATH)
-                if revision != camera_revision:
-                    camera_revision = revision
-                    cap.release()
-                    cap, source_label = open_camera_capture(file.load_camera_settings())
-                    self.observations.clear()
-                    self.reset_tracking()
-                ret, frame = cap.read() if cap.isOpened() else (False, None)
-                if not ret:
-                    self.reset_tracking()
-                    if not camera_failed:
-                        logger.warning("Camera unavailable (%s); retrying capture.", source_label)
-                    camera_failed = True
-                    if show_preview and cv2.waitKey(1) & 0xFF in (ord("q"), ord("Q")):
-                        break
-                    if self.runtime.stop_event.wait(0.5):
-                        break
-                    cap.release()
-                    cap, source_label = open_camera_capture(file.load_camera_settings())
+                item = cap.take(self.runtime.policy.stale_gesture_ms)
+                if item is None:
                     continue
-                camera_failed = False
-                timestamp_ms = self.frame_clock.next()
+                frame, timestamp_ms, frame_epoch = item
+                if frame_epoch != control.epoch:
+                    continue
+                settings = self.engine_settings()
+                self.aspect_ratio = frame.shape[1] / frame.shape[0]
                 self.latest_frame_ts = timestamp_ms
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                if frame.shape[1] > settings['recognitionWidth']:
+                    recognition_frame = cv2.resize(frame, (settings['recognitionWidth'],
+                                       round(frame.shape[0]*settings['recognitionWidth']/frame.shape[1])))
+                else:
+                    recognition_frame = frame
+                rgb = cv2.cvtColor(recognition_frame, cv2.COLOR_BGR2RGB)
                 recognizer.recognize_async(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb), timestamp_ms)
-                preview_needed = show_preview or frame_hub.has_subscribers()
-                self.process_latest_observation(timestamp_ms, draw=preview_needed)
+                preview_needed = (show_preview or frame_hub.has_subscribers()) and time.monotonic()-last_preview >= 1/settings["previewFps"]
+                with control.lock:
+                    if frame_epoch != control.epoch:
+                        continue
+                    self.process_latest_observation(time.monotonic_ns() // 1_000_000, draw=preview_needed)
                 if preview_needed:
+                    last_preview = time.monotonic()
                     for landmarks in self.draw_landmarks or []:
                         mp.solutions.drawing_utils.draw_landmarks(frame, landmarks, mp.solutions.hands.HAND_CONNECTIONS)
                     if MIRROR_PREVIEW:
@@ -230,7 +280,10 @@ class GestureApp:
                         label, overlay_ts = self.runtime.overlay_label, self.runtime.overlay_ts
                     if label and time.monotonic() - overlay_ts < OVERLAY_DURATION_SECONDS:
                         draw_action_overlay(frame, label)
-                    set_frame_from_bgr(frame)
+                    if frame.shape[1] > settings["previewWidth"]:
+                        frame = cv2.resize(frame, (settings["previewWidth"], round(frame.shape[0]*settings["previewWidth"]/frame.shape[1])))
+                    frame_hub.set_fps(settings["previewFps"])
+                    set_frame_from_bgr(frame, settings["jpegQuality"])
                     if show_preview:
                         cv2.imshow("MediaPipe Hands", frame)
                 if show_preview and cv2.waitKey(1) & 0xFF in (ord("q"), ord("Q")):
@@ -250,7 +303,7 @@ class GestureApp:
             if server_thread:
                 server_thread.join(timeout=3.5)
             if cap is not None:
-                cap.release()
+                cap.close()
             if recognizer is not None:
                 recognizer.close()
             cv2.destroyAllWindows()

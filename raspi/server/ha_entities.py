@@ -8,7 +8,7 @@ from typing import Any, Mapping, Sequence
 
 from gesture_engine.log import get_logger
 
-from .ha_services import get_domain_from_entity
+from .ha_services import get_domain_from_entity, available_actions
 from .ha_transport import MOCK_MODE, get_http_client
 from .ha_config import get_ha_config
 
@@ -25,6 +25,8 @@ _DOMAIN_TO_SENSEE_TYPE = {
     "switch": "Light",
     "climate": "Ac",
     "fan": "Fan",
+    "scene": "Scene",
+    "script": "Script",
 }
 
 
@@ -72,6 +74,8 @@ def _format_states_to_devices(all_states: Sequence[Mapping[str, Any]]) -> list[d
                 "entity_id": entity_id,
                 "friendly_name": friendly_name,
                 "type": sensee_type,
+                "domain": domain,
+                "actions": available_actions(domain, attributes),
             }
         )
 

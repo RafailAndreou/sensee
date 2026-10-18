@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:convert';
+import '../../server/auth_http.dart' as http;
 import 'package:surface_controller/globals/connectionslist.dart';
 import 'package:surface_controller/globals/global.dart';
 import 'package:surface_controller/globals/locale.dart';
@@ -15,6 +17,7 @@ class ActionDetails extends StatefulWidget {
   final int? editingConnectionId;
   final String connectionType;
   final String entityId;
+  final List<String>? availableActions;
 
   const ActionDetails({
     super.key,
@@ -23,6 +26,7 @@ class ActionDetails extends StatefulWidget {
     this.editingConnectionId,
     this.connectionType = 'ir',
     this.entityId = '',
+    this.availableActions,
   });
 
   @override
@@ -33,6 +37,7 @@ class _ActionDetailsState extends State<ActionDetails> {
   late String _selectedAction;
   String _selectedGesture = 'Index+Thumb';
   String _selectedHand = 'Right Hand';
+  List<String>? _availableActions;
 
   String _defaultActionForDeviceType(String deviceType) {
     if (deviceType.toLowerCase() == 'pc') {
@@ -100,7 +105,10 @@ class _ActionDetailsState extends State<ActionDetails> {
   @override
   void initState() {
     super.initState();
-    _selectedAction = _defaultActionForDeviceType(widget.deviceType);
+    _availableActions = widget.availableActions;
+    _selectedAction =
+        widget.availableActions?.firstOrNull ??
+        _defaultActionForDeviceType(widget.deviceType);
 
     if (widget.editingConnectionId != null) {
       final config = getConnectionConfig(widget.editingConnectionId!);
@@ -114,6 +122,34 @@ class _ActionDetailsState extends State<ActionDetails> {
           ? _selectedHand
           : config.hand.value;
     }
+    if (_availableActions == null) unawaited(_loadCapabilities());
+  }
+
+  Future<void> _loadCapabilities() async {
+    if (widget.connectionType != 'smart' || widget.entityId.isEmpty) return;
+    final client = await server_sync.getServerClient();
+    if (client == null) return;
+    try {
+      final response = await http.get(client.smartDevicesUri);
+      if (response.statusCode != 200 || !mounted) return;
+      final devices = jsonDecode(response.body)['devices'] as List;
+      for (final device in devices) {
+        if (device['entity_id'] == widget.entityId &&
+            device['actions'] is List) {
+          final actions = (device['actions'] as List).cast<String>();
+          if (actions.isEmpty) return;
+          setState(() {
+            _availableActions = actions;
+            if (!actions.contains(_selectedAction)) {
+              _selectedAction = actions.first;
+            }
+          });
+          return;
+        }
+      }
+    } catch (error) {
+      debugPrint('Could not refresh action capabilities: $error');
+    }
   }
 
   Future<void> _saveConfiguration() async {
@@ -126,9 +162,9 @@ class _ActionDetailsState extends State<ActionDetails> {
     if (selectedHandNormalized == 'both hands') {
       if (existingHands.contains('both hands')) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t('err_both_hands_assigned'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('err_both_hands_assigned'))));
         return;
       }
 
@@ -137,28 +173,28 @@ class _ActionDetailsState extends State<ActionDetails> {
       if (hasLeft && !hasRight) {
         _selectedHand = 'Right Hand';
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t('err_both_conflicts_left'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('err_both_conflicts_left'))));
       } else if (hasRight && !hasLeft) {
         _selectedHand = 'Left Hand';
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t('err_both_conflicts_right'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('err_both_conflicts_right'))));
       } else if (hasLeft && hasRight) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t('err_both_left_right_used'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('err_both_left_right_used'))));
         return;
       }
     } else {
       if (existingHands.contains('both hands')) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t('err_gesture_assigned_both'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('err_gesture_assigned_both'))));
         return;
       }
     }
@@ -167,9 +203,9 @@ class _ActionDetailsState extends State<ActionDetails> {
       excludeConnectionId: existingConnectionId,
     )) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t('err_duplicate_gesture_hand'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('err_duplicate_gesture_hand'))));
       return;
     }
 
@@ -195,6 +231,7 @@ class _ActionDetailsState extends State<ActionDetails> {
 
     config.id.value = connectionId;
     config.brand.value = widget.brand;
+    config.isSynced.value = false;
     config.action.value = _selectedAction;
     config.gesture.value = _selectedGesture;
     config.hand.value = _selectedHand;
@@ -245,6 +282,8 @@ class _ActionDetailsState extends State<ActionDetails> {
               ),
               const SizedBox(height: 24),
               ActionSelectorCard(
+                key: ValueKey(_availableActions?.join("|")),
+                availableActions: _availableActions,
                 deviceType: widget.deviceType,
                 brand: widget.brand,
                 initialAction: _selectedAction,

@@ -4,6 +4,6 @@ httpx
 uvicorn
 zeroconf
 requests
-opencv-python
-numpy
+opencv-contrib-python==4.10.0.84
+numpy==1.26.4
 pyautogui

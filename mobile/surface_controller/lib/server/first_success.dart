@@ -8,7 +8,12 @@ Future<T?> firstSuccessful<T>(Iterable<Future<T?>> attempts) {
   var remaining = probes.length;
   return Future.any<T?>(
     probes.map((probe) async {
-      final value = await probe;
+      T? value;
+      try {
+        value = await probe;
+      } catch (_) {
+        value = null;
+      }
       if (value != null) return value;
       remaining -= 1;
       if (remaining == 0) allFailed.complete(null);

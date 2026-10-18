@@ -25,45 +25,28 @@ def action_requires_confirmation(action_name: str) -> bool:
     return any(keyword in normalized_action for keyword in CONFIRMATION_ACTION_KEYWORDS)
 
 
-def detect_touch_gestures(hand_landmarks) -> list[tuple[str, bool]]:
+def detect_touch_gestures(hand_landmarks, calibration=None, aspect=1.0, *, release=False) -> list[tuple[str, bool]]:
     """Return [(gesture_name, is_touching), ...] for thumb-finger contacts.
 
     Priority chain: Pinky > Ring > Middle > Index. Each higher-priority touch
     suppresses lower-priority ones to prevent co-firing as the thumb sweeps.
     """
     landmarks = getattr(hand_landmarks, "landmark", hand_landmarks)
-    thumb, index, middle, ring, pinky = (landmarks[i] for i in (4, 8, 12, 16, 20))
-
-    pinky_touching = touching(
-        thumb, pinky, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
-    )
-    ring_touching = (
-        False
-        if pinky_touching
-        else touching(
-            thumb, ring, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
-        )
-    )
-    middle_touching = (
-        False
-        if pinky_touching or ring_touching
-        else touching(
-            thumb, middle, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
-        )
-    )
-    index_touching = (
-        False
-        if pinky_touching or ring_touching or middle_touching
-        else touching(
-            thumb, index, threshold=TOUCH_XY_THRESHOLD, z_threshold=TOUCH_Z_THRESHOLD
-        )
-    )
-    return [
-        ("Thumb+Pinky", pinky_touching),
-        ("Thumb+Ring", ring_touching),
-        ("Thumb+Middle", middle_touching),
-        ("Thumb+Index", index_touching),
-    ]
+    margin = TOUCH_RELEASE_MARGIN if release else 1
+    found = False
+    result = []
+    for name, index in (("Thumb+Pinky", 20), ("Thumb+Ring", 16),
+                        ("Thumb+Middle", 12), ("Thumb+Index", 8)):
+        if calibration and calibration.get('enabled'):
+            from gesture_engine.calibration import contact_distance
+            xy, z = contact_distance(landmarks, index, aspect)
+            active = xy <= calibration['contactRatio']*margin and z <= calibration['depthRatio']*margin
+        else:
+            active = touching(landmarks[4], landmarks[index], threshold=TOUCH_XY_THRESHOLD*margin,
+                              z_threshold=TOUCH_Z_THRESHOLD*margin)
+        result.append((name, active and (release or not found)))
+        found = found or active
+    return result
 
 
 def snapshot_to_multi_hand_landmarks(snapshot):

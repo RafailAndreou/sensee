@@ -37,29 +37,8 @@ class WakeGate:
         self._last_observation_at = None
 
     def _gesture_key(self, gesture_name):
-        normalized = normalize_name(str(gesture_name)).replace("_", " ")
-        aliases = {
-            "open hand": "open_palm",
-            "open palm": "open_palm",
-            "closed fist": "closed_fist",
-            "thumbs+index": "thumb_index",
-            "thumbs index": "thumb_index",
-            "thumb+index": "thumb_index",
-            "thumb index": "thumb_index",
-            "middle+thumb": "thumb_middle",
-            "middle thumb": "thumb_middle",
-            "thumb+middle": "thumb_middle",
-            "thumb middle": "thumb_middle",
-        }
-        if normalized in aliases:
-            return aliases[normalized]
-
-        parts = [part for part in normalized.replace("+", " ").split() if part]
-        if set(parts) == {"thumb", "index"}:
-            return "thumb_index"
-        if set(parts) == {"thumb", "middle"}:
-            return "thumb_middle"
-        return normalized.replace(" ", "_")
+        from .matching import canonical_gesture_name
+        return canonical_gesture_name(str(gesture_name))
 
     def _refresh_settings_if_needed(self, force=False):
         now = time.monotonic()

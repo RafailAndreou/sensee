@@ -7,6 +7,7 @@ runtime cache management have distinct responsibilities.
 from __future__ import annotations
 
 import threading
+from gesture_engine import control
 
 from server.file import load_configure_json
 from gesture_engine.core.matching import canonical_gesture_name, canonical_hand_name
@@ -31,7 +32,8 @@ def set_loaded_config(configuration: list) -> None:
         key = (canonical_gesture_name(item["gesture"]),
                canonical_hand_name(str(item.get("hand", ""))))
         index.setdefault(key, (position, item))
-    with _lock:
+    with control.lock, _lock:
+        control.invalidate("mappings")
         _loaded_config, _active_config, _mapping_index = snapshot, active, index
 
 

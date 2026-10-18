@@ -11,6 +11,10 @@ final Set<int> _pendingDeletedConnectionIds = <int>{};
 
 Set<int> get pendingDeletedConnectionIds => _pendingDeletedConnectionIds;
 
+void acknowledgeConnectionDeletions(Set<int> ids) {
+  _pendingDeletedConnectionIds.removeAll(ids);
+}
+
 void clearPendingConnectionDeletions() {
   _pendingDeletedConnectionIds.clear();
 }
@@ -95,7 +99,16 @@ void printAllConnections() {
   }
 }
 
-Future<void> saveConfigsToFile() async {
+Future<void> _saveTail = Future.value();
+String? _savedSnapshot;
+Future<void> saveConfigsToFile() {
+  _saveTail = _saveTail
+      .catchError((Object _) {})
+      .then((_) => _saveConfigsToFile());
+  return _saveTail;
+}
+
+Future<void> _saveConfigsToFile() async {
   try {
     final Map<String, dynamic> allConfigs = {};
 
@@ -114,8 +127,12 @@ Future<void> saveConfigsToFile() async {
 
     allConfigs['_order'] = connectionsList.value;
     final jsonString = jsonEncode(allConfigs);
+    if (jsonString == _savedSnapshot) return;
     final file = await _configurationsFile;
-    await file.writeAsString(jsonString);
+    final temporary = File("${file.path}.tmp");
+    await temporary.writeAsString(jsonString, flush: true);
+    await temporary.rename(file.path);
+    _savedSnapshot = jsonString;
     debugPrint('Configurations saved to file: $jsonString');
   } catch (e) {
     debugPrint('Error saving configurations to file: $e');
@@ -189,10 +206,9 @@ Future<void> loadConfigurationsFromFile() async {
             .whereType<int>()
             .where(loadedConnectionIds.contains)
             .toList();
-        final missing = loadedConnectionIds
-            .where((id) => !ordered.contains(id))
-            .toList()
-          ..sort();
+        final missing =
+            loadedConnectionIds.where((id) => !ordered.contains(id)).toList()
+              ..sort();
         connectionsList.value = [...ordered, ...missing];
       } else {
         loadedConnectionIds.sort();
@@ -221,6 +237,8 @@ void applyServerConfigurationsSnapshot(List<Map<String, dynamic>> incoming) {
     }
 
     incomingIds.add(parsedId);
+    final existing = connectionConfigs[parsedId];
+    if (existing != null && !existing.isSynced.value) continue;
     final config = getConnectionConfig(parsedId);
     config.id.value = parsedId;
     config.connectionType.value =
@@ -258,7 +276,8 @@ void applyServerConfigurationsSnapshot(List<Map<String, dynamic>> incoming) {
     ..sort();
   final finalOrder = [...orderedKnown, ...newIds];
   connectionsList.value = finalOrder;
-  _nextConnectionId =
-      allIds.isEmpty ? 1 : (allIds.reduce((a, b) => a > b ? a : b) + 1);
+  _nextConnectionId = allIds.isEmpty
+      ? 1
+      : (allIds.reduce((a, b) => a > b ? a : b) + 1);
   saveConfigsToFile();
 }

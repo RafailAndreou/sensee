@@ -11,6 +11,7 @@ typedef OnSelectionChanged =
 class ActionSelectorCard extends StatefulWidget {
   final String deviceType;
   final String brand;
+  final List<String>? availableActions;
   final String initialAction;
   final String initialGesture;
   final String initialHand;
@@ -21,6 +22,7 @@ class ActionSelectorCard extends StatefulWidget {
     super.key,
     required this.deviceType,
     required this.brand,
+    this.availableActions,
     this.initialAction = 'Turn on',
     this.initialGesture = 'Index+Thumb',
     this.initialHand = 'Right Hand',
@@ -42,13 +44,21 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
     'Middle+Thumb',
     'Open Palm',
     'Fist',
+    'Thumb+Ring',
+    'Thumb+Pinky',
+    'Victory',
+    'Thumb Up',
+    'Thumb Down',
+    'Pointing Up',
   ];
   final List<String> hands = ['Left Hand', 'Right Hand', 'Both Hands'];
 
   @override
   void initState() {
     super.initState();
-    actions = _actionsForDeviceType(widget.deviceType);
+    actions = widget.availableActions?.isNotEmpty == true
+        ? widget.availableActions!
+        : _actionsForDeviceType(widget.deviceType);
     selectedAction = actions.contains(widget.initialAction)
         ? widget.initialAction
         : actions.first;
@@ -59,12 +69,28 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
   List<String> _actionsForDeviceType(String type) {
     switch (type.toLowerCase()) {
       case 'pc':
+        return ['Open Spotify', 'Open YouTube', 'Close Window', 'Open Browser'];
+      case 'scene':
+      case 'script':
+        return ['Activate'];
+      case 'light':
         return [
-          'Open Spotify',
-          'Open YouTube',
-          'Close Window',
-          'Open Browser',
+          'Turn on',
+          'Turn off',
+          'Brightness 25',
+          'Brightness 50',
+          'Brightness 100',
         ];
+      case 'fan':
+        return [
+          'Turn on',
+          'Turn off',
+          'Fan speed 25',
+          'Fan speed 50',
+          'Fan speed 100',
+        ];
+      case 'ac':
+        return ['Turn on', 'Turn off', 'Temperature 20', 'Temperature 22'];
       default:
         return ['Turn on', 'Turn off', 'Increase volume', 'Decrease volume'];
     }
@@ -152,8 +178,9 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
       valueListenable: appLocale,
       builder: (context, _, __) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        final pillBg =
-            isDark ? const Color(0xFF374151) : const Color(0xFFDCE3EC);
+        final pillBg = isDark
+            ? const Color(0xFF374151)
+            : const Color(0xFFDCE3EC);
         return SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -195,10 +222,7 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
                           value: action,
                           child: Row(
                             children: [
-                              Icon(
-                                _deviceIcon(widget.deviceType),
-                                size: 30,
-                              ),
+                              Icon(_deviceIcon(widget.deviceType), size: 30),
                               const SizedBox(width: 8),
                               Text(
                                 '${widget.deviceType}: ${_displayAction(action)}',

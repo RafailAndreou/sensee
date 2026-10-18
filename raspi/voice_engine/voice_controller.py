@@ -3,7 +3,8 @@ import threading
 import time
 
 import numpy as np
-import pyautogui
+from gesture_engine.desktop import pyautogui
+from gesture_engine import control
 
 import voice_engine.status as voice_status
 from gesture_engine.log import get_logger
@@ -29,6 +30,7 @@ class VoiceController:
         self._cache_ts: float = 0.0
         self._params_lock = threading.Lock()
         self._generation = 0
+        self._invalidate_callback = self._invalidate_session
         self._stop = threading.Event()
         self._audio_sequence = 0
         self._last_audio_sequence = 0
@@ -49,8 +51,15 @@ class VoiceController:
         voice_status.register_preload(self.preload)
         voice_status.register_settings_changed(self._on_settings_changed)
         self._thread = threading.Thread(target=self._run, daemon=True, name="VoiceController")
+        control.register(self._invalidate_callback)
         if start_thread:
             self._thread.start()
+
+    def _invalidate_session(self):
+        # Called under the session lock; do not acquire params while persistence is locked.
+        self._generation += 1
+        self._cache_ts = 0.0
+        self._wake.set()
 
     def _on_settings_changed(self) -> None:
         with self._params_lock:
@@ -226,25 +235,30 @@ class VoiceController:
                     fp16=False,
                 )
                 text = result.get("text", "").strip()
-                logger.info("Transcribed: %r", text)
+                logger.debug("Speech transcription completed")
             except Exception as e:
                 logger.warning("Whisper transcription error: %s", e)
                 continue
 
             if text and self._params().get("enabled", False):
-                with self._params_lock:
+                with control.lock, self._params_lock:
                     if not self._stop.is_set() and generation == self._generation:
                         self._type_text(text)
 
     def _type_text(self, text: str) -> None:
         """Paste transcribed text at the current cursor position via clipboard."""
         try:
+            if control.test_mode:
+                control.record("test_action", action="voice dictation")
+                return
             import pyperclip
             pyperclip.copy(text)
             pyautogui.hotkey("ctrl", "v", _pause=False)
-            logger.info("Typed via clipboard: %r", text)
+            logger.debug("Dictation delivered")
         except ImportError:
             try:
+                if control.test_mode:
+                    return
                 pyautogui.write(text, interval=0.02, _pause=False)
             except Exception as e:
                 logger.warning("Typing fallback error: %s", e)

@@ -1,7 +1,8 @@
 import webbrowser
 from typing import Final
 
-import pyautogui
+from gesture_engine.desktop import pyautogui
+from gesture_engine import control
 
 from gesture_engine.log import get_logger
 

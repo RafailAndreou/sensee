@@ -122,8 +122,7 @@ def process_action_queue_loop(runtime: "GestureRuntime") -> None:
         try:
             entity_id, action, event_ts_ms, source = runtime.action_queue.get(timeout=0.1)
             # Use the inference timestamp; queuing never extends command freshness.
-            if runtime.command_is_fresh(event_ts_ms, source):
-                runtime.send_queued_action(entity_id, action, event_ts_ms, source)
+            runtime.send_queued_action(entity_id, action, event_ts_ms, source)
         except Empty:
             continue
         except Exception as e:
@@ -136,8 +135,7 @@ def process_volume_loop(runtime: "GestureRuntime") -> None:
         try:
             # This will wait quietly without using CPU until a volume action arrives
             entity_id, action, event_ts_ms, source = runtime.volume_queue.get(timeout=0.1)
-            if runtime.command_is_fresh(event_ts_ms, source):
-                runtime.send_queued_action(entity_id, action, event_ts_ms, source)
+            runtime.send_queued_action(entity_id, action, event_ts_ms, source)
         except Empty:
             continue
         except Exception as e:

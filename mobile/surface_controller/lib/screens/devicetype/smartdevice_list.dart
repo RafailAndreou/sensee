@@ -37,9 +37,10 @@ class _SmartDeviceListState extends State<SmartDeviceList> {
         throw Exception("Could not discover server.");
       }
 
-      final response = await http
-          .get(client.smartDevicesUri)
-          .timeout(const Duration(seconds: 5));
+      final response = await http.get(
+        client.smartDevicesUri,
+        timeout: const Duration(seconds: 5),
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
@@ -167,6 +168,8 @@ class _SmartDeviceListState extends State<SmartDeviceList> {
                     brand: "${device['friendly_name']}",
                     connectionType: "smart",
                     entityId: device['entity_id'],
+                    availableActions: (device['actions'] as List?)
+                        ?.cast<String>(),
                   ),
                 ),
               );

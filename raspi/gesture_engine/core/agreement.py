@@ -2,6 +2,8 @@
 import threading
 from dataclasses import dataclass
 
+from gesture_engine import control
+
 from .matching import canonical_gesture_name, canonical_hand_name
 
 
@@ -28,10 +30,25 @@ class GestureAgreement:
         self._states = {}
         self._generation = 0
         self._timestamp = -1
+        self._invalidate_callback = self.clear
+        control.register(self._invalidate_callback)
 
     def clear(self):
         with self._lock:
             self._states.clear()
+
+    def invalidate_mismatches(self, gestures_by_hand):
+        """Apply the latest callback as a safety barrier before main-loop consumption.
+
+        Matching, certain hands retain their generation. A mismatch or uncertain
+        hand can never revive an old queued command when recognition returns.
+        """
+        observed = {canonical_hand_name(hand): canonical_gesture_name(name) if name else None
+                    for hand, name in gestures_by_hand.items()}
+        with self._lock:
+            for hand, state in tuple(self._states.items()):
+                if observed.get(hand) != state.gesture or not state.certain:
+                    del self._states[hand]
 
     def observe(self, gestures_by_hand, timestamp_ms, released=()):
         """None means uncertain recognition; missing hands mean lost tracking.
@@ -76,5 +93,4 @@ class GestureAgreement:
             state = self._states.get(source.hand)
             return (state is not None and state.generation == source.generation
                     and state.gesture == source.gesture
-                    and (state.certain or source.one_shot
-                         and now_ms - state.last_match_ms <= self.grace_ms))
+                    and state.certain)

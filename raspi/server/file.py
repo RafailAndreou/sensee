@@ -5,10 +5,11 @@ import copy
 import tempfile
 import threading
 
+from gesture_engine import control
 from gesture_engine.log import get_logger
 
 logger = get_logger(__name__)
-PERSISTENCE_LOCK = threading.RLock()
+PERSISTENCE_LOCK = control.lock
 _settings_cache = {}
 _settings_revisions = {}
 _settings_lock = threading.Lock()
@@ -48,7 +49,7 @@ def _atomic_write(path: str, content: str) -> None:
 def _save_json(path: str, value) -> None:
     # Serialize before touching disk: invalid input cannot damage a saved file.
     content = json.dumps(value, indent=4, ensure_ascii=False, allow_nan=False)
-    with PERSISTENCE_LOCK:
+    with PERSISTENCE_LOCK, control.lock:
         try:
             with open(path, encoding="utf-8") as stream:
                 previous = stream.read()
@@ -58,6 +59,7 @@ def _save_json(path: str, value) -> None:
             pass
         except (json.JSONDecodeError, UnicodeError) as error:
             logger.warning("Keeping existing backup of damaged %s: %s", path, error)
+        control.invalidate("configuration")
         _atomic_write(path, content)
         with _settings_lock:
             _settings_cache.pop(path, None)
@@ -143,6 +145,7 @@ def load_gesture_settings() -> dict:
 def delete_gesture_settings() -> None:
     # Removing both files prevents recovery from re-enabling the wake gate.
     with PERSISTENCE_LOCK:
+        control.invalidate("configuration")
         for path in (GESTURE_SETTINGS_PATH, GESTURE_SETTINGS_PATH + ".bak"):
             try:
                 os.remove(path)
@@ -249,3 +252,13 @@ def load_camera_settings() -> dict:
     except Exception as e:
         logger.warning("Error loading camera settings: %s", e)
         return {"useNetwork": False, "streamUrl": ""}
+
+ENGINE_SETTINGS_PATH = os.path.join(_data_dir(), "engine_settings.json")
+PROFILES_PATH = os.path.join(_data_dir(), "mapping_profiles.json")
+
+def load_engine_settings():
+    from server.models import EngineSettings
+    return {**EngineSettings().model_dump(), **_load_settings(ENGINE_SETTINGS_PATH, {})}
+
+def save_engine_settings(settings):
+    _save_json(ENGINE_SETTINGS_PATH, settings)

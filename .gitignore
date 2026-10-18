@@ -63,3 +63,7 @@ raspi/server/ironman_params.json
 raspi/server/voice_settings.json
 raspi/server/access_config.json
 raspi/server/*.json.bak
+
+# Engine settings and private mapping profiles
+raspi/server/engine_settings.json
+raspi/server/mapping_profiles.json

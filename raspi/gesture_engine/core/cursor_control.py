@@ -2,7 +2,8 @@ import time
 import threading
 from queue import Queue, Empty, Full
 
-import pyautogui
+from gesture_engine.desktop import pyautogui
+from gesture_engine import control
 
 from gesture_engine.log import get_logger
 from gesture_engine.core.matching import normalize_name
@@ -11,8 +12,6 @@ from server.models import IronmanParams
 
 logger = get_logger(__name__)
 
-pyautogui.FAILSAFE = False
-pyautogui.PAUSE = 0
 
 _PARAMS_CACHE_TTL = 0.5  # seconds between disk reads
 _DIRECTIONAL_SCROLL_BOOST = 3  # Integer speed multiplier for scroll_up/scroll_down.
@@ -43,6 +42,8 @@ class CursorController:
         self.cursor_queue: Queue = Queue(maxsize=2)
         self._stop = threading.Event()
         self._tracking_generation = 0
+        self.command_context = None
+        self._output_guard = lambda: True
         self._residual_x = self._residual_y = 0.0
 
         self._thread = threading.Thread(target=self._run, daemon=True, name="CursorController")
@@ -75,6 +76,8 @@ class CursorController:
         self._enqueue_latest((0.0, 0.0, "scroll_down"))
 
     def _enqueue_latest(self, item: tuple[float, float, str]) -> None:
+        if self.command_context is not None and item[2] != "reset":
+            item = (*item, self.command_context)
         try:
             self.cursor_queue.put_nowait(item)
             return
@@ -115,12 +118,20 @@ class CursorController:
 
     def fire_action(self, action_key: str) -> None:
         """Execute a one-shot PC action with per-action cooldown."""
-        now = time.monotonic()
-        with self._action_lock:
-            if now - self._action_cooldowns.get(action_key, 0) < _ACTION_COOLDOWN_SECONDS:
+        with control.lock:
+            if self.command_context is not None and not self.command_context():
                 return
-            self._action_cooldowns[action_key] = now
-        execute_pc_action(action_key.replace("_", " "))
+            now = time.monotonic()
+            with self._action_lock:
+                if now - self._action_cooldowns.get(action_key, 0) < _ACTION_COOLDOWN_SECONDS:
+                    return
+                if control.test_mode:
+                    control.record("test_action", action=action_key)
+                    return
+                else:
+                    accepted = execute_pc_action(action_key.replace("_", " "))
+                if accepted:
+                    self._action_cooldowns[action_key] = now
 
     def _run(self) -> None:
         prev_x: float | None = None
@@ -131,7 +142,11 @@ class CursorController:
 
         while not self._stop.is_set():
             try:
-                x, y, mode = self.cursor_queue.get(timeout=0.15)
+                item = self.cursor_queue.get(timeout=0.15)
+                x, y, mode = item[:3]
+                self._output_guard = item[3] if len(item) > 3 else lambda: True
+                if not self._output_guard():
+                    mode = "reset"
             except Empty:
                 # Gap in position feed — reset position so next entry starts without a jump.
                 # For scroll, keep the accumulator alive across brief recognition gaps
@@ -201,11 +216,14 @@ class CursorController:
         sent_x = sent_y = 0
         # Preserve total integer displacement; retain fractional residual across observations.
         for step in range(1, steps + 1):
-            if self._stop.is_set() or generation != self._tracking_generation:
+            if self._stop.is_set() or generation != self._tracking_generation or not self._output_guard():
                 return
             target_x, target_y = round(total_x * step / steps), round(total_y * step / steps)
             try:
-                pyautogui.moveRel(target_x - sent_x, target_y - sent_y, _pause=False)
+                with control.lock:
+                    if not self._output_guard():
+                        return
+                    pyautogui.moveRel(target_x - sent_x, target_y - sent_y, _pause=False)
             except Exception as e:
                 logger.warning("Cursor move error: %s", e)
                 break
@@ -226,7 +244,10 @@ class CursorController:
         if clicks == 0:
             return accum
         try:
-            pyautogui.scroll(clicks, _pause=False)
+            with control.lock:
+                if not self._output_guard():
+                    return 0.0
+                pyautogui.scroll(clicks, _pause=False)
         except Exception as e:
             logger.warning("Scroll error: %s", e)
         return accum - clicks * scroll_speed
@@ -246,7 +267,10 @@ class CursorController:
 
         direction = 1 if mode == "scroll_up" else -1
         try:
-            pyautogui.scroll(direction * clicks, _pause=False)
+            with control.lock:
+                if not self._output_guard():
+                    return 0.0
+                pyautogui.scroll(direction * clicks, _pause=False)
         except Exception as e:
             logger.warning("Directional scroll error: %s", e)
         return now

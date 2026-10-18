@@ -104,6 +104,10 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
       });
     }
 
+    if (WidgetsBinding.instance.lifecycleState != null &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
     if (_refreshInFlight) {
       return;
     }

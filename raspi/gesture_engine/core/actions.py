@@ -1,6 +1,7 @@
 import time
 from typing import TYPE_CHECKING, Any, Mapping
 
+from gesture_engine import control
 from gesture_engine.log import get_logger
 
 from .handlers.ha_handler import handle_smart_device_action
@@ -102,6 +103,9 @@ def should_execute_action(
     Returns:
         `True` when action execution is allowed now.
     """
+    for command in tuple(runtime._reservations):
+        if not runtime.command_is_fresh(command[2], command[3]):
+            runtime.release_reservation(*command)
     cooldown_seconds = action_cooldown_seconds(runtime, action_name, device_name)
     if cooldown_seconds <= 0:
         return True
@@ -133,7 +137,7 @@ def _extract_action_context(matched_config: Mapping[str, Any]) -> tuple[str, str
     return action, device_name, connection_type, entity_id, is_volume
 
 
-def execute_configured_action(
+def _execute_configured_action(
     runtime: "GestureRuntime",
     matched_config: Mapping[str, Any],
     gesture_name: str,
@@ -156,7 +160,10 @@ def execute_configured_action(
         return
 
     try:
-        if get_device_family(device_name) == "pc":
+        if control.test_mode:
+            control.record("test_action", entity=entity_id or device_name, action=action)
+            accepted = True
+        elif get_device_family(device_name) == "pc":
             if source is not None and not runtime.command_is_fresh(event_ts_ms, source):
                 return
             accepted = execute_pc_action(action)
@@ -174,7 +181,10 @@ def execute_configured_action(
     now = time.monotonic()
     key = build_action_cooldown_key(action, device_name, target_id)
     with runtime.action_trigger_lock:
-        runtime.action_trigger_times[key] = now  # Cooldown begins on accepted dispatch.
+        if not control.test_mode:
+            runtime.action_trigger_times[key] = now
+        if not control.test_mode and get_device_family(device_name) != "pc":
+            runtime._reservations[(entity_id, action, event_ts_ms, source)] = key
     if is_volume:
         logger.debug("Queued volume action: %s %s", device_name, action)
     else:
@@ -186,6 +196,13 @@ def execute_configured_action(
         with runtime.overlay_lock:
             runtime.overlay_label = f"{device_name}  {action}" if device_name else action
             runtime.overlay_ts = now
+
+
+def execute_configured_action(runtime, matched_config, gesture_name, event_ts_ms=None, source=None):
+    with control.lock:
+        if event_ts_ms is None:
+            event_ts_ms = time.monotonic_ns() // 1_000_000
+        _execute_configured_action(runtime, matched_config, gesture_name, event_ts_ms, source)
 
 
 def take_action(

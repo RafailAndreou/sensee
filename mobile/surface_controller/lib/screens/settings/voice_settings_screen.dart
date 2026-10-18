@@ -75,6 +75,10 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      if (WidgetsBinding.instance.lifecycleState != null &&
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+        return;
+      }
       final status = await loadVoiceStatus();
       if (!mounted) return;
       final s = status?['status'] as String? ?? 'idle';
@@ -110,8 +114,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
   bool get _isModelDownloading =>
       _modelStatus == 'loading' && _loadedModel == _model;
 
-  bool get _isModelReady =>
-      _modelStatus == 'ready' && _loadedModel == _model;
+  bool get _isModelReady => _modelStatus == 'ready' && _loadedModel == _model;
 
   @override
   Widget build(BuildContext context) {
@@ -124,8 +127,10 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
               children: [
                 const Icon(Icons.mic, color: Colors.green, size: 22),
                 const SizedBox(width: 8),
-                Text(t('voice_title'),
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  t('voice_title'),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ],
             ),
             actions: [
@@ -144,7 +149,9 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
               ? const Center(child: CircularProgressIndicator())
               : ListView(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 16),
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   children: [
                     _sectionHeader(t('voice_section_model')),
                     const SizedBox(height: 12),
@@ -153,10 +160,12 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
                       label: t('voice_model_label'),
                       value: _model,
                       items: _kModels
-                          .map((m) => DropdownMenuItem(
-                                value: m,
-                                child: Text(_kModelLabels[m] ?? m),
-                              ))
+                          .map(
+                            (m) => DropdownMenuItem(
+                              value: m,
+                              child: Text(_kModelLabels[m] ?? m),
+                            ),
+                          )
                           .toList(),
                       onChanged: (v) {
                         if (v == null) return;
@@ -177,10 +186,12 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
                       label: t('voice_language_label'),
                       value: _language,
                       items: _kLanguages
-                          .map(((String, String) e) => DropdownMenuItem(
-                                value: e.$1,
-                                child: Text(e.$2),
-                              ))
+                          .map(
+                            ((String, String) e) => DropdownMenuItem(
+                              value: e.$1,
+                              child: Text(e.$2),
+                            ),
+                          )
                           .toList(),
                       onChanged: (v) {
                         if (v != null) setState(() => _language = v);
@@ -314,16 +325,15 @@ class _DropdownRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(label,
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
           decoration: BoxDecoration(
-            color: isDark
-                ? const Color(0xFF374151)
-                : const Color(0xFFEEF2F7),
+            color: isDark ? const Color(0xFF374151) : const Color(0xFFEEF2F7),
             borderRadius: BorderRadius.circular(8),
           ),
           child: DropdownButtonHideUnderline(

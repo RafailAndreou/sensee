@@ -22,6 +22,10 @@ class FrameHub:
         self._stopped = False
         self._encoder = None
 
+    def set_fps(self, fps):
+        with self._cond:
+            self._interval = 1.0 / fps
+
     def start(self):
         with self._cond:
             self._stopped = False
@@ -125,5 +129,5 @@ class FrameHub:
 frame_hub = FrameHub()
 
 
-def set_frame_from_bgr(frame_bgr):
-    return frame_hub.set_bgr_frame(frame_bgr)
+def set_frame_from_bgr(frame_bgr, jpeg_quality=80):
+    return frame_hub.set_bgr_frame(frame_bgr, jpeg_quality)

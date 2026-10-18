@@ -231,3 +231,118 @@ flutter test
 4. Make sure your code passes all tests and lint checks
 
 **AI-assisted contributions:** Upload `guidelines.md` to your AI assistant before generating changes.
+
+## Engine tools (browser and Flutter)
+
+Open **Settings → Engine tools** on either client. The controls are shared with
+an authenticated engine; settings persist on that engine, while **test mode is
+session-only** and starts disabled after a restart.
+
+- **Performance:** capture width/height/FPS, recognition width, preview width/FPS,
+  and JPEG quality. Widths preserve the camera's aspect ratio. Start with
+  640×480 at 30 FPS, 640 recognition/preview width, 15 preview FPS, quality 80;
+  lower recognition width or preview FPS on a slower Pi. Camera drivers may
+  negotiate different capture dimensions or FPS. The worker continues draining
+  the decoder and limits published frames to the requested FPS, preventing a
+  slower requested rate from accumulating old RTSP frames. Recognition and preview resize
+  independently. Preview drawing/encoding runs only when a window or subscriber
+  needs it, at the configured rate.
+- **Calibration:** optional and off by default, preserving existing contact
+  thresholds. Keep one hand visible, touch thumb to index, press **1. Sample
+  touching**, and collect 30 fresh observations. Separate those fingers and press
+  **2. Sample separated** for another 30. Refresh diagnostics to see progress,
+  apply the samples, then save settings. Poor separation requires a new sample.
+  The contact and depth ratios use palm size and image aspect ratio; the saved
+  threshold applies to index, middle, ring and pinky contacts. You can edit the
+  ratios or disable calibration. Disconnects/settings changes interrupt samples;
+  restart the sampling step after reconnecting.
+- **Gestures:** mapping and wake selectors include thumb/ring, thumb/pinky,
+  Victory, Thumb Up, Thumb Down and Pointing Up. Fist and Closed_Fist are aliases;
+  Open Hand and Open_Palm are aliases. Touch priority is pinky, ring, middle,
+  index. An uncertain near-contact frame blocks output without rearming an
+  already held one-shot touch; a definite release or lost tracking rearms it.
+- **Home Assistant:** device actions follow the discovered entity's capabilities.
+  Switches get power controls; dimmable lights also get brightness presets;
+  variable-speed fans get percentage presets; temperature-capable climate
+  entities get temperature presets within their advertised range. Scene and
+  Script device types use **Activate**. JSON mappings may use `Brightness 50`,
+  `Fan speed 25`, or `Temperature 22`; temperature uses the unit configured in HA.
+  Domain and numeric bounds are validated at save and dispatch. Actual device
+  capability and temperature-unit behavior still need a live HA check.
+- **Test mode:** intended device/PC/cursor/voice actions appear in diagnostics,
+  while device calls, browser launches, clipboard, mouse and keyboard output are
+  blocked. Voice transcript text is never included in the action history or
+  normal logs. Switching mode cancels pending work in both directions; old work
+  cannot run when test mode is disabled again.
+- **Profiles:** save current server mappings under a name, load or delete a saved
+  profile, or export/import `{ "name": "Evening", "configurations": [...] }`
+  as JSON. Browser export uses a copyable text area; Flutter also offers **Copy
+  JSON**. Profiles include mappings only, without HA tokens, camera URLs, voice
+  settings, or test mode. There are at most 32 profiles. Loading replaces server
+  mappings; unsaved client edits are retained for review.
+- **Conflicts:** saves serialize and use the ETag returned by the last accepted
+  read/write. A `412` preserves edits and does not automatically overwrite a
+  newer server revision. In Engine tools, **Review latest server mappings** shows
+  the server and local versions. After reviewing, **Retry local mappings** sends
+  your local version against that reviewed revision; another concurrent change
+  still conflicts. Copy/export important edits before closing a client.
+- **Diagnostics:** capture/recognition latency, current observation age,
+  rejection counters, and the latest 64 gesture/action decisions. History is
+  bounded and kept in memory. Camera logs omit URL credentials, paths and query
+  strings.
+
+The capture worker owns the camera and replaces a single pending frame. Failed
+reads invalidate camera agreement before reconnecting. Late frames/results,
+changed or uncertain gestures, disconnected cameras, settings changes and
+mode changes cancel queued commands. Each command retains its original camera
+observation time through every queue and expires after 100 ms; moving it into
+another queue never refreshes its age. A newer callback applies mismatches
+before main-loop processing; matching observations retain uninterrupted agreement. Final dispatch checks the
+current uninterrupted hand/gesture agreement, including cursor interpolation
+and delayed TV wake fallbacks. Commands already sent to a device cannot be
+retracted.
+
+Settings and mapping writes require **If-Match**. Custom API clients must first
+GET the relevant resource, keep its `ETag`, and POST with `If-Match: <etag>`.
+Missing preconditions return `428`; stale preconditions return `412`. Profile
+loads also require `If-Match-Configuration` from GET `/configuration`.
+`GET /engine-settings`, `POST /engine-settings`, `GET /engine-tools`,
+`POST /test-mode`, `POST /calibration/contact`, `POST /calibration/open`,
+`GET /profiles`, and `POST /profiles` require pairing like the other control APIs.
+Profile POST uses `name`, `operation` (`save`, `load`, `delete`, `import`), and
+`configurations` for import. Settings and profiles use the existing atomic JSON
+persistence/backup mechanism in `SENSEE_DATA_DIR`.
+
+## Regression and native vision checks
+
+Use Python 3.11 or 3.12. Desktop automation imports are lazy, so camera, desktop,
+Whisper and microphone hardware are not needed for the unit suite.
+
+```bash
+python -m venv .venv
+.venv/bin/python -m pip install -r raspi/requirements-test.txt -r raspi/requirements-vision.txt
+cd raspi
+SENSEE_REQUIRE_MEDIAPIPE=1 ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+```
+
+The pinned vision requirements keep MediaPipe 0.10.14, NumPy 1.26.4, OpenCV
+4.10.0.84, protobuf 4.25.9 and JAX/JAXlib 0.4.30 compatible. The integration test
+loads the repository's actual gesture recognizer model and runs both native image
+inference and the asynchronous live-stream callback on a synthetic blank image.
+`SENSEE_REQUIRE_MEDIAPIPE=1` makes a missing dependency fail, not skip. CI runs a
+separate Linux native-vision job, plus the Python unit, dashboard and Flutter jobs.
+
+```bash
+cd mobile/surface_controller
+flutter pub get
+flutter analyze --no-fatal-infos
+flutter test
+# from the repository root:
+node --test raspi/web/tests/*.test.mjs
+```
+
+Hardware acceptance still requires a USB/network camera (including unplug/replug
+and a stalled RTSP stream), real hands at multiple distances/aspect ratios, a
+Raspberry Pi performance run, an Android/iOS discovery/background/resume run,
+a desktop cursor/clipboard test and microphone dictation, and real Home Assistant
+lights/fans/climate/scenes/scripts. Start those checks in session test mode.

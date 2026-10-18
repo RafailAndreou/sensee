@@ -1,3 +1,4 @@
+import { renderEngineTools } from './views/engine-tools.js';
 import { state, invalidateDashboardCache } from './state.js';
 import { t } from './i18n.js';
 import { closeAllModals } from './ui.js';
@@ -12,7 +13,8 @@ function dispatch() {
   if (state.view === 'dashboard') renderDashboard();
   else if (state.view === 'camera') renderCamera();
   else if (state.view === 'settings') {
-    if (state.subView === 'ha') renderHASettings();
+    if (state.subView === 'engine') renderEngineTools();
+    else if (state.subView === 'ha') renderHASettings();
     else if (state.subView === 'gesture') renderGestureSettings();
     else if (state.subView === 'camera-cfg') renderCameraSettings();
     else if (state.subView === 'ironman') renderIronmanSettings();

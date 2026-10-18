@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'smartdevice_list.dart';
 import 'package:surface_controller/globals/locale.dart';
 import 'widgets/devicetypebutton.dart';
 import 'connection_method.dart';
@@ -30,6 +31,16 @@ class DeviceType extends StatelessWidget {
             mainAxisSpacing: 10,
             childAspectRatio: 1.08,
             children: [
+              for (final type in ["Scene", "Script"])
+                ListTile(
+                  title: Text(type),
+                  leading: const Icon(Icons.play_arrow),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SmartDeviceList(deviceType: type),
+                    ),
+                  ),
+                ),
               GestureDetector(
                 onTap: () {
                   Navigator.of(context).push(
@@ -65,8 +76,7 @@ class DeviceType extends StatelessWidget {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) =>
-                          const ConnectionMethod(deviceType: 'Fan'),
+                      builder: (_) => const ConnectionMethod(deviceType: 'Fan'),
                     ),
                   );
                 },

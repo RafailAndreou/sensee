@@ -26,6 +26,7 @@ class ObservationMailbox:
     def clear(self):
         with self._lock:
             self._pending = None
+            self._latest_timestamp = max(self._latest_timestamp, time.monotonic_ns() // 1_000_000)
 
 
 class FrameClock:

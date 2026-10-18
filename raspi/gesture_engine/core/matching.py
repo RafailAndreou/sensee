@@ -2,6 +2,8 @@ from functools import lru_cache
 
 
 _GESTURE_ALIAS_MAP = {
+    "open hand": "open palm",
+    "thumbs index": "thumb index",
     "closed fist": "fist",
     "open palm": "open palm",
     "thumb index": "thumb index",

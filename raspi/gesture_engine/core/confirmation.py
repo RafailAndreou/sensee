@@ -15,6 +15,11 @@ class TouchConfirmation:
             state["active"] = False
         return False
 
+    def uncertain(self, state_key):
+        """Break a confirmation streak without rearming an already held contact."""
+        if state_key in self._state:
+            self._state[state_key]["streak"] = 0
+
     def retry(self, state_key):
         """Allow a confirmed transition to retry a rejected bounded enqueue."""
         if state_key in self._state:

@@ -12,7 +12,8 @@ from gesture_engine.log import get_logger
 
 from .ha_client import HAClient
 from .ha_config import get_ha_config
-from .ha_services import get_domain_from_entity, parse_action_to_service
+from .ha_services import get_domain_from_entity, parse_action_to_service, action_service_data
+from gesture_engine import control
 
 logger = get_logger(__name__)
 
@@ -47,7 +48,7 @@ def _entity_is_on(state: str) -> bool:
     return state in ("on", "playing", "idle", "paused")
 
 
-def _try_tv_wake_fallback(url_base: str, token: str, target_entity_id: str, is_current=None) -> bool:
+def _try_tv_wake_fallback_unlocked(url_base: str, token: str, target_entity_id: str, is_current=None) -> bool:
     """Try alternate wake paths when a TV power-on request does not stick."""
     attempted = False
 
@@ -111,14 +112,22 @@ def _try_tv_wake_fallback(url_base: str, token: str, target_entity_id: str, is_c
     return False
 
 
-def trigger_ha_action(entity_id: str, action_type: str, *, is_current=None) -> bool:
+def _try_tv_wake_fallback(url_base, token, target_entity_id, is_current=None):
+    with control.lock:
+        if control.test_mode:
+            control.record('test_action', entity=target_entity_id, action='TV wake fallback')
+            return True
+        return _try_tv_wake_fallback_unlocked(url_base, token, target_entity_id, is_current=is_current)
+
+
+def _trigger_ha_action_unlocked(entity_id: str, action_type: str, *, is_current=None) -> bool:
     """Send a Home Assistant service request for the configured entity."""
     if not entity_id:
         logger.error("Home Assistant trigger failed: no entity_id provided.")
         return False
 
     try:
-        service = parse_action_to_service(action_type)
+        domain, service, data = action_service_data(entity_id, action_type)
     except ValueError as error:
         logger.warning("%s", error)
         return False
@@ -141,11 +150,14 @@ def trigger_ha_action(entity_id: str, action_type: str, *, is_current=None) -> b
                 return True
             _volume_send_times[key] = now
 
-    data = {"entity_id": entity_id}
 
     # Recheck after configuration lookup, immediately before network dispatch.
     if is_current is not None and not is_current():
         return False
+
+    if control.test_mode:
+        control.record("test_action", entity=entity_id, action=action_type)
+        return True
 
     if MOCK_MODE:
         logger.info("MOCK HA: %s -> %s (mapped to '%s')", entity_id, action_type, service)
@@ -175,6 +187,11 @@ def trigger_ha_action(entity_id: str, action_type: str, *, is_current=None) -> b
     except requests.exceptions.RequestException as e:
         logger.error("Failed to reach Home Assistant at %s: %s", url_base, e)
         return False
+
+
+def trigger_ha_action(entity_id, action_type, *, is_current=None):
+    with control.lock:
+        return _trigger_ha_action_unlocked(entity_id, action_type, is_current=is_current)
 
 
 def _schedule_tv_wake_verify(url_base: str, token: str, entity_id: str, is_current=None) -> None:

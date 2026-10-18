@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:multicast_dns/multicast_dns.dart';
 import 'first_success.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const int _discoveryPort = 54321;
 const String _discoveryToken = 'SENSEE_DISCOVER';
@@ -68,9 +68,16 @@ void invalidateServerClientCache() {
   _lastProbeOk = null;
 }
 
-Future<bool> _probeClient(ServerClient client, {int timeoutMs = 900}) async {
+Future<bool> _probeClient(
+  ServerClient client, {
+  int timeoutMs = 900,
+  DiscoveryCancellation? cancellation,
+}) async {
+  if (cancellation?.cancelled == true) return false;
+  final transport = http.Client();
+  cancellation?.add(transport.close);
   try {
-    final response = await http
+    final response = await transport
         .get(client.pingUri)
         .timeout(Duration(milliseconds: timeoutMs));
     if (response.statusCode != 200) return false;
@@ -78,6 +85,8 @@ Future<bool> _probeClient(ServerClient client, {int timeoutMs = 900}) async {
     return body is Map && body['status'] == 'ok' && body['service'] == 'sensee';
   } catch (_) {
     return false;
+  } finally {
+    transport.close();
   }
 }
 
@@ -91,10 +100,17 @@ Future<bool> _probeOrFresh(ServerClient client, {int timeoutMs = 900}) async {
   return ok;
 }
 
-Future<String?> discoverServer({int timeoutMs = 3000}) async {
+Future<String?> discoverServer({
+  int timeoutMs = 3000,
+  DiscoveryCancellation? cancellation,
+}) async {
   RawDatagramSocket? socket;
   try {
     socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+    if (cancellation?.cancelled == true) {
+      socket.close();
+      return null;
+    }
     socket.broadcastEnabled = true;
 
     final data = utf8.encode(_discoveryToken);
@@ -106,6 +122,11 @@ Future<String?> discoverServer({int timeoutMs = 3000}) async {
       socket?.close();
     });
 
+    cancellation?.add(() {
+      timer.cancel();
+      socket?.close();
+      if (!completer.isCompleted) completer.complete(null);
+    });
     socket.listen((event) {
       if (event != RawSocketEvent.read) return;
 
@@ -139,11 +160,19 @@ Future<String?> discoverServer({int timeoutMs = 3000}) async {
   }
 }
 
-Future<String?> discoverServerMDNS({int timeoutMs = 3000}) async {
+Future<String?> discoverServerMDNS({
+  int timeoutMs = 3000,
+  DiscoveryCancellation? cancellation,
+}) async {
   final client = MDnsClient();
 
   try {
     await client.start();
+    if (cancellation?.cancelled == true) {
+      client.stop();
+      return null;
+    }
+    cancellation?.add(client.stop);
     await for (final PtrResourceRecord ptr
         in client
             .lookup<PtrResourceRecord>(
@@ -186,70 +215,61 @@ Future<String?> discoverServerSmart() async {
   }
 }
 
+class DiscoveryCancellation {
+  bool cancelled = false;
+  final List<void Function()> _closers = [];
+  void add(void Function() closer) {
+    if (cancelled) {
+      closer();
+    } else {
+      _closers.add(closer);
+    }
+  }
+
+  void cancel() {
+    cancelled = true;
+    for (final closer in _closers) {
+      closer();
+    }
+    _closers.clear();
+  }
+}
+
 Future<String?> _discoverServerSmartInternal() async {
-  // 1. Check cached client first
   if (_cachedClient != null && await _probeOrFresh(_cachedClient!)) {
     return _cachedClient!.configUri.toString();
   }
   invalidateServerClientCache();
-
-  // 2. The "Smart" part: Try mDNS first (Fast & Reliable)
-  debugPrint("Attempting mDNS discovery...");
-  final mdnsResult = await discoverServerMDNS(timeoutMs: 1500);
-  if (mdnsResult != null &&
-      await _probeClient(
-        ServerClient.fromConfigurationUri(Uri.parse(mdnsResult)),
-      )) {
-    _cachedClient = ServerClient.fromConfigurationUri(Uri.parse(mdnsResult));
-    _lastProbeOk = DateTime.now();
-    debugPrint("Found via mDNS: $mdnsResult");
-    return mdnsResult;
+  final cancellation = DiscoveryCancellation();
+  final preferences = await SharedPreferences.getInstance();
+  Future<ServerClient?> probe(ServerClient candidate) async =>
+      await _probeClient(candidate, cancellation: cancellation)
+      ? candidate
+      : null;
+  Future<ServerClient?> discover(Future<String?> result) async {
+    final address = await result;
+    if (address == null || cancellation.cancelled) return null;
+    return probe(ServerClient.fromConfigurationUri(Uri.parse(address)));
   }
 
-  // 3. Try UDP broadcast discovery before falling back to port scanning.
-  debugPrint("mDNS failed, trying UDP discovery...");
-  final udpResult = await discoverServer(timeoutMs: 1200);
-  if (udpResult != null &&
-      await _probeClient(
-        ServerClient.fromConfigurationUri(Uri.parse(udpResult)),
-      )) {
-    _cachedClient = ServerClient.fromConfigurationUri(Uri.parse(udpResult));
-    _lastProbeOk = DateTime.now();
-    debugPrint("Found via UDP discovery: $udpResult");
-    return udpResult;
-  }
-
-  // 4. The Fallback: Concurrent port scanning (Fixes the 13.5s freeze)
-  debugPrint("mDNS failed, falling back to concurrent pinging...");
-
-  // Create a list of all possible combinations
-  final List<ServerClient> candidates = [];
-  for (final host in _commonServerHosts) {
-    for (final port in _commonServerPorts) {
-      candidates.add(ServerClient('http://$host:$port'));
-    }
-  }
-
-  // Fire them all concurrently and catch the first one that responds
   try {
-    final winningClient = await firstSuccessful<ServerClient>(
-      candidates.map((candidate) async {
-        if (await _probeClient(candidate)) {
-          return candidate;
-        }
-        return null;
-      }),
-    );
-
-    if (winningClient == null) return null;
-    _cachedClient = winningClient;
+    final last = preferences.getString('sensee.lastAddress');
+    final winner = await firstSuccessful<ServerClient>([
+      if (last != null) probe(ServerClient(last)),
+      discover(discoverServerMDNS(timeoutMs: 1500, cancellation: cancellation)),
+      discover(discoverServer(timeoutMs: 1200, cancellation: cancellation)),
+      for (final host in _commonServerHosts)
+        for (final port in _commonServerPorts)
+          probe(ServerClient('http://$host:$port')),
+    ]);
+    if (winner == null) return null;
+    cancellation.cancel();
+    _cachedClient = winner;
     _lastProbeOk = DateTime.now();
-    debugPrint("Found via fallback: ${winningClient.configUri}");
-    return winningClient.configUri.toString();
-  } catch (_) {
-    // All probes failed
-    debugPrint("All discovery methods failed.");
-    return null;
+    await preferences.setString('sensee.lastAddress', winner.baseUrl);
+    return winner.configUri.toString();
+  } finally {
+    cancellation.cancel();
   }
 }
 
@@ -263,26 +283,7 @@ Future<bool> isServerReachable({
       return true;
     }
 
-    final winner = await firstSuccessful<ServerClient>([
-      for (final host in _commonServerHosts)
-        for (final port in _commonServerPorts)
-          (() async {
-            final candidate = ServerClient('http://$host:$port');
-            return await _probeClient(candidate, timeoutMs: timeoutMs)
-                ? candidate
-                : null;
-          })(),
-    ]);
-    if (winner != null) {
-      _cachedClient = winner;
-      _lastProbeOk = DateTime.now();
-      return true;
-    }
-
-    if (!discoverIfUnknown) {
-      return false;
-    }
-
+    invalidateServerClientCache();
     return await discoverServerSmart() != null;
   } catch (_) {
     return false;

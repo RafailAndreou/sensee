@@ -4,6 +4,7 @@ import { t } from './i18n.js';
 import { pullConfigs } from './config-sync.js';
 
 export async function checkServer() {
+  if (document.hidden) return;
   const dot = document.getElementById('status-dot');
   const txt = document.getElementById('status-text');
   if (!dot) return;

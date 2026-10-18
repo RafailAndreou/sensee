@@ -35,3 +35,16 @@ class CursorControlTests(unittest.TestCase):
             with self.subTest(params=params), self.assertRaises(ValidationError):
                 IronmanParams(**params)
         self.assertEqual(IronmanParams(steps=100, delay=.01).steps, 100)
+
+    def test_stale_or_failed_one_shot_does_not_consume_cooldown(self):
+        with patch('gesture_engine.core.cursor_control.execute_pc_action', return_value=False) as execute:
+            self.controller.command_context = lambda:False
+            self.controller.fire_action('left_click')
+            execute.assert_not_called()
+            self.assertFalse(self.controller._action_cooldowns)
+            self.controller.command_context = lambda:True
+            self.controller.fire_action('left_click')
+            self.assertFalse(self.controller._action_cooldowns)
+            execute.return_value = True
+            self.controller.fire_action('left_click')
+            self.assertIn('left_click', self.controller._action_cooldowns)

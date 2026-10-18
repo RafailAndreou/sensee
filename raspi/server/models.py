@@ -58,3 +58,30 @@ class VoiceSettings(BaseModel):
     enabled: bool = False
     model: str = "tiny"
     language: str = "en"
+
+
+class ContactCalibration(BaseModel):
+    enabled: bool = False
+    contactRatio: float = Field(default=0.25, ge=0.02, le=1, allow_inf_nan=False)
+    depthRatio: float = Field(default=0.15, ge=0.01, le=1, allow_inf_nan=False)
+
+
+class EngineSettings(BaseModel):
+    captureWidth: int = Field(default=640, ge=160, le=3840)
+    captureHeight: int = Field(default=480, ge=120, le=2160)
+    captureFps: int = Field(default=30, ge=1, le=120)
+    recognitionWidth: int = Field(default=640, ge=160, le=1920)
+    previewWidth: int = Field(default=640, ge=160, le=1920)
+    previewFps: int = Field(default=15, ge=1, le=60)
+    jpegQuality: int = Field(default=80, ge=20, le=95)
+    calibration: ContactCalibration = Field(default_factory=ContactCalibration)
+
+
+class TestMode(BaseModel):
+    enabled: bool
+
+
+class ProfileRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64, pattern=r'^[\w .-]+$')
+    operation: str = Field(pattern=r'^(save|load|delete|import)$')
+    configurations: list[Configuration] | None = None

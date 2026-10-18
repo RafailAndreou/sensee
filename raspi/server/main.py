@@ -9,6 +9,11 @@ from typing import Any, List
 
 from gesture_engine.log import get_logger
 from server import config_cache, file
+from gesture_engine import control
+from gesture_engine.calibration import sampler
+from server.models import EngineSettings, TestMode, ProfileRequest
+import hashlib
+import json
 from server import homeassistant
 from server.config_validation import validate_configuration_payload
 from server.events import send_msg
@@ -47,8 +52,9 @@ def _validate_configuration_or_raise(configs: list[dict[str, Any]]) -> None:
 
 
 def _persist_configuration(configs: list[dict[str, Any]]) -> None:
-    file.save_configure_json(configs)
-    config_cache.set_loaded_config(configs)
+    with control.lock:
+        file.save_configure_json(configs)
+        config_cache.set_loaded_config(configs)
 
 
 def _log_received_configurations(configs: list[dict[str, Any]]) -> None:
@@ -106,6 +112,115 @@ async def require_paired_client(request: Request, call_next):
     if not public or path == "/auth/pair":
         response.headers["Cache-Control"] = "no-store"
     return response
+
+
+# Serialize read/compare/write across clients; revisions survive process restarts.
+_revision_lock = asyncio.Lock()
+_revision_paths = {
+    '/configuration': file.CONFIG_FILE_PATH, '/engine-settings': file.ENGINE_SETTINGS_PATH,
+    '/camera-settings': file.CAMERA_SETTINGS_PATH, '/gesture-settings': file.GESTURE_SETTINGS_PATH,
+    '/ironman-params': file.IRONMAN_PARAMS_PATH, '/voice-settings': file.VOICE_SETTINGS_PATH,
+    '/ha/config': file.HA_CONFIG_PATH, '/profiles': file.PROFILES_PATH,
+}
+
+
+def revision_tag(path):
+    value = file._load_json(path, [] if path == file.CONFIG_FILE_PATH else {})
+    return '"' + hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest() + '"'
+
+
+@app.middleware('http')
+async def configuration_revision(request, call_next):
+    path = _revision_paths.get(request.url.path)
+    if path is None:
+        return await call_next(request)
+    async with _revision_lock:
+        revision = revision_tag(path)
+        if request.method == 'POST':
+            authorization = request.headers.get('authorization', '')
+            candidate = authorization[7:] if authorization.startswith('Bearer ') else request.cookies.get(COOKIE_NAME, '')
+            authenticated = matches_key(candidate, request.app.state.pairing_key)
+            origin = request.headers.get('origin')
+            if not authenticated or origin is not None and origin != f'{request.url.scheme}://{request.url.netloc}':
+                return await call_next(request)
+            if 'if-match' not in request.headers:
+                return JSONResponse({'detail':'Read current settings and send If-Match before saving.'}, status_code=428)
+            expected = request.headers.get('if-match')
+            if expected is not None and expected != revision:
+                return JSONResponse({'detail': 'Configuration changed on another client. Reload and review your unsaved edits.'},
+                                    status_code=412, headers={'ETag': revision})
+        if request.method == 'POST' and request.url.path == '/profiles':
+            payload = await request.json()
+            if payload.get('operation') == 'load' and request.headers.get('if-match-configuration') != revision_tag(file.CONFIG_FILE_PATH):
+                return JSONResponse({'detail':'Mappings changed. Reload and review before loading a profile.'}, status_code=412)
+        response = await call_next(request)
+        response.headers['ETag'] = revision_tag(path)
+        return response
+
+
+@app.get('/engine-settings')
+def engine_settings():
+    return file.load_engine_settings()
+
+
+@app.post('/engine-settings')
+def save_engine_settings(settings: EngineSettings):
+    file.save_engine_settings(settings.model_dump())
+    return {'status': 'saved'}
+
+
+@app.get('/engine-tools')
+def engine_tools():
+    return {**control.snapshot(), 'calibration': sampler.status()}
+
+
+@app.post('/test-mode')
+def test_mode(settings: TestMode):
+    control.set_test_mode(settings.enabled)
+    return {'testMode': control.test_mode}
+
+
+@app.post('/calibration/{phase}')
+def calibration_phase(phase: str):
+    try:
+        sampler.start(phase)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    return sampler.status()
+
+
+@app.get('/profiles')
+def profiles():
+    return file._load_json(file.PROFILES_PATH, {})
+
+
+@app.post('/profiles')
+def update_profiles(payload: ProfileRequest):
+    with file.PERSISTENCE_LOCK, control.lock:
+        saved = profiles()
+        name = payload.name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail='Profile name is required')
+        if payload.operation in ('save', 'import'):
+            if payload.operation == 'import' and payload.configurations is None:
+                raise HTTPException(status_code=400, detail='Import requires configurations')
+            configs = ([c.model_dump() for c in payload.configurations]
+                       if payload.configurations is not None else config_cache.get_loaded_config())
+            _validate_configuration_or_raise(configs)
+            if name not in saved and len(saved) >= 32:
+                raise HTTPException(status_code=400, detail='Maximum 32 profiles')
+            saved[name] = configs
+            file._save_json(file.PROFILES_PATH, saved)
+        elif payload.operation == 'delete':
+            saved.pop(name, None)
+            file._save_json(file.PROFILES_PATH, saved)
+        else:
+            if name not in saved:
+                raise HTTPException(status_code=404, detail='Profile not found')
+            _validate_configuration_or_raise(saved[name])
+            _persist_configuration(saved[name])
+            app.state.sensee.current_config = saved[name]
+    return {'status': 'saved', 'profiles': saved}
 
 
 @app.post("/auth/pair")

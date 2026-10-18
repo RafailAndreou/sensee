@@ -4,11 +4,16 @@ import { state, pendingDeletedIds, normalizeId, sanitizeConfigForSync,
 import { t } from './i18n.js';
 import { toast } from './ui.js';
 
+let mappingVersion = 0;
+let pushesPending = 0;
+
 export async function pullConfigs() {
-  if (state.syncInFlight) return;
+  if (state.syncInFlight || pushesPending || document.hidden) return;
   state.syncInFlight = true;
+  const version = mappingVersion;
   try {
-    const data = await api.get('/configuration');
+    const data = await api.get('/configuration', () => version === mappingVersion && !pushesPending && !state.configs.some(c => !c.isSynced) && !pendingDeletedIds.size);
+    if (version !== mappingVersion || pushesPending) return;
     if (Array.isArray(data)) {
       const serverConfigs = data
         .map(sc => ({ ...sc, id: normalizeId(sc.id) }))
@@ -32,14 +37,26 @@ export async function pullConfigs() {
   finally { state.syncInFlight = false; }
 }
 
-export async function pushConfigs(silent = false) {
+let pushTail = Promise.resolve();
+export function pushConfigs(silent = false) {
+  mappingVersion++;
+  pushesPending++;
+  pushTail = pushTail.catch(() => {}).then(() => performPush(silent)).finally(()=>{ pushesPending--; mappingVersion++; });
+  return pushTail;
+}
+
+async function performPush(silent) {
   try {
     const payload = state.configs
       .map(sanitizeConfigForSync)
       .filter(c => c.id);
+    const deleted = new Set(pendingDeletedIds);
     await api.post('/configuration', payload);
-    state.configs.forEach(c => c.isSynced = true);
-    pendingDeletedIds.clear();
+    state.configs.forEach(c => {
+      const sent = payload.find(p => p.id === normalizeId(c.id));
+      if (sent && JSON.stringify(sanitizeConfigForSync(c)) === JSON.stringify(sent)) c.isSynced = true;
+    });
+    deleted.forEach(id => pendingDeletedIds.delete(id));
     if (state.view === 'dashboard') triggerDashboardRefresh();
     if (!silent) toast(t('Mappings synced'), 'success');
   } catch (e) {

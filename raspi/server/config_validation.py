@@ -39,6 +39,13 @@ def _find_invalid_hand_combination(configs: list[dict]):
 
 
 def validate_configuration_payload(configs: list[dict]) -> str | None:
+    from server.ha_services import action_service_data
+    for config in configs:
+        if (config.get('connectionType') == 'smart' or config.get('entityId')) and str(config.get('sound','')).lower() != 'pc':
+            try:
+                action_service_data(config.get('entityId', ''), config.get('action', ''))
+            except ValueError as error:
+                return str(error)
     first, second = _find_duplicate_gesture_hand(configs)
     if first and second:
         gesture = second.get("gesture", "")

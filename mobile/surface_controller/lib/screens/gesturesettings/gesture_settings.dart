@@ -322,6 +322,16 @@ class _GesturesettingsState extends State<Gesturesettings> {
                 },
                 value: _selectedGesture,
                 items: [
+                  ...[
+                    'Thumb+Ring',
+                    'Thumb+Pinky',
+                    'Victory',
+                    'Thumb Up',
+                    'Thumb Down',
+                    'Pointing Up',
+                  ].map(
+                    (name) => DropdownMenuItem(value: name, child: Text(name)),
+                  ),
                   DropdownMenuItem(
                     value: "Open Hand",
                     child: Text(t('gesture_dropdown_open_hand')),

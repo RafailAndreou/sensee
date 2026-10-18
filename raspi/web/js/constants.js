@@ -1,6 +1,7 @@
-export const DEVICE_TYPES = ['TV', 'AC', 'Light', 'Fan', 'PC'];
+export const DEVICE_TYPES = ['TV', 'AC', 'Light', 'Fan', 'Scene', 'Script', 'PC'];
 
 export const DEVICE_META = {
+  Scene: {emoji:'🎬', bg:'#333', accent:'#aaa'}, Script: {emoji:'▶', bg:'#333', accent:'#aaa'},
   TV:    { emoji: '📺', bg: 'rgba(59,130,246,0.18)',  accent: '#3b82f6' },
   AC:    { emoji: '❄️', bg: 'rgba(34,197,94,0.18)',   accent: '#22c55e' },
   Light: { emoji: '💡', bg: 'rgba(245,158,11,0.18)',  accent: '#f59e0b' },
@@ -9,6 +10,7 @@ export const DEVICE_META = {
 };
 
 export const GESTURES = [
+  ...['Thumb+Ring','Thumb+Pinky','Victory','Thumb Up','Thumb Down','Pointing Up'].map(id => ({id, label:id, icon:'✋'})),
   { id: 'Index+Thumb',  label: 'Index + Thumb',  icon: '🤏' },
   { id: 'Middle+Thumb', label: 'Middle + Thumb', icon: '✌️' },
   { id: 'Open Palm',    label: 'Open Palm',      icon: '✋' },
@@ -22,14 +24,16 @@ export const HANDS = [
 ];
 
 export const ACTIONS_BY_TYPE = {
+  Scene: ['Activate'], Script: ['Activate'],
   TV:    ['Turn on', 'Turn off', 'Increase volume', 'Decrease volume'],
-  AC:    ['Turn on', 'Turn off', 'Increase volume', 'Decrease volume'],
-  Light: ['Turn on', 'Turn off', 'Increase volume', 'Decrease volume'],
-  Fan:   ['Turn on', 'Turn off', 'Increase volume', 'Decrease volume'],
+  AC:    ['Turn on', 'Turn off', 'Temperature 20', 'Temperature 22'],
+  Light: ['Turn on', 'Turn off', 'Brightness 25', 'Brightness 50', 'Brightness 100'],
+  Fan:   ['Turn on', 'Turn off', 'Fan speed 25', 'Fan speed 50', 'Fan speed 100'],
   PC:    ['Open Spotify', 'Open YouTube', 'Close Window', 'Open Browser'],
 };
 
 export const BRANDS_BY_TYPE = {
+  Scene: [], Script: [],
   TV:    ['Samsung', 'LG', 'Sony', 'TCL', 'Hisense', 'Philips', 'Panasonic', 'Sharp', 'Vizio', 'Toshiba'],
   AC:    ['Daikin', 'Carrier', 'LG', 'Samsung', 'Mitsubishi', 'Panasonic', 'Hitachi', 'Fujitsu', 'Toshiba', 'Gree'],
   Light: ['Philips Hue', 'Wyze', 'LIFX', 'GE', 'Sengled', 'Nanoleaf', 'Govee', 'Kasa'],

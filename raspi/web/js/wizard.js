@@ -14,11 +14,17 @@ export function openAddWizard() {
   showDeviceTypeStep(draft, false);
 }
 
-export function openEditWizard(id) {
+export async function openEditWizard(id) {
   const normalizedId = normalizeId(id);
   const cfg = state.configs.find(c => normalizeId(c.id) === normalizedId);
   if (!cfg) return;
   const draft = { ...cfg };
+  if (draft.connectionType === 'smart') {
+    try {
+      const {devices} = await api.get('/smart-devices');
+      draft.availableActions = devices.find(d => d.entity_id === draft.entityId)?.actions;
+    } catch(e) { toast(e.message, 'error'); return; }
+  }
   showActionStep(draft, true);
 }
 
@@ -195,6 +201,8 @@ async function showSmartDeviceStep(draft, editing) {
       listEl.querySelectorAll('.list-item').forEach(item => {
         item.addEventListener('click', () => {
           draft.entityId = item.dataset.id;
+          draft.availableActions = devices.find(d => d.entity_id === draft.entityId)?.actions;
+          if (draft.availableActions?.length) draft.action = draft.availableActions[0];
           draft.brand = '';
           close();
           showActionStep(draft, editing);
@@ -262,7 +270,7 @@ function showBrandStep(draft, editing) {
 
 /* STEP 4 — Action + Gesture + Hand */
 function showActionStep(draft, editing) {
-  const actions = ACTIONS_BY_TYPE[draft.sound] || ACTIONS_BY_TYPE.TV;
+  const actions = draft.availableActions || ACTIONS_BY_TYPE[draft.sound] || ACTIONS_BY_TYPE.TV;
   if (!draft.action || !actions.includes(draft.action)) draft.action = actions[0];
   if (!draft.gesture) draft.gesture = 'Index+Thumb';
   if (!draft.hand) draft.hand = 'Right Hand';

@@ -7,6 +7,7 @@ from typing import Any, Callable, Mapping, Sequence, Tuple
 
 from collections import deque
 
+from gesture_engine import control
 from gesture_engine.core.actions import take_action
 from gesture_engine.core.agreement import GestureAgreement, GestureSource
 from gesture_engine.core.workers import start_workers
@@ -89,7 +90,7 @@ class GestureRuntime:
         self.action_queue_lock = threading.Lock()
 
         self.action_trigger_times: dict[str, float] = {}
-        self.action_trigger_lock = threading.Lock()
+        self.action_trigger_lock = threading.RLock()
 
         self.last_gesture_log_time: float = 0.0
         self.gesture_log_lock = threading.Lock()
@@ -98,6 +99,15 @@ class GestureRuntime:
         self.overlay_ts: float = 0.0
         self.overlay_lock = threading.Lock()
         self.last_action_feedback = {}
+        self._reservations = {}
+        self._invalidate_callback = self._invalidate_commands
+        control.register(self._invalidate_callback)
+
+    def _invalidate_commands(self):
+        with self.action_trigger_lock:
+            for key in self._reservations.values():
+                self.action_trigger_times.pop(key, None)
+            self._reservations.clear()
 
     def enqueue_gesture(
         self,
@@ -119,6 +129,7 @@ class GestureRuntime:
                 self.transition_queue.append((gesture, handedness, event_ts_ms, source))
             else:
                 self.gesture_queue.append((gesture, handedness, event_ts_ms, source))
+            control.record("gesture_queued", gesture=source.gesture, hand=source.hand, timestamp_ms=event_ts_ms)
             self.gesture_event.set()
             return True
 
@@ -137,9 +148,17 @@ class GestureRuntime:
 
     def command_is_fresh(self, event_ts_ms, source=None):
         now_ms = max(self._get_latest_frame_ts(), time.monotonic_ns() // 1_000_000)
-        return (not self.stop_event.is_set() and now_ms - event_ts_ms <= self.policy.stale_gesture_ms
-                and (source is None or self.agreement.matches(source, now_ms)
-                     and (self.command_guard is None or self.command_guard(source))))
+        reason = None
+        if self.stop_event.is_set():
+            reason = 'stopped'
+        elif now_ms - event_ts_ms > self.policy.stale_gesture_ms or event_ts_ms > now_ms:
+            reason = 'stale_command'
+        elif source is not None and (not self.agreement.matches(source, now_ms)
+                or self.command_guard is not None and not self.command_guard(source)):
+            reason = 'observation_mismatch'
+        if reason:
+            control.record('rejected', reason=reason)
+        return reason is None
 
     def enqueue_action(self, entity_id, action, is_volume=False, event_ts_ms=None, source=None):
         """FIFO transitions, latest-only volume; never block the producer."""
@@ -167,13 +186,36 @@ class GestureRuntime:
         for thread in self._threads:
             thread.join(timeout=3.5)
 
+    def release_reservation(self, entity_id, action, event_ts_ms, source):
+        with self.action_trigger_lock:
+            key = self._reservations.pop((entity_id, action, event_ts_ms, source), None)
+            if key is not None:
+                self.action_trigger_times.pop(key, None)
+
     def send_queued_action(self, entity_id, action, event_ts_ms, source):
-        if not self.command_is_fresh(event_ts_ms, source):
-            return False
-        if source is None:
-            return self.trigger_ha_action(entity_id, action)
-        return self.trigger_ha_action(entity_id, action,
-                                      is_current=lambda: self.command_is_fresh(event_ts_ms, source))
+        success = False
+        started = time.monotonic()
+        try:
+            with control.lock:
+                if not self.command_is_fresh(event_ts_ms, source):
+                    return False
+                if control.test_mode:
+                    control.record('test_action', entity=entity_id, action=action)
+                    success = True
+                elif source is None:
+                    success = self.trigger_ha_action(entity_id, action)
+                else:
+                    success = self.trigger_ha_action(entity_id, action,
+                        is_current=lambda: self.command_is_fresh(event_ts_ms, source))
+                return success
+        finally:
+            control.metric(actionLatencyMs=round((time.monotonic()-started)*1000, 2))
+            control.record("action_sent" if success else "action_cancelled_or_failed", entity=entity_id, action=action)
+            if not success:
+                self.release_reservation(entity_id, action, event_ts_ms, source)
+            else:
+                with self.action_trigger_lock:
+                    self._reservations.pop((entity_id, action, event_ts_ms, source), None)
 
     def take_action(self, gesture_name: str, detected_hand: str = "Unknown", event_ts_ms=None, source=None) -> None:
         """Dispatch a recognized gesture to the action execution layer.

@@ -17,6 +17,7 @@ export function renderSettingsHub() {
         </div>
       </div>
       <div class="settings-grid">
+        <div class="settings-card" data-sub="engine"><div class="settings-card-body"><div class="settings-card-title">Engine tools</div><div class="settings-card-sub">Performance, calibration, test mode, profiles and diagnostics</div></div></div>
         <div class="settings-card" data-sub="ha">
           <div class="settings-card-icon" style="background:rgba(79,158,255,.15)">🏠</div>
           <div class="settings-card-body">
@@ -498,6 +499,8 @@ export async function renderVoiceSettings() {
   function startPolling() {
     stopPolling();
     pollInterval = setInterval(async () => {
+      if (!document.getElementById("vc-model")) { stopPolling(); return; }
+      if (document.hidden) return;
       try {
         const st = await api.get('/voice-status');
         updateStatusBadge(st.status, st.model);

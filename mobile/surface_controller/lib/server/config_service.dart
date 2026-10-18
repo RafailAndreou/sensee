@@ -1,14 +1,48 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'auth_http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:surface_controller/globals/connectionslist.dart';
 import 'package:surface_controller/globals/global.dart';
 import 'package:surface_controller/server/discovery_service.dart';
 
-Future<void> sendAllConfigurations() async {
+final configurationSyncError = ValueNotifier<String?>(null);
+
+int _mappingGeneration = 0;
+int _sendsPending = 0;
+Future<void> _sendTail = Future.value();
+Future<void> sendAllConfigurations() {
+  _mappingGeneration++;
+  _sendsPending++;
+  _sendTail = _sendTail
+      .catchError((Object _) {})
+      .then((_) => _sendAllConfigurations())
+      .whenComplete(() {
+        _sendsPending--;
+        _mappingGeneration++;
+      });
+  return _sendTail;
+}
+
+String _snapshot() => jsonEncode([
+  for (final c in connectionConfigs.values)
+    {
+      "id": c.id.value.toString(),
+      "connectionType": c.connectionType.value,
+      "entityId": c.entityId.value,
+      "brand": c.brand.value,
+      "action": c.action.value,
+      "gesture": c.gesture.value,
+      "sound": c.sound.value,
+      "hand": c.hand.value,
+    },
+]);
+
+Future<void> _sendAllConfigurations() async {
+  final snapshot = _snapshot();
+  final deletions = Set<int>.from(pendingDeletedConnectionIds);
   final List<Map<String, dynamic>> allConfigsData = [];
 
   connectionConfigs.forEach((id, config) {
@@ -39,13 +73,23 @@ Future<void> sendAllConfigurations() async {
       body: jsonEncode(allConfigsData),
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 412) {
+      configurationSyncError.value =
+          'Mappings changed on another client. Unsaved edits kept. Review both versions in Settings → Engine tools.';
+    } else if (response.statusCode == 200) {
+      configurationSyncError.value = null;
+    } else {
+      configurationSyncError.value =
+          "Mapping save failed (${response.statusCode}). Unsaved edits kept.";
+    }
+    if (response.statusCode == 200 && snapshot == _snapshot()) {
       connectionConfigs.forEach((id, config) => config.isSynced.value = true);
-      clearPendingConnectionDeletions();
+      acknowledgeConnectionDeletions(deletions);
     } else {
       connectionConfigs.forEach((id, config) => config.isSynced.value = false);
     }
   } catch (_) {
+    configurationSyncError.value = "Engine unavailable. Unsaved mappings kept.";
     invalidateServerClientCache();
     connectionConfigs.forEach((id, config) => config.isSynced.value = false);
   }
@@ -56,15 +100,24 @@ Future<void> sendConfiguration(ConnectionConfig config) async {
 }
 
 Future<bool> pullLatestConfigurationsFromServer() async {
+  if (_sendsPending > 0) return false;
+  final generation = _mappingGeneration;
   try {
     final client = await getServerClient();
     if (client == null) {
       return false;
     }
 
-    final response = await http
-        .get(client.configUri)
-        .timeout(const Duration(milliseconds: 1800));
+    final snapshot = _snapshot();
+    final deleted = Set<int>.from(pendingDeletedConnectionIds);
+    final dirty =
+        connectionConfigs.values.any((c) => !c.isSynced.value) ||
+        pendingDeletedConnectionIds.isNotEmpty;
+    final response = await http.get(
+      client.configUri,
+      rememberRevision: false,
+      timeout: const Duration(milliseconds: 1800),
+    );
 
     if (response.statusCode != 200) {
       return false;
@@ -84,6 +137,19 @@ Future<bool> pullLatestConfigurationsFromServer() async {
       }
     }
 
+    if (generation != _mappingGeneration ||
+        _sendsPending > 0 ||
+        snapshot != _snapshot() ||
+        !setEquals(deleted, pendingDeletedConnectionIds)) {
+      return false;
+    }
+    if (!dirty) await http.rememberResponseRevision(client.configUri, response);
+    if (generation != _mappingGeneration ||
+        _sendsPending > 0 ||
+        snapshot != _snapshot() ||
+        !setEquals(deleted, pendingDeletedConnectionIds)) {
+      return false;
+    }
     applyServerConfigurationsSnapshot(configs);
     return true;
   } catch (_) {
@@ -269,9 +335,10 @@ Future<Map<String, dynamic>?> loadVoiceStatus() async {
   try {
     final client = await getServerClient();
     if (client == null) return null;
-    final response = await http
-        .get(client.voiceStatusUri)
-        .timeout(const Duration(seconds: 3));
+    final response = await http.get(
+      client.voiceStatusUri,
+      timeout: const Duration(seconds: 3),
+    );
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
@@ -301,9 +368,10 @@ Future<List<Map<String, dynamic>>> loadHACameras() async {
     final client = await getServerClient();
     if (client == null) return [];
 
-    final response = await http
-        .get(client.haCamerasUri)
-        .timeout(const Duration(seconds: 5));
+    final response = await http.get(
+      client.haCamerasUri,
+      timeout: const Duration(seconds: 5),
+    );
 
     if (response.statusCode != 200) return [];
 

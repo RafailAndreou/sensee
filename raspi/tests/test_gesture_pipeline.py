@@ -27,6 +27,9 @@ def snapshot(points, name='None', score=1.0):
 
 class GesturePipelineTests(unittest.TestCase):
     def setUp(self):
+        clock = patch("gesture_engine.control.time.monotonic_ns", return_value=0)
+        clock.start()
+        self.addCleanup(clock.stop)
         previous = config_cache.get_loaded_config()
         self.addCleanup(config_cache.set_loaded_config, previous)
         config_cache.set_loaded_config([{'id': '1', 'gesture': 'Thumb+Index', 'action': 'Turn off',
@@ -109,7 +112,7 @@ class GesturePipelineTests(unittest.TestCase):
         with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1066000000):
             self.assertFalse(self.app.runtime.command_is_fresh(event[2], event[3]))
 
-    def test_near_contact_flicker_has_bounded_one_shot_tolerance(self):
+    def test_near_contact_uncertainty_blocks_one_shots(self):
         for timestamp in (1000, 1033):
             self.app.gesture_callback(snapshot(landmarks(8)), None, timestamp)
             self.app.process_latest_observation(timestamp)
@@ -119,9 +122,49 @@ class GesturePipelineTests(unittest.TestCase):
         self.app.gesture_callback(snapshot(points), None, 1066)
         self.app.process_latest_observation(1066)
         with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1066000000):
-            self.assertTrue(self.app.runtime.command_is_fresh(event[2], event[3]))
+            self.assertFalse(self.app.runtime.command_is_fresh(event[2], event[3]))
         with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1084000000):
             self.assertFalse(self.app.runtime.command_is_fresh(event[2], event[3]))
+
+    def test_uncertain_contact_does_not_rearm_held_one_shot(self):
+        points = landmarks()
+        points[8].x, points[8].y = .055, 0
+        for timestamp, hand in ((1000, landmarks(8)), (1033, landmarks(8))):
+            self.app.gesture_callback(snapshot(hand), None, timestamp)
+            self.app.process_latest_observation(timestamp)
+        self.assertIsNotNone(self.app.runtime.pop_latest_gesture())
+        for timestamp, hand in ((1066, points), (1099, landmarks(8)), (1132, landmarks(8)),
+                                (1165, points), (1198, landmarks(8))):
+            self.app.gesture_callback(snapshot(hand), None, timestamp)
+            self.app.process_latest_observation(timestamp)
+        self.assertIsNone(self.app.runtime.pop_latest_gesture())
+
+    def test_new_pending_callback_already_cancels_previous_command(self):
+        for timestamp in (1000, 1033):
+            self.app.gesture_callback(snapshot(landmarks(8)), None, timestamp)
+            self.app.process_latest_observation(timestamp)
+        event = self.app.runtime.pop_latest_gesture()
+        self.app.gesture_callback(snapshot(landmarks(), 'Open_Palm'), None, 1066)
+        # No main-loop consumption of the new result yet.
+        with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1066000000):
+            self.assertFalse(self.app.runtime.command_is_fresh(event[2], event[3]))
+
+    def test_matching_pending_callback_retains_current_command_agreement(self):
+        for timestamp in (1000, 1033):
+            self.app.gesture_callback(snapshot(landmarks(8)), None, timestamp)
+            self.app.process_latest_observation(timestamp)
+        event = self.app.runtime.pop_latest_gesture()
+        self.app.gesture_callback(snapshot(landmarks(8)), None, 1066)
+        with patch('gesture_engine.runtime.time.monotonic_ns', return_value=1066000000):
+            self.assertTrue(self.app.runtime.command_is_fresh(event[2], event[3]))
+
+    def test_callback_from_before_invalidation_cannot_reestablish_agreement(self):
+        from gesture_engine import control
+        with patch('gesture_engine.control.time.monotonic_ns', return_value=1050000000):
+            control.invalidate('camera_disconnect')
+        self.app.gesture_callback(snapshot(landmarks(8)), None, 1033)
+        self.assertFalse(self.app.process_latest_observation(1066))
+        self.assertIsNone(self.app.runtime.agreement.capture('Thumb+Index', 'Right', True))
 
     def test_no_hand_cancels_pending_command_and_return_does_not_revive_it(self):
         for timestamp in (1000, 1033):

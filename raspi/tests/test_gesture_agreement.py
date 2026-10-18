@@ -27,10 +27,10 @@ class AgreementTests(unittest.TestCase):
         new = self.agreement.capture('Thumb+Index', 'Right', True)
         self.assertTrue(self.agreement.matches(new, 1060))
 
-    def test_flicker_grace_is_only_for_one_shots_and_is_bounded(self):
+    def test_uncertainty_blocks_both_one_shot_and_continuous_commands(self):
         continuous = self.agreement.capture('Thumb+Index', 'Right')
         self.agreement.observe({'Right': None}, 1030)
-        self.assertTrue(self.agreement.matches(self.source, 1050))
+        self.assertFalse(self.agreement.matches(self.source, 1050))
         self.assertFalse(self.agreement.matches(self.source, 1051))
         self.assertFalse(self.agreement.matches(continuous, 1030))
         self.assertIsNone(self.agreement.capture('Thumb+Index', 'Right', True))
