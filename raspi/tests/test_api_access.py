@@ -24,6 +24,20 @@ class ApiAccessTests(unittest.TestCase):
         self.assertEqual(self.client.get('/').status_code, 200)
         self.assertEqual(self.client.get('/web/js/main.js').status_code, 200)
 
+    def test_cached_dashboard_can_check_access_without_a_key(self):
+        response = self.client.get('/auth/status')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'status': 'paired', 'pairing_required': False})
+        self.assertEqual(response.headers['cache-control'], 'no-store')
+        self.assertEqual(self.client.get('/web/js/auth.js').status_code, 200)
+
+    def test_dashboard_files_are_revalidated_after_updates(self):
+        for path in ('/', '/web/js/main.js', '/web/js/auth.js', '/web/js/api.js'):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.headers['cache-control'], 'no-cache')
+
     def test_configuration_settings_and_preview_are_accessible_without_pairing(self):
         for path in ('/configuration', '/ha/config', '/preview', '/voice-settings', '/docs'):
             with self.subTest(path=path):

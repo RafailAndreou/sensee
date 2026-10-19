@@ -90,11 +90,16 @@ async def protect_local_requests(request: Request, call_next):
         expected_origin = f"{request.url.scheme}://{request.url.netloc}"
         if origin is not None and origin != expected_origin:
             return JSONResponse({"detail": "Cross-origin writes are not allowed"}, status_code=403)
-    public = path in ("/", "/ping") or path.startswith("/web/") or path == "/web"
+    dashboard_asset = path == "/" or path.startswith("/web/") or path == "/web"
     response = await call_next(request)
-    if not public:
-        response.headers["Cache-Control"] = "no-store"
+    response.headers["Cache-Control"] = "no-cache" if dashboard_asset else "no-store"
     return response
+
+
+@app.get("/auth/status")
+def client_access_status():
+    """Let previously installed clients continue without a pairing prompt."""
+    return {"status": "paired", "pairing_required": False}
 
 
 # Serve web dashboard (web folder lives one level above the server package)
