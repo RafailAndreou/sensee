@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:surface_controller/screens/dashboard/widgets/dashboardnavigation.dart';
 import 'package:surface_controller/server/server.dart' as server_discovery;
-import 'auth_http.dart' as auth;
 
 class VideoPage extends StatefulWidget {
   const VideoPage({super.key});
@@ -32,27 +31,6 @@ class _VideoPageState extends State<VideoPage> {
     }
 
     final baseUri = Uri.parse(client.baseUrl);
-    final key = await auth.getPairingKey(baseUri);
-    if (!mounted) return;
-    if (key == null || !await auth.isPaired(baseUri)) {
-      if (mounted) {
-        setState(
-          () => _loadingMessage =
-              'Pair with Sensee on the dashboard to view the camera.',
-        );
-      }
-      return;
-    }
-    await WebViewCookieManager().setCookie(
-      WebViewCookie(
-        name: 'sensee_access',
-        value: key,
-        domain: baseUri.host,
-        path: '/',
-      ),
-    );
-    if (!mounted) return;
-
     setState(() {
       _loadingMessage = 'Loading video...';
       _controller = WebViewController()

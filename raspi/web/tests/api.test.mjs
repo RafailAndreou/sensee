@@ -9,7 +9,7 @@ afterEach(() => {
   globalThis.window = originalWindow;
 });
 
-test('protected requests send the browser cookie and have a deadline', async () => {
+test('configuration requests have a deadline', async () => {
   globalThis.fetch = async (path, options) => {
     assert.equal(path, '/configuration');
     assert.equal(options.credentials, 'same-origin');
@@ -19,18 +19,10 @@ test('protected requests send the browser cookie and have a deadline', async () 
   assert.deepEqual(await api.get('/configuration'), []);
 });
 
-test('an expired pairing signals the UI and retains the HTTP status', async () => {
-  const events = [];
-  globalThis.window = { dispatchEvent: event => events.push(event.type) };
-  globalThis.fetch = async () => new Response('{"detail":"Pair first"}', { status: 401 });
-  await assert.rejects(api.get('/configuration'), error => error.status === 401 && error.message === 'Pair first');
-  assert.deepEqual(events, ['sensee-unpaired']);
-});
-
-test('an incorrect pairing key does not recursively open another pairing UI', async () => {
+test('HTTP errors retain their status without opening a pairing prompt', async () => {
   globalThis.window = { dispatchEvent: () => assert.fail('Unexpected pairing event') };
-  globalThis.fetch = async () => new Response('{"detail":"Incorrect pairing key"}', { status: 401 });
-  await assert.rejects(api.post('/auth/pair', { key: 'incorrect' }), /Incorrect pairing key/);
+  globalThis.fetch = async () => new Response('{"detail":"Unavailable"}', { status: 401 });
+  await assert.rejects(api.get('/configuration'), error => error.status === 401 && error.message === 'Unavailable');
 });
 
 test('validation errors retain the server explanation', async () => {

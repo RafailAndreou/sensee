@@ -1,10 +1,6 @@
 from pydantic import BaseModel, Field
 
 
-class PairRequest(BaseModel):
-    key: str = Field(min_length=1, max_length=256)
-
-
 class Configuration(BaseModel):
     id: str
     connectionType: str = "ir"

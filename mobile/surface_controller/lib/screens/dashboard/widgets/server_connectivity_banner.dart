@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/server/server.dart' as server_sync;
-import 'package:surface_controller/server/auth_http.dart' as auth;
 
 class ServerConnectivityBanner extends StatefulWidget {
   const ServerConnectivityBanner({super.key});
@@ -18,12 +17,10 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
   Timer? _timer;
   bool _refreshInFlight = false;
   bool _autoSyncInFlight = false;
-  bool _isPaired = false;
 
   @override
   void initState() {
     super.initState();
-    auth.pairingRequired.addListener(_onPairingRequired);
     _refreshConnectivity();
     _timer = Timer.periodic(
       const Duration(seconds: 4),
@@ -34,64 +31,7 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
   @override
   void dispose() {
     _timer?.cancel();
-    auth.pairingRequired.removeListener(_onPairingRequired);
     super.dispose();
-  }
-
-  void _onPairingRequired() {
-    if (mounted && auth.pairingRequired.value) {
-      setState(() => _isPaired = false);
-    }
-  }
-
-  Future<void> _pair() async {
-    final client = await server_sync.getServerClient();
-    if (client == null || !mounted) return;
-    var enteredKey = '';
-    final key = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Pair with Sensee'),
-        content: TextField(
-          onChanged: (value) => enteredKey = value,
-          obscureText: true,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Pairing key',
-            helperText: 'Shown in the Sensee engine window',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, enteredKey),
-            child: const Text('Pair'),
-          ),
-        ],
-      ),
-    );
-    if (key == null || key.trim().isEmpty) return;
-    try {
-      final ok = await auth.pairWithServer(Uri.parse(client.baseUrl), key);
-      if (!mounted) return;
-      if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pairing failed. Check the key and try again.'),
-          ),
-        );
-      }
-      await _refreshConnectivity();
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not pair: $error')));
-      }
-    }
   }
 
   Future<void> _refreshConnectivity({
@@ -108,15 +48,12 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
       return;
     }
 
-    final wasOnline = _isConnected == true && _isPaired;
+    final wasOnline = _isConnected == true;
 
     _refreshInFlight = true;
     final reachable = await server_sync.isServerReachable(
       discoverIfUnknown: discoverIfUnknown,
     );
-    final client = reachable ? await server_sync.getServerClient() : null;
-    final paired =
-        client != null && await auth.isPaired(Uri.parse(client.baseUrl));
     _refreshInFlight = false;
 
     if (!mounted) {
@@ -124,10 +61,9 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
     }
     setState(() {
       _isConnected = reachable;
-      _isPaired = paired;
     });
 
-    final becameOnline = !wasOnline && reachable && paired;
+    final becameOnline = !wasOnline && reachable;
     if (becameOnline && !_autoSyncInFlight) {
       _autoSyncInFlight = true;
       try {
@@ -144,8 +80,7 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
       valueListenable: appLocale,
       builder: (context, _, __) {
         final isChecking = _isConnected == null;
-        final isOnline = _isConnected == true && _isPaired;
-        final needsPairing = _isConnected == true && !_isPaired;
+        final isOnline = _isConnected == true;
 
         final Color backgroundColor = isChecking
             ? const Color(0xFFE5E7EB)
@@ -169,8 +104,6 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
             ? t('banner_checking')
             : isOnline
             ? t('banner_online')
-            : needsPairing
-            ? 'Pair with Sensee to continue'
             : t('banner_offline');
 
         return AnimatedContainer(
@@ -197,13 +130,11 @@ class _ServerConnectivityBannerState extends State<ServerConnectivityBanner> {
               ),
               if (!isOnline)
                 TextButton(
-                  onPressed: needsPairing
-                      ? _pair
-                      : () => _refreshConnectivity(
-                          discoverIfUnknown: true,
-                          showChecking: true,
-                        ),
-                  child: Text(needsPairing ? 'Pair' : t('banner_retry')),
+                  onPressed: () => _refreshConnectivity(
+                    discoverIfUnknown: true,
+                    showChecking: true,
+                  ),
+                  child: Text(t('banner_retry')),
                 ),
             ],
           ),

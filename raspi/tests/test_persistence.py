@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 from server import file
-from server.access import load_pairing_key
 
 
 class PersistenceTests(unittest.TestCase):
@@ -72,12 +71,3 @@ class PersistenceTests(unittest.TestCase):
             file.delete_gesture_settings()
             self.assertFalse(file.load_gesture_settings()['wakeEnabled'])
             self.assertFalse(Path(path + '.bak').exists())
-
-    def test_pairing_key_survives_restart_and_is_replaced_when_revoked(self):
-        path = str(Path(self.directory.name) / 'access_config.json')
-        with patch.object(file, 'ACCESS_CONFIG_PATH', path):
-            key = load_pairing_key()
-            self.assertGreaterEqual(len(key), 32)
-            self.assertEqual(load_pairing_key(), key)
-            Path(path).unlink()
-            self.assertNotEqual(load_pairing_key(), key)

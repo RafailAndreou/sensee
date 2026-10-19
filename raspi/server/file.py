@@ -25,7 +25,6 @@ GESTURE_SETTINGS_PATH = os.path.join(_data_dir(), "gesture_settings.json")
 CAMERA_SETTINGS_PATH = os.path.join(_data_dir(), "camera_settings.json")
 IRONMAN_PARAMS_PATH = os.path.join(_data_dir(), "ironman_params.json")
 VOICE_SETTINGS_PATH = os.path.join(_data_dir(), "voice_settings.json")
-ACCESS_CONFIG_PATH = os.path.join(_data_dir(), "access_config.json")
 
 def _atomic_write(path: str, content: str) -> None:
     directory = os.path.dirname(os.path.abspath(path))

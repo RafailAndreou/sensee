@@ -4,9 +4,6 @@ async function decodeResponse(response, path) {
     try { detail = (await response.json()).detail || detail; } catch { /* non-JSON error response */ }
     const error = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
     error.status = response.status;
-    if (response.status === 401 && path !== '/auth/pair') {
-      window.dispatchEvent(new Event('sensee-unpaired'));
-    }
     throw error;
   }
   return response.json();
