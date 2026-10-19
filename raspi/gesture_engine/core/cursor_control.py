@@ -6,7 +6,7 @@ from gesture_engine.desktop import pyautogui
 from gesture_engine import control
 
 from gesture_engine.log import get_logger
-from gesture_engine.core.matching import normalize_name
+from gesture_engine.core.matching import normalize_name, canonical_gesture_name
 from gesture_engine.core.handlers.pc_handler import execute_pc_action
 from server.models import IronmanParams
 
@@ -103,7 +103,7 @@ class CursorController:
                 self._params_cache_ts = now
                 gesture_map = self._params_cache.get("gesture_map", {})
                 self._reverse_map = {
-                    normalize_name(gname): action_key
+                    canonical_gesture_name(gname): action_key
                     for action_key, gname in gesture_map.items()
                     if gname
                 }
@@ -114,7 +114,7 @@ class CursorController:
         params = self.get_params()
         if not params.get("enabled", False):
             return None
-        return self._reverse_map.get(normalize_name(gesture_name))
+        return self._reverse_map.get(canonical_gesture_name(gesture_name))
 
     def fire_action(self, action_key: str) -> None:
         """Execute a one-shot PC action with per-action cooldown."""

@@ -10,7 +10,7 @@ import requests
 
 from gesture_engine.log import get_logger
 
-from .ha_client import HAClient
+from .ha_client import HAClient, DispatchCancelled
 from .ha_config import get_ha_config
 from .ha_services import get_domain_from_entity, parse_action_to_service, action_service_data
 from gesture_engine import control
@@ -63,10 +63,13 @@ def _try_tv_wake_fallback_unlocked(url_base: str, token: str, target_entity_id: 
                 "script",
                 "turn_on",
                 {"entity_id": TV_WAKE_SCRIPT_ENTITY, "variables": {"target_entity_id": target_entity_id}},
+                is_current=is_current,
             )
             if response.status_code == 200:
                 return True
             logger.warning("TV wake script failed (%s): %s", response.status_code, response.text)
+        except DispatchCancelled:
+            return False
         except requests.exceptions.RequestException as e:
             logger.warning("TV wake script request failed: %s", e)
 
@@ -81,10 +84,13 @@ def _try_tv_wake_fallback_unlocked(url_base: str, token: str, target_entity_id: 
                 "switch",
                 "turn_on",
                 {"entity_id": TV_WAKE_SWITCH_ENTITY},
+                is_current=is_current,
             )
             if response.status_code == 200:
                 return True
             logger.warning("TV wake switch failed (%s): %s", response.status_code, response.text)
+        except DispatchCancelled:
+            return False
         except requests.exceptions.RequestException as e:
             logger.warning("TV wake switch request failed: %s", e)
 
@@ -99,10 +105,13 @@ def _try_tv_wake_fallback_unlocked(url_base: str, token: str, target_entity_id: 
                 "wake_on_lan",
                 "send_magic_packet",
                 {"mac": TV_WAKE_MAC},
+                is_current=is_current,
             )
             if response.status_code == 200:
                 return True
             logger.warning("TV WOL failed (%s): %s", response.status_code, response.text)
+        except DispatchCancelled:
+            return False
         except requests.exceptions.RequestException as e:
             logger.warning("TV WOL request failed: %s", e)
 
@@ -112,32 +121,52 @@ def _try_tv_wake_fallback_unlocked(url_base: str, token: str, target_entity_id: 
     return False
 
 
+def _origin_guard(is_current):
+    """Keep even non-camera requests/fallbacks bound to their original epoch."""
+    with control.lock:
+        epoch = control.epoch
+    def current():
+        with control.lock:
+            if epoch != control.epoch:
+                control.record('rejected', reason='dispatch_epoch_changed')
+                return False
+            return is_current is None or is_current()
+    return current
+
+
 def _try_tv_wake_fallback(url_base, token, target_entity_id, is_current=None):
+    guard = _origin_guard(is_current)
     with control.lock:
         if control.test_mode:
+            if not guard():
+                return False
             control.record('test_action', entity=target_entity_id, action='TV wake fallback')
             return True
-        return _try_tv_wake_fallback_unlocked(url_base, token, target_entity_id, is_current=is_current)
+    return _try_tv_wake_fallback_unlocked(url_base, token, target_entity_id, is_current=guard)
 
 
 def _trigger_ha_action_unlocked(entity_id: str, action_type: str, *, is_current=None) -> bool:
     """Send a Home Assistant service request for the configured entity."""
     if not entity_id:
+        control.record("rejected", reason="missing_target")
         logger.error("Home Assistant trigger failed: no entity_id provided.")
         return False
 
     try:
         domain, service, data = action_service_data(entity_id, action_type)
     except ValueError as error:
+        control.record("rejected", reason="invalid_action")
         logger.warning("%s", error)
         return False
     domain = get_domain_from_entity(entity_id)
     if service in ("volume_up", "volume_down") and domain != "media_player":
+        control.record("rejected", reason="invalid_action")
         logger.warning("Volume action is unsupported for domain %s", domain)
         return False
     url_base, token = get_ha_config()
 
     if not _has_valid_runtime_config(url_base, token):
+        control.record("rejected", reason="ha_config_missing")
         logger.error("Home Assistant config missing. Save URL and token from the mobile app or set SENSEE_HA_URL/SENSEE_HA_TOKEN.")
         return False
 
@@ -147,6 +176,7 @@ def _trigger_ha_action_unlocked(entity_id: str, action_type: str, *, is_current=
         with _volume_send_lock:
             last_sent = _volume_send_times.get(key, 0.0)
             if now - last_sent < VOLUME_MIN_INTERVAL_SECONDS:
+                control.record("dispatch_coalesced", reason="volume_interval", entity=entity_id)
                 return True
             _volume_send_times[key] = now
 
@@ -164,7 +194,7 @@ def _trigger_ha_action_unlocked(entity_id: str, action_type: str, *, is_current=
         return True
 
     try:
-        response, elapsed_ms = _http_client.post_service(url_base, token, domain, service, data)
+        response, elapsed_ms = _http_client.post_service(url_base, token, domain, service, data, is_current=is_current)
         if response.status_code == 200:
             if DEBUG_HA_TIMING:
                 logger.info("HA accepted %s -> %s in %.1fms", entity_id, service, elapsed_ms)
@@ -177,6 +207,7 @@ def _trigger_ha_action_unlocked(entity_id: str, action_type: str, *, is_current=
 
             return True
 
+        control.record("rejected", reason="ha_http_error", status=response.status_code)
         logger.error("HA error %s: %s", response.status_code, response.text)
 
         if domain == "media_player" and service == "turn_on":
@@ -184,14 +215,17 @@ def _trigger_ha_action_unlocked(entity_id: str, action_type: str, *, is_current=
             _schedule_tv_wake_fallback(url_base, token, entity_id, is_current=is_current)
 
         return False
+    except DispatchCancelled:
+        return False
     except requests.exceptions.RequestException as e:
+        control.record("rejected", reason="ha_request_error")
         logger.error("Failed to reach Home Assistant at %s: %s", url_base, e)
         return False
 
 
 def trigger_ha_action(entity_id, action_type, *, is_current=None):
-    with control.lock:
-        return _trigger_ha_action_unlocked(entity_id, action_type, is_current=is_current)
+    guard = _origin_guard(is_current)
+    return _trigger_ha_action_unlocked(entity_id, action_type, is_current=guard)
 
 
 def _schedule_tv_wake_verify(url_base: str, token: str, entity_id: str, is_current=None) -> None:

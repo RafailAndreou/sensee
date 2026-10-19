@@ -1,3 +1,4 @@
+import { SUPPORTED_GESTURES } from './gestures.js';
 export const DEVICE_TYPES = ['TV', 'AC', 'Light', 'Fan', 'Scene', 'Script', 'PC'];
 
 export const DEVICE_META = {
@@ -9,13 +10,7 @@ export const DEVICE_META = {
   PC:    { emoji: '💻', bg: 'rgba(99,102,241,0.18)',  accent: '#6366f1' },
 };
 
-export const GESTURES = [
-  ...['Thumb+Ring','Thumb+Pinky','Victory','Thumb Up','Thumb Down','Pointing Up'].map(id => ({id, label:id, icon:'✋'})),
-  { id: 'Index+Thumb',  label: 'Index + Thumb',  icon: '🤏' },
-  { id: 'Middle+Thumb', label: 'Middle + Thumb', icon: '✌️' },
-  { id: 'Open Palm',    label: 'Open Palm',      icon: '✋' },
-  { id: 'Fist',         label: 'Fist',           icon: '✊' },
-];
+export const GESTURES = SUPPORTED_GESTURES.map(id => ({id, label:id, icon:'✋'}));
 
 export const HANDS = [
   { id: 'Left Hand',  label: 'Left',  icon: '🫲' },

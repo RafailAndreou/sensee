@@ -189,14 +189,19 @@ Future<bool> sendGestureSettings({
   }
 }
 
-Future<Map<String, dynamic>?> loadGestureSettings() async {
+Future<Map<String, dynamic>?> loadGestureSettings({
+  bool Function()? acceptRevision,
+}) async {
   try {
     final client = await getServerClient();
     if (client == null) {
       return null;
     }
 
-    final response = await http.get(client.gestureSettingsUri);
+    final response = await http.get(
+      client.gestureSettingsUri,
+      acceptRevision: acceptRevision,
+    );
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -231,14 +236,14 @@ Future<Map<String, dynamic>> loadGestureSettingsLocal() async {
       'wakeEnabled': prefs.getBool('gesture_wake_enabled') ?? false,
       'holdDurationSeconds': prefs.getDouble('gesture_hold_duration') ?? 2.0,
       'activeWindowSeconds': prefs.getDouble('gesture_active_window') ?? 5.0,
-      'selectedGesture': prefs.getString('gesture_selected') ?? 'Open Hand',
+      'selectedGesture': prefs.getString('gesture_selected') ?? 'Open Palm',
     };
   } catch (_) {
     return {
       'wakeEnabled': false,
       'holdDurationSeconds': 2.0,
       'activeWindowSeconds': 5.0,
-      'selectedGesture': 'Open Hand',
+      'selectedGesture': 'Open Palm',
     };
   }
 }
@@ -262,12 +267,17 @@ Future<bool> sendCameraSettings({
   }
 }
 
-Future<Map<String, dynamic>?> loadCameraSettings() async {
+Future<Map<String, dynamic>?> loadCameraSettings({
+  bool Function()? acceptRevision,
+}) async {
   try {
     final client = await getServerClient();
     if (client == null) return null;
 
-    final response = await http.get(client.cameraSettingsUri);
+    final response = await http.get(
+      client.cameraSettingsUri,
+      acceptRevision: acceptRevision,
+    );
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }

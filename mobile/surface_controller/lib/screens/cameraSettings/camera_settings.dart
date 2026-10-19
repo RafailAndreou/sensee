@@ -1,10 +1,20 @@
+import '../../server/settings_draft.dart';
+import '../../server/auth_http.dart' as auth;
 import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/globals/sizes.dart';
 import 'package:surface_controller/server/config_service.dart';
 
 class CameraSettingsScreen extends StatefulWidget {
-  const CameraSettingsScreen({super.key});
+  const CameraSettingsScreen({
+    super.key,
+    this.loadLocal,
+    this.loadRemote,
+    this.saveRemote,
+  });
+  final Future<Map<String, dynamic>> Function()? loadLocal;
+  final Future<Map<String, dynamic>?> Function()? loadRemote;
+  final Future<bool> Function(bool useNetwork, String streamUrl)? saveRemote;
 
   @override
   State<CameraSettingsScreen> createState() => _CameraSettingsScreenState();
@@ -14,6 +24,7 @@ class _CameraSettingsScreenState extends State<CameraSettingsScreen> {
   bool _useNetwork = false;
   final TextEditingController _urlController = TextEditingController();
   bool _saving = false;
+  final _draft = SettingsDraft();
 
   @override
   void initState() {
@@ -28,16 +39,21 @@ class _CameraSettingsScreenState extends State<CameraSettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final local = await loadCameraSettingsLocal();
-    if (mounted) {
+    final revision = _draft.revision;
+    final local = await (widget.loadLocal?.call() ?? loadCameraSettingsLocal());
+    if (mounted && _draft.isCurrent(revision)) {
       setState(() {
         _useNetwork = local['useNetwork'] ?? false;
         _urlController.text = local['streamUrl'] ?? '';
       });
     }
 
-    final server = await loadCameraSettings();
-    if (server != null && mounted) {
+    final server =
+        await (widget.loadRemote?.call() ??
+            loadCameraSettings(
+              acceptRevision: () => mounted && _draft.isCurrent(revision),
+            ));
+    if (server != null && mounted && _draft.isCurrent(revision)) {
       setState(() {
         _useNetwork = server['useNetwork'] ?? false;
         _urlController.text = server['streamUrl'] ?? '';
@@ -55,9 +71,9 @@ class _CameraSettingsScreenState extends State<CameraSettingsScreen> {
     if (!mounted) return;
 
     if (cameras.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t('camera_no_cameras'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('camera_no_cameras'))));
       return;
     }
 
@@ -95,6 +111,7 @@ class _CameraSettingsScreenState extends State<CameraSettingsScreen> {
             enabled: hasUrl,
             onTap: hasUrl
                 ? () {
+                    _draft.edited();
                     setState(() {
                       _useNetwork = true;
                       _urlController.text = url;
@@ -109,18 +126,29 @@ class _CameraSettingsScreenState extends State<CameraSettingsScreen> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
+    final revision = _draft.revision;
+    final useNetwork = _useNetwork;
+    final streamUrl = _urlController.text.trim();
     setState(() => _saving = true);
-    await saveCameraSettingsLocal(
-      useNetwork: _useNetwork,
-      streamUrl: _urlController.text.trim(),
-    );
-    await sendCameraSettings(
-      useNetwork: _useNetwork,
-      streamUrl: _urlController.text.trim(),
-    );
+    await saveCameraSettingsLocal(useNetwork: useNetwork, streamUrl: streamUrl);
+    final success =
+        await (widget.saveRemote?.call(useNetwork, streamUrl) ??
+            sendCameraSettings(useNetwork: useNetwork, streamUrl: streamUrl));
     if (mounted) {
       setState(() => _saving = false);
-      Navigator.pop(context);
+      if (success && _draft.isCurrent(revision)) {
+        Navigator.pop(context);
+      } else if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              auth.settingsWriteError.value ??
+                  'Could not save settings. Your edits are kept.',
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -174,7 +202,10 @@ class _CameraSettingsScreenState extends State<CameraSettingsScreen> {
                         Switch.adaptive(
                           value: _useNetwork,
                           activeTrackColor: Colors.blue,
-                          onChanged: (val) => setState(() => _useNetwork = val),
+                          onChanged: (val) {
+                            _draft.edited();
+                            setState(() => _useNetwork = val);
+                          },
                         ),
                       ],
                     ),
@@ -197,8 +228,9 @@ class _CameraSettingsScreenState extends State<CameraSettingsScreen> {
                                 ),
                               ),
                               TextButton.icon(
-                                onPressed:
-                                    _useNetwork ? _browseHACameras : null,
+                                onPressed: _useNetwork
+                                    ? _browseHACameras
+                                    : null,
                                 icon: const Icon(Icons.home, size: 18),
                                 label: Text(t('camera_browse_ha')),
                                 style: TextButton.styleFrom(
@@ -213,14 +245,16 @@ class _CameraSettingsScreenState extends State<CameraSettingsScreen> {
                           const SizedBox(height: 8),
                           TextField(
                             controller: _urlController,
+                            onChanged: (_) => _draft.edited(),
                             enabled: _useNetwork,
                             keyboardType: TextInputType.url,
                             decoration: InputDecoration(
                               hintText: 'rtsp://192.168.1.100:554/stream',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    const BorderSide(color: Colors.black12),
+                                borderSide: const BorderSide(
+                                  color: Colors.black12,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),

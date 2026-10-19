@@ -18,6 +18,7 @@ from gesture_engine.core.touch_gestures import (
     resolve_detected_hand, snapshot_to_multi_hand_landmarks, clear_touch_releases,
 )
 from gesture_engine.core.wake_gate import WakeGate
+from gesture_engine.core.matching import canonical_gesture_name
 from gesture_engine.capture import CaptureWorker
 from gesture_engine import control
 from gesture_engine.overlay import OVERLAY_DURATION_SECONDS, draw_action_overlay
@@ -76,6 +77,7 @@ class GestureApp:
     def enqueue_detected_gesture(self, gesture_name, handedness, timestamp_ms,
                                  score=1.0, one_shot=False):
         if not self.wake_gate.allows(gesture_name):
+            control.record("rejected", reason="wake_gate")
             return False
         return self.runtime.enqueue_gesture(
             SimpleNamespace(category_name=gesture_name, score=score),
@@ -100,6 +102,8 @@ class GestureApp:
                             (name for name, active in contacts if active), builtin)
                     self.runtime.agreement.invalidate_mismatches(observed)
                 self.observations.publish(result, timestamp_ms)
+            else:
+                control.record("rejected", reason="observation_invalidated")
 
     def reset_tracking(self):
         self.runtime.agreement.clear()
@@ -115,8 +119,10 @@ class GestureApp:
         contacts = contacts if contacts is not None else self.contacts(hand_landmarks)
         released = {name for name, active in self.contacts(hand_landmarks, release=True) if not active}
         for gesture_name, is_touching in contacts:
-            state_key = (detected_hand, gesture_name)
+            state_key = (detected_hand, canonical_gesture_name(gesture_name))
             if not is_touching or not self.wake_gate.allows(gesture_name):
+                if is_touching:
+                    control.record("rejected", reason="wake_gate")
                 if gesture_name in released:
                     self.touch_confirmation.is_confirmed(state_key, False)
                 else:
@@ -127,12 +133,15 @@ class GestureApp:
             matched_config = self.runtime.find_config(gesture_name, detected_hand)
             if matched_config is None:
                 action_key = self.cursor_controller.resolve_action(gesture_name)
+                if not action_key:
+                    control.record("rejected", reason="no_mapping")
                 if (action_key and action_key not in ("move_cursor", "scroll", "scroll_up", "scroll_down")
                         and self.touch_confirmation.is_confirmed(state_key, True)):
                     self.cursor_controller.fire_action(action_key)
                 continue
             one_shot = action_requires_confirmation(str(matched_config.get("action", "")))
             if one_shot and not self.touch_confirmation.is_confirmed(state_key, True):
+                control.record("rejected", reason="confirmation_or_held")
                 continue
             if not self.enqueue_detected_gesture(gesture_name, detected_hand, timestamp_ms,
                                                  one_shot=one_shot) and one_shot:
@@ -163,6 +172,8 @@ class GestureApp:
             category = gesture_list[0]
             if category.category_name != "None" and category.score >= minimum_confidence_for_gesture(category.category_name):
                 categories.append((i, category))
+            elif category.category_name != "None":
+                control.record("rejected", reason="low_confidence")
         names = [category.category_name for _, category in categories]
         names.extend(name for hand_contacts in contacts for name, touching in hand_contacts if touching)
         self.wake_gate.observe(names, timestamp_ms)
@@ -173,6 +184,17 @@ class GestureApp:
                                            builtin_by_hand.get(i))
             releases.extend((identities[i], name) for name, active in self.contacts(hand, release=True) if not active)
         self.runtime.agreement.observe(observed, timestamp_ms, released=releases)
+        # Native one-shots rearm only on a definite different gesture or tracking
+        # loss. Uncertain recognition breaks the streak but keeps the held latch.
+        touch_names = {'thumb index', 'thumb middle', 'thumb ring', 'thumb pinky'}
+        for key in tuple(self.touch_confirmation._state):
+            hand_name, name = key
+            if name not in touch_names:
+                current = observed.get(hand_name)
+                if current and canonical_gesture_name(current) != name:
+                    self.touch_confirmation.is_confirmed(key, False)
+                elif not current:
+                    self.touch_confirmation.uncertain(key)
         self.last_result_ts = timestamp_ms
         if not hands:
             self.reset_tracking()
@@ -185,7 +207,15 @@ class GestureApp:
                 pass
         for i, category in categories:
             if not any(touching for _, touching in contacts[i]):
-                self.enqueue_detected_gesture(category.category_name, identities[i], timestamp_ms, category.score)
+                config = self.runtime.find_config(category.category_name, identities[i])
+                one_shot = config is not None and action_requires_confirmation(str(config.get('action', '')))
+                key = (identities[i], canonical_gesture_name(category.category_name))
+                if one_shot and not self.touch_confirmation.is_confirmed(key, True):
+                    control.record('rejected', reason='confirmation_or_held')
+                    continue
+                if not self.enqueue_detected_gesture(category.category_name, identities[i], timestamp_ms,
+                                                     category.score, one_shot=one_shot) and one_shot:
+                    self.touch_confirmation.retry(key)
         self._feed_ironman_mode(hands, categories)
         self.draw_landmarks = snapshot_to_multi_hand_landmarks(snapshot) if draw else None
         return True

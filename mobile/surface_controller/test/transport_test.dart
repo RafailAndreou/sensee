@@ -159,6 +159,63 @@ void main() {
     },
   );
 
+  test(
+    'a late settings GET cannot rebase an edited form or a conflict',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      var reads = 0;
+      final started = Completer<void>();
+      final release = Completer<void>();
+      final sentRevisions = <String?>[];
+      server.listen((request) async {
+        await request.drain<void>();
+        if (request.method == 'GET') {
+          reads++;
+          final number = reads;
+          if (number == 2) {
+            started.complete();
+            await release.future;
+          }
+          request.response.headers.set(
+            'etag',
+            number == 1 ? '"base"' : '"remote"',
+          );
+        } else {
+          sentRevisions.add(request.headers.value('if-match'));
+          request.response.statusCode = 412;
+          request.response.headers.set('etag', '"remote"');
+        }
+        request.response.write('{}');
+        await request.response.close();
+      });
+      try {
+        final uri = Uri.parse(
+          'http://127.0.0.1:${server.port}/camera-settings',
+        );
+        await auth.get(uri);
+        var edited = false;
+        final pending = auth.get(uri, acceptRevision: () => !edited);
+        await started.future;
+        edited = true;
+        release.complete();
+        await pending;
+        expect(
+          (await auth.post(uri, body: '{"streamUrl":"draft"}')).statusCode,
+          412,
+        );
+        expect(
+          (await auth.post(uri, body: '{"streamUrl":"draft"}')).statusCode,
+          412,
+        );
+        expect(sentRevisions, ['"base"', '"base"']);
+        expect(auth.settingsWriteError.value, contains('Your edits are kept'));
+      } finally {
+        if (!release.isCompleted) release.complete();
+        await server.close(force: true);
+      }
+    },
+  );
+
   test('discovery cancellation closes every registered losing resource', () {
     final cancellation = DiscoveryCancellation();
     var closed = 0;

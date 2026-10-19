@@ -3,8 +3,11 @@ from functools import lru_cache
 
 _GESTURE_ALIAS_MAP = {
     "open hand": "open palm",
+    "hand open": "open palm",
     "thumbs index": "thumb index",
+    "index thumbs": "thumb index",
     "closed fist": "fist",
+    "fist closed": "fist",
     "open palm": "open palm",
     "thumb index": "thumb index",
     "index thumb": "thumb index",
@@ -42,6 +45,17 @@ def _canonical_from_normalized(normalized: str):
 def canonical_gesture_name(value):
     normalized = normalize_name(value)
     return _canonical_from_normalized(normalized)
+
+
+SUPPORTED_GESTURES = ('Open Palm', 'Fist', 'Thumb+Index', 'Thumb+Middle', 'Thumb+Ring',
+                      'Thumb+Pinky', 'Victory', 'Thumb Up', 'Thumb Down', 'Pointing Up', 'ILoveYou')
+
+
+@lru_cache(maxsize=128)
+def gesture_display_name(value):
+    """One stable label for saved settings and both client selectors."""
+    canonical = canonical_gesture_name(value)
+    return next((name for name in SUPPORTED_GESTURES if canonical_gesture_name(name) == canonical), str(value))
 
 
 @lru_cache(maxsize=128)

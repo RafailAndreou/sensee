@@ -133,10 +133,14 @@ def load_gesture_settings() -> dict:
         "wakeEnabled": False,
         "holdDurationSeconds": 2,
         "activeWindowSeconds": 5,
-        "selectedGesture": "Open Hand",
+        "selectedGesture": "Open Palm",
     }
     try:
-        return _load_settings(GESTURE_SETTINGS_PATH, defaults)
+        from gesture_engine.core.matching import gesture_display_name, SUPPORTED_GESTURES
+        settings = _load_settings(GESTURE_SETTINGS_PATH, defaults)
+        name = gesture_display_name(settings.get("selectedGesture", "Open Palm"))
+        settings["selectedGesture"] = name if name in SUPPORTED_GESTURES else "Open Palm"
+        return settings
     except Exception as e:
         logger.warning("Error loading gesture settings: %s", e)
         return defaults

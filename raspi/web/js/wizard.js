@@ -1,3 +1,4 @@
+import { normalizeGestureName } from './gestures.js';
 import { state, normalizeId } from './state.js';
 import { t } from './i18n.js';
 import { DEVICE_TYPES, DEVICE_META, GESTURES, HANDS, ACTIONS_BY_TYPE, BRANDS_BY_TYPE } from './constants.js';
@@ -10,7 +11,7 @@ import { showPairingWizard } from './pairing.js';
 
 export function openAddWizard() {
   const draft = { id: nextId(), connectionType: 'smart', entityId: '', brand: '',
-    action: '', gesture: 'Index+Thumb', sound: '', hand: 'Right Hand', isSynced: false };
+    action: '', gesture: 'Thumb+Index', sound: '', hand: 'Right Hand', isSynced: false };
   showDeviceTypeStep(draft, false);
 }
 
@@ -18,7 +19,7 @@ export async function openEditWizard(id) {
   const normalizedId = normalizeId(id);
   const cfg = state.configs.find(c => normalizeId(c.id) === normalizedId);
   if (!cfg) return;
-  const draft = { ...cfg };
+  const draft = { ...cfg, gesture:normalizeGestureName(cfg.gesture) };
   if (draft.connectionType === 'smart') {
     try {
       const {devices} = await api.get('/smart-devices');

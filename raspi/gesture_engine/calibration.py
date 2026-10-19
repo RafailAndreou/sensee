@@ -17,17 +17,26 @@ class ContactSampler:
         self.samples = []
         self.contact = None
         self.result = None
-        self.epoch = -1
+        self.epoch = control.epoch
+        self._invalidate_callback = self.invalidate
+        control.register(self._invalidate_callback)
+
+    def invalidate(self):
+        with control.lock:
+            self.phase = "interrupted"
+            self.samples.clear()
+            self.contact = self.result = None
+            self.epoch = control.epoch
 
     def start(self, phase):
         if phase not in ('contact', 'open', 'cancel'):
             raise ValueError('Phase must be contact, open or cancel')
         with control.lock:
-            if phase == 'open' and self.contact is None:
+            if phase == 'open' and (self.contact is None or self.epoch != control.epoch):
                 raise ValueError('Sample contact first')
             self.phase, self.samples, self.result = phase, [], None
             self.epoch = control.epoch
-            if phase == 'contact':
+            if phase in ('contact', 'cancel'):
                 self.contact = None
 
     def observe(self, hand, aspect):
@@ -51,8 +60,8 @@ class ContactSampler:
 
     def status(self):
         with control.lock:
-            if self.phase in ('contact', 'open') and self.epoch != control.epoch:
-                self.phase, self.samples = 'interrupted', []
+            if self.epoch != control.epoch:
+                self.invalidate()
             return {'phase': self.phase, 'samples': len(self.samples), 'required': 30, 'result': self.result}
 
 

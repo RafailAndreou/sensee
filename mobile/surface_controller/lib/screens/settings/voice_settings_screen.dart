@@ -1,3 +1,4 @@
+import '../../server/auth_http.dart' as auth;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
   bool _enabled = false;
   bool _loading = true;
   bool _saving = false;
+  bool _saveAgain = false;
   Timer? _saveDebounce;
 
   // Model download status
@@ -94,6 +96,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
   }
 
   void _scheduleSave() {
+    if (_saving) _saveAgain = true;
     _saveDebounce?.cancel();
     _saveDebounce = Timer(const Duration(milliseconds: 400), _save);
   }
@@ -101,12 +104,27 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
   Future<void> _save() async {
     if (_saving) return;
     setState(() => _saving = true);
-    await saveVoiceSettings({
+    _saveAgain = false;
+    final success = await saveVoiceSettings({
       'enabled': _enabled,
       'model': _model,
       'language': _language,
     });
-    if (mounted) setState(() => _saving = false);
+    if (mounted) {
+      setState(() => _saving = false);
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              auth.settingsWriteError.value ??
+                  'Could not save settings. Your edits are kept.',
+            ),
+          ),
+        );
+        return;
+      }
+      if (_saveAgain) _scheduleSave();
+    }
     // Server triggers preload on POST; start polling until ready
     _startPolling();
   }

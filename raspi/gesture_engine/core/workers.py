@@ -4,6 +4,7 @@ from queue import Empty
 from typing import TYPE_CHECKING
 
 from gesture_engine.log import get_logger
+from gesture_engine import control
 
 if TYPE_CHECKING:
     from gesture_engine.runtime import GestureRuntime
@@ -88,6 +89,7 @@ def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> Non
             latest_frame_ts_ms = max(get_latest_frame_ts(), time.monotonic_ns() // 1_000_000)
             # Every camera command expires, including confirmed one-shot gestures.
             if is_stale_gesture(runtime, event_ts_ms, latest_frame_ts_ms):
+                control.record("rejected", reason="stale_command")
                 continue
             if not runtime.command_is_fresh(event_ts_ms, source):
                 continue
@@ -96,6 +98,7 @@ def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> Non
             confidence = gesture.score
 
             if confidence < minimum_confidence_for_gesture(gesture_name):
+                control.record("rejected", reason="low_confidence")
                 continue
 
             if can_log_detected_gesture(runtime):
@@ -111,6 +114,7 @@ def process_gestures_loop(runtime: "GestureRuntime", get_latest_frame_ts) -> Non
             # deque is empty (handled safely)
             continue
         except Exception as e:
+            control.record("rejected", reason="worker_error")
             logger.error("Error processing gesture: %s", e)
 def process_action_queue_loop(runtime: "GestureRuntime") -> None:
     """Serialize queued actions through a single worker thread.
@@ -126,6 +130,7 @@ def process_action_queue_loop(runtime: "GestureRuntime") -> None:
         except Empty:
             continue
         except Exception as e:
+            control.record("rejected", reason="worker_error")
             logger.error("Error processing action queue item: %s", e)
 
 
@@ -139,6 +144,7 @@ def process_volume_loop(runtime: "GestureRuntime") -> None:
         except Empty:
             continue
         except Exception as e:
+            control.record("rejected", reason="worker_error")
             logger.error("Error processing volume action: %s", e)
             
             

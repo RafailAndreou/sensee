@@ -1,3 +1,5 @@
+import { settingsLoadGuard } from '../settings-load.js';
+import { wakeGestureName, normalizeGestureName } from '../gestures.js';
 import { t } from '../i18n.js';
 import { GESTURES } from '../constants.js';
 import { api } from '../api.js';
@@ -79,9 +81,11 @@ export async function renderHASettings() {
     </div>`;
   document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
 
+  const loadCurrent = settingsLoadGuard(main);
   let cfg = { url: '', token: '' };
-  try { cfg = await api.get('/ha/config'); } catch {}
+  try { cfg = await api.get('/ha/config', loadCurrent); } catch {}
 
+  if (!loadCurrent()) return;
   main.innerHTML = `
     <div class="view">
       <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
@@ -124,9 +128,13 @@ export async function renderGestureSettings() {
     <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Loading…'))}</div></div>`;
   document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
 
+  const loadCurrent = settingsLoadGuard(main);
   let s = { wakeEnabled: false, holdDurationSeconds: 1.0, activeWindowSeconds: 10, selectedGesture: 'Fist' };
-  try { const d = await api.get('/gesture-settings'); if (d && typeof d === 'object') Object.assign(s, d); } catch {}
+  try { const d = await api.get('/gesture-settings', loadCurrent); if (d && typeof d === 'object') Object.assign(s, d); } catch {}
 
+  s.selectedGesture = wakeGestureName(s.selectedGesture);
+
+  if (!loadCurrent()) return;
   main.innerHTML = `
     <div class="view">
       <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
@@ -205,9 +213,11 @@ export async function renderCameraSettings() {
     <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Loading…'))}</div></div>`;
   document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
 
+  const loadCurrent = settingsLoadGuard(main);
   let s = { useNetwork: false, streamUrl: '' };
-  try { const d = await api.get('/camera-settings'); if (d) Object.assign(s, d); } catch {}
+  try { const d = await api.get('/camera-settings', loadCurrent); if (d) Object.assign(s, d); } catch {}
 
+  if (!loadCurrent()) return;
   main.innerHTML = `
     <div class="view">
       <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
@@ -270,7 +280,7 @@ export async function renderCameraSettings() {
 
 /* ─── Ironman Mode Settings ─────────────────────────────────────────────── */
 const _IM_GESTURES = [
-  '', 'Open Palm', 'Closed Fist', 'Thumb Up', 'Thumb Down',
+  '', 'Open Palm', 'Fist', 'Thumb Up', 'Thumb Down',
   'Victory', 'ILoveYou', 'Pointing Up',
   'Thumb+Index', 'Thumb+Middle', 'Thumb+Ring', 'Thumb+Pinky',
 ];
@@ -298,11 +308,12 @@ export async function renderIronmanSettings() {
     <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Loading…'))}</div></div>`;
   document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
 
+  const loadCurrent = settingsLoadGuard(main);
   let s = { enabled: false, always_track: false, gain: 5000, damp: 50, sensitivity: 3, steps: 10, delay: 0.001, scroll: 10, gesture_map: {} };
-  try { const d = await api.get('/ironman-params'); if (d && typeof d === 'object') Object.assign(s, d); } catch {}
+  try { const d = await api.get('/ironman-params', loadCurrent); if (d && typeof d === 'object') Object.assign(s, d); } catch {}
 
   const delayMs = +(s.delay * 1000).toFixed(1);
-  const gmap = { ...(s.gesture_map || {}) };
+  const gmap = Object.fromEntries(Object.entries(s.gesture_map || {}).map(([k,v]) => [k, normalizeGestureName(v)]));
   if (!gmap.scroll_up && gmap.scroll) gmap.scroll_up = gmap.scroll;
   if (!Object.prototype.hasOwnProperty.call(gmap, 'scroll_down')) gmap.scroll_down = '';
   delete gmap.scroll;
@@ -319,6 +330,7 @@ export async function renderIronmanSettings() {
       </div>`;
   }).join('');
 
+  if (!loadCurrent()) return;
   main.innerHTML = `
     <div class="view">
       <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
@@ -359,24 +371,24 @@ export async function renderIronmanSettings() {
   let saveTimer = null;
   function scheduleSave() {
     clearTimeout(saveTimer);
+    const newGmap = {};
+    document.querySelectorAll('.im-gesture-select').forEach(sel => {
+      newGmap[sel.dataset.action] = sel.value;
+    });
+    const payload = {
+      enabled:      document.getElementById('im-toggle').classList.contains('on'),
+      always_track: document.getElementById('im-always-track').classList.contains('on'),
+      gain:        +document.getElementById('im-gain').value,
+      damp:        +document.getElementById('im-damp').value,
+      sensitivity: +document.getElementById('im-sensitivity').value,
+      steps:       +document.getElementById('im-steps').value,
+      delay:       +(+document.getElementById('im-delay').value / 1000).toFixed(4),
+      scroll:      +document.getElementById('im-scroll').value,
+      gesture_map: newGmap,
+    };
     saveTimer = setTimeout(async () => {
-      const newGmap = {};
-      document.querySelectorAll('.im-gesture-select').forEach(sel => {
-        newGmap[sel.dataset.action] = sel.value;
-      });
-      try {
-        await api.post('/ironman-params', {
-          enabled:      document.getElementById('im-toggle').classList.contains('on'),
-          always_track: document.getElementById('im-always-track').classList.contains('on'),
-          gain:        +document.getElementById('im-gain').value,
-          damp:        +document.getElementById('im-damp').value,
-          sensitivity: +document.getElementById('im-sensitivity').value,
-          steps:       +document.getElementById('im-steps').value,
-          delay:       +(+document.getElementById('im-delay').value / 1000).toFixed(4),
-          scroll:      +document.getElementById('im-scroll').value,
-          gesture_map: newGmap,
-        });
-      } catch {}
+      try { await api.post('/ironman-params', payload); }
+      catch (error) { toast(error.message + ' — edits kept', 'error'); }
     }, 400);
   }
 
@@ -429,12 +441,14 @@ export async function renderVoiceSettings() {
     <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Loading…'))}</div></div>`;
   document.getElementById('back-btn').addEventListener('click', () => navigate('settings'));
 
+  const loadCurrent = settingsLoadGuard(main);
   let s = { enabled: false, model: 'tiny', language: 'en' };
-  try { const d = await api.get('/voice-settings'); if (d && typeof d === 'object') Object.assign(s, d); } catch {}
+  try { const d = await api.get('/voice-settings', loadCurrent); if (d && typeof d === 'object') Object.assign(s, d); } catch {}
 
   let vs = { status: 'idle', model: null };
   try { vs = await api.get('/voice-status'); } catch {}
 
+  if (!loadCurrent()) return;
   main.innerHTML = `
     <div class="view">
       <button class="back-btn" id="back-btn">${escHtml(t('‹ Settings'))}</button>
@@ -520,16 +534,17 @@ export async function renderVoiceSettings() {
   let saveTimer = null;
   function scheduleSave() {
     clearTimeout(saveTimer);
+    const payload = {
+      enabled:  document.getElementById('vc-toggle').classList.contains('on'),
+      model:    document.getElementById('vc-model').value,
+      language: document.getElementById('vc-lang').value,
+    };
+    const form = main.firstElementChild;
     saveTimer = setTimeout(async () => {
       try {
-        await api.post('/voice-settings', {
-          enabled:  document.getElementById('vc-toggle').classList.contains('on'),
-          model:    document.getElementById('vc-model').value,
-          language: document.getElementById('vc-lang').value,
-        });
-        // Server triggers preload on POST — start polling
-        startPolling();
-      } catch {}
+        await api.post('/voice-settings', payload);
+        if (main.firstElementChild === form) startPolling();
+      } catch (error) { toast(error.message + ' — edits kept', 'error'); }
     }, 400);
   }
 

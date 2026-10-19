@@ -1,7 +1,7 @@
 import threading
 import time
 
-from gesture_engine.core.matching import normalize_name
+from gesture_engine import control
 from gesture_engine.log import get_logger
 
 logger = get_logger(__name__)
@@ -24,7 +24,7 @@ class WakeGate:
         self._refresh_interval_seconds = max(0.1, float(refresh_interval_seconds))
 
         self._lock = threading.Lock()
-        self._settings_refresh_ts = 0.0
+        self._settings_refresh_ts = float("-inf")
 
         self._wake_enabled = False
         self._wake_selected_key = self._gesture_key("Open Hand")
@@ -35,12 +35,25 @@ class WakeGate:
         self._wake_active_until = 0.0
         self._last_settings_tuple = None
         self._last_observation_at = None
+        self._invalidate_callback = self.invalidate_settings
+        control.register(self._invalidate_callback)
+
+    def invalidate_settings(self):
+        with self._lock:
+            self._settings_refresh_ts = float("-inf")
+            self._wake_hold_started_at = None
+            self._wake_active_until = 0.0
+            self._last_observation_at = None
 
     def _gesture_key(self, gesture_name):
         from .matching import canonical_gesture_name
         return canonical_gesture_name(str(gesture_name))
 
     def _refresh_settings_if_needed(self, force=False):
+        with control.lock:
+            self._refresh_locked(force)
+
+    def _refresh_locked(self, force):
         now = time.monotonic()
         if not force and now - self._settings_refresh_ts < self._refresh_interval_seconds:
             return

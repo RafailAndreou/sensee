@@ -15,6 +15,10 @@ CONFIRMATION_ACTION_KEYWORDS = (
     "open",
     "close",
     "toggle",
+    "brightness",
+    "fan speed",
+    "temperature",
+    "activate",
 )
 
 

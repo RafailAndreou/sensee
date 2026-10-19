@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PairRequest(BaseModel):
@@ -35,6 +35,15 @@ class GestureSettings(BaseModel):
     holdDurationSeconds: float = Field(ge=0, le=60, allow_inf_nan=False)
     activeWindowSeconds: float = Field(ge=0, le=3600, allow_inf_nan=False)
     selectedGesture: str
+
+    @field_validator('selectedGesture')
+    @classmethod
+    def supported_wake_name(cls, value):
+        from gesture_engine.core.matching import gesture_display_name, SUPPORTED_GESTURES
+        name = gesture_display_name(value)
+        if name not in SUPPORTED_GESTURES:
+            raise ValueError('Unsupported wake gesture')
+        return name
 
 
 class CameraSettings(BaseModel):

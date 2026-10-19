@@ -254,8 +254,10 @@ session-only** and starts disabled after a restart.
   apply the samples, then save settings. Poor separation requires a new sample.
   The contact and depth ratios use palm size and image aspect ratio; the saved
   threshold applies to index, middle, ring and pinky contacts. You can edit the
-  ratios or disable calibration. Disconnects/settings changes interrupt samples;
-  restart the sampling step after reconnecting.
+  ratios or disable calibration. Any camera, configuration or test-mode epoch
+  change clears all transient samples and results, including between sampling
+  steps and after completion. Restart from **1. Sample touching**. This is one
+  index/thumb calibration applied to all contacts, not per-finger calibration.
 - **Gestures:** mapping and wake selectors include thumb/ring, thumb/pinky,
   Victory, Thumb Up, Thumb Down and Pointing Up. Fist and Closed_Fist are aliases;
   Open Hand and Open_Palm are aliases. Touch priority is pinky, ring, middle,
@@ -269,6 +271,10 @@ session-only** and starts disabled after a restart.
   `Fan speed 25`, or `Temperature 22`; temperature uses the unit configured in HA.
   Domain and numeric bounds are validated at save and dispatch. Actual device
   capability and temperature-unit behavior still need a live HA check.
+  Brightness, fan speed, temperature and scene/script activation require two
+  consecutive observations and fire once per held gesture, for both contacts and
+  native poses. A definite release/different pose or tracking loss rearms them;
+  a 1.5-second cooldown also limits successive accepted commands.
 - **Test mode:** intended device/PC/cursor/voice actions appear in diagnostics,
   while device calls, browser launches, clipboard, mouse and keyboard output are
   blocked. Voice transcript text is never included in the action history or
@@ -282,7 +288,9 @@ session-only** and starts disabled after a restart.
   mappings; unsaved client edits are retained for review.
 - **Conflicts:** saves serialize and use the ETag returned by the last accepted
   read/write. A `412` preserves edits and does not automatically overwrite a
-  newer server revision. In Engine tools, **Review latest server mappings** shows
+  newer server revision. Delayed settings loads cannot overwrite an edited
+  Flutter camera/wake draft or replace a newer browser form. Saves use snapshots;
+  failed saves and edits made while a save is pending stay in the form. In Engine tools, **Review latest server mappings** shows
   the server and local versions. After reviewing, **Retry local mappings** sends
   your local version against that reviewed revision; another concurrent change
   still conflicts. Copy/export important edits before closing a client.
@@ -291,16 +299,29 @@ session-only** and starts disabled after a restart.
   bounded and kept in memory. Camera logs omit URL credentials, paths and query
   strings.
 
-The capture worker owns the camera and replaces a single pending frame. Failed
-reads invalidate camera agreement before reconnecting. Late frames/results,
+The capture worker owns the camera and replaces a single pending frame. The
+camera URL and capture properties are opened from one configuration snapshot;
+changes during opening discard that handle before reading it. Reads crossing an
+epoch or capture-configuration change are discarded, never retagged with the new
+epoch. Failed reads invalidate camera agreement before reconnecting. Late frames/results,
 changed or uncertain gestures, disconnected cameras, settings changes and
 mode changes cancel queued commands. Each command retains its original camera
 observation time through every queue and expires after 100 ms; moving it into
 another queue never refreshes its age. A newer callback applies mismatches
 before main-loop processing; matching observations retain uninterrupted agreement. Final dispatch checks the
 current uninterrupted hand/gesture agreement, including cursor interpolation
-and delayed TV wake fallbacks. Commands already sent to a device cannot be
-retracted.
+and delayed TV wake fallbacks. Home Assistant connection preparation and network
+I/O run without holding the observation/settings lock. The final freshness and
+test-mode check runs after connection preparation, immediately before HTTP
+handoff. Handoff is the commit boundary: once handed to `requests`, a call may
+send bytes and cannot reliably be recalled, even if test mode/configuration
+changes before its response arrives. Queued commands and subsequent TV wake
+fallbacks still undergo the original freshness checks; timestamps are never
+refreshed. A slow device response therefore cannot stall camera observations,
+settings saves or test-mode changes.
+
+See the [audit-fix checklist](showcase/engine-audit-checklist.md) for regression
+coverage and remaining hardware validation.
 
 Settings and mapping writes require **If-Match**. Custom API clients must first
 GET the relevant resource, keep its `ETag`, and POST with `If-Match: <etag>`.

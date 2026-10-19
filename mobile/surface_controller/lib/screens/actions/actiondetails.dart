@@ -1,3 +1,4 @@
+import '../../globals/gestures.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -35,7 +36,7 @@ class ActionDetails extends StatefulWidget {
 
 class _ActionDetailsState extends State<ActionDetails> {
   late String _selectedAction;
-  String _selectedGesture = 'Index+Thumb';
+  String _selectedGesture = 'Thumb+Index';
   String _selectedHand = 'Right Hand';
   List<String>? _availableActions;
 
@@ -59,7 +60,9 @@ class _ActionDetailsState extends State<ActionDetails> {
   }
 
   Set<String> _existingHandsForGesture({required int? excludeConnectionId}) {
-    final targetGesture = _normalizeSelectionValue(_selectedGesture);
+    final targetGesture = _normalizeSelectionValue(
+      normalizeGestureName(_selectedGesture),
+    );
     final hands = <String>{};
 
     for (final entry in connectionConfigs.entries) {
@@ -69,7 +72,9 @@ class _ActionDetailsState extends State<ActionDetails> {
       }
 
       final config = entry.value;
-      final configGesture = _normalizeSelectionValue(config.gesture.value);
+      final configGesture = _normalizeSelectionValue(
+        normalizeGestureName(config.gesture.value),
+      );
       if (configGesture != targetGesture) {
         continue;
       }
@@ -81,7 +86,9 @@ class _ActionDetailsState extends State<ActionDetails> {
   }
 
   bool _hasDuplicateGestureHandMapping({required int? excludeConnectionId}) {
-    final targetGesture = _normalizeSelectionValue(_selectedGesture);
+    final targetGesture = _normalizeSelectionValue(
+      normalizeGestureName(_selectedGesture),
+    );
     final targetHand = _normalizeSelectionValue(_selectedHand);
 
     for (final entry in connectionConfigs.entries) {
@@ -91,7 +98,9 @@ class _ActionDetailsState extends State<ActionDetails> {
       }
 
       final config = entry.value;
-      final configGesture = _normalizeSelectionValue(config.gesture.value);
+      final configGesture = _normalizeSelectionValue(
+        normalizeGestureName(config.gesture.value),
+      );
       final configHand = _normalizeSelectionValue(config.hand.value);
 
       if (configGesture == targetGesture && configHand == targetHand) {

@@ -84,7 +84,7 @@ class GestureRuntime:
         self.gesture_event = threading.Event()
         self.transition_queue = deque()
         self.max_transitions = 32
-        
+
         self.action_queue: Queue = Queue(maxsize=32)
         self.volume_queue: Queue[tuple[str, str, int, GestureSource | None]] = Queue(maxsize=1)
         self.action_queue_lock = threading.Lock()
@@ -119,15 +119,20 @@ class GestureRuntime:
         """Keep confirmed transitions in order and coalesce continuous state."""
         source = self.agreement.capture(getattr(gesture, "category_name", gesture), handedness, one_shot)
         if source is None:
+            control.record("rejected", reason="missing_source")
             return False
         with self.gesture_queue_lock:
             if self.stop_event.is_set():
+                control.record("rejected", reason="stopped")
                 return False
             if one_shot:
                 if len(self.transition_queue) >= self.max_transitions:
+                    control.record("rejected", reason="transition_queue_full")
                     return False
                 self.transition_queue.append((gesture, handedness, event_ts_ms, source))
             else:
+                if self.gesture_queue:
+                    control.record("rejected", reason="superseded_gesture")
                 self.gesture_queue.append((gesture, handedness, event_ts_ms, source))
             control.record("gesture_queued", gesture=source.gesture, hand=source.hand, timestamp_ms=event_ts_ms)
             self.gesture_event.set()
@@ -153,9 +158,10 @@ class GestureRuntime:
             reason = 'stopped'
         elif now_ms - event_ts_ms > self.policy.stale_gesture_ms or event_ts_ms > now_ms:
             reason = 'stale_command'
-        elif source is not None and (not self.agreement.matches(source, now_ms)
-                or self.command_guard is not None and not self.command_guard(source)):
+        elif source is not None and not self.agreement.matches(source, now_ms):
             reason = 'observation_mismatch'
+        elif source is not None and self.command_guard is not None and not self.command_guard(source):
+            reason = 'wake_gate'
         if reason:
             control.record('rejected', reason=reason)
         return reason is None
@@ -168,16 +174,20 @@ class GestureRuntime:
         target = self.volume_queue if is_volume else self.action_queue
         with self.action_queue_lock:
             if self.stop_event.is_set():
+                control.record("rejected", reason="stopped")
                 return False
             if is_volume and target.full():
                 try:
-                    target.get_nowait()
+                    replaced = target.get_nowait()
+                    self.release_reservation(*replaced)
+                    control.record("rejected", reason="superseded_volume")
                 except Empty:
                     pass
             try:
                 target.put_nowait((entity_id, action, event_ts_ms, source))
                 return True
             except Full:
+                control.record("rejected", reason="action_queue_full")
                 return False
 
     def stop(self):
@@ -202,12 +212,15 @@ class GestureRuntime:
                 if control.test_mode:
                     control.record('test_action', entity=entity_id, action=action)
                     success = True
-                elif source is None:
-                    success = self.trigger_ha_action(entity_id, action)
-                else:
-                    success = self.trigger_ha_action(entity_id, action,
-                        is_current=lambda: self.command_is_fresh(event_ts_ms, source))
-                return success
+                    return True
+            # The transport performs its final guarded check after preparing the
+            # session. Never hold control.lock while waiting for a device.
+            if source is None:
+                success = self.trigger_ha_action(entity_id, action)
+            else:
+                success = self.trigger_ha_action(entity_id, action,
+                    is_current=lambda: self.command_is_fresh(event_ts_ms, source))
+            return success
         finally:
             control.metric(actionLatencyMs=round((time.monotonic()-started)*1000, 2))
             control.record("action_sent" if success else "action_cancelled_or_failed", entity=entity_id, action=action)
@@ -227,6 +240,7 @@ class GestureRuntime:
         if event_ts_ms is not None and source is None:
             source = self.agreement.capture(gesture_name, detected_hand)
             if source is None:
+                control.record("rejected", reason="missing_source")
                 return
         take_action(self, gesture_name, detected_hand, event_ts_ms=event_ts_ms, source=source)
 

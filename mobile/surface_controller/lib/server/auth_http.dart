@@ -7,6 +7,7 @@ import 'package:http/http.dart' as raw;
 import 'package:shared_preferences/shared_preferences.dart';
 
 final pairingRequired = ValueNotifier<bool>(false);
+final settingsWriteError = ValueNotifier<String?>(null);
 const _requestTimeout = Duration(seconds: 10);
 
 final _transport = HttpClient()..idleTimeout = const Duration(seconds: 30);
@@ -98,6 +99,7 @@ Future<raw.Response> get(
   Uri uri, {
   Map<String, String>? headers,
   bool rememberRevision = true,
+  bool Function()? acceptRevision,
   Duration timeout = _requestTimeout,
 }) async {
   final response = await _request(
@@ -106,7 +108,7 @@ Future<raw.Response> get(
     headers: headers,
     timeout: timeout,
   );
-  if (rememberRevision) {
+  if (rememberRevision && (acceptRevision?.call() ?? true)) {
     await rememberResponseRevision(uri, response);
   } else if (!_revisions.containsKey(uri.toString())) {
     final prefs = await SharedPreferences.getInstance();
@@ -152,6 +154,11 @@ Future<raw.Response> post(
       },
       body: body,
     );
+    settingsWriteError.value = response.statusCode == 412
+        ? 'Settings changed on another client. Your edits are kept; review or reload before retrying.'
+        : response.statusCode >= 400
+        ? 'Settings save failed (${response.statusCode}). Your edits are kept.'
+        : null;
     await rememberResponseRevision(uri, response);
     return response;
   })();

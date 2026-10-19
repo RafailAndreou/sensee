@@ -1,18 +1,25 @@
+import '../../server/settings_draft.dart';
+import '../../server/auth_http.dart' as auth;
+import '../../globals/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/globals/sizes.dart';
 import 'package:surface_controller/server/config_service.dart';
 
 class Gesturesettings extends StatefulWidget {
-  const Gesturesettings({super.key});
+  const Gesturesettings({super.key, this.loadLocal, this.loadRemote});
+  final Future<Map<String, dynamic>> Function()? loadLocal;
+  final Future<Map<String, dynamic>?> Function()? loadRemote;
 
   @override
   State<Gesturesettings> createState() => _GesturesettingsState();
 }
 
 class _GesturesettingsState extends State<Gesturesettings> {
+  final _draft = SettingsDraft();
+  bool _saving = false;
   bool _wakeEnabled = false;
-  String _selectedGesture = 'Open Hand';
+  String _selectedGesture = 'Open Palm';
   double _holdDurationSeconds = 2;
   double _activeWindowSeconds = 5;
 
@@ -27,11 +34,15 @@ class _GesturesettingsState extends State<Gesturesettings> {
   }
 
   Future<void> _loadGestureSettings() async {
-    final localSettings = await loadGestureSettingsLocal();
-    if (mounted) {
+    final revision = _draft.revision;
+    final localSettings =
+        await (widget.loadLocal?.call() ?? loadGestureSettingsLocal());
+    if (mounted && _draft.isCurrent(revision)) {
       setState(() {
         _wakeEnabled = localSettings['wakeEnabled'] ?? false;
-        _selectedGesture = localSettings['selectedGesture'] ?? 'Open Hand';
+        _selectedGesture = wakeGestureName(
+          localSettings['selectedGesture']?.toString() ?? 'Open Palm',
+        );
         _holdDurationSeconds = _clampValue(
           (localSettings['holdDurationSeconds'] ?? 2).toDouble(),
           0,
@@ -45,11 +56,17 @@ class _GesturesettingsState extends State<Gesturesettings> {
       });
     }
 
-    final serverSettings = await loadGestureSettings();
-    if (serverSettings != null && mounted) {
+    final serverSettings =
+        await (widget.loadRemote?.call() ??
+            loadGestureSettings(
+              acceptRevision: () => mounted && _draft.isCurrent(revision),
+            ));
+    if (serverSettings != null && mounted && _draft.isCurrent(revision)) {
       setState(() {
         _wakeEnabled = serverSettings['wakeEnabled'] ?? false;
-        _selectedGesture = serverSettings['selectedGesture'] ?? 'Open Hand';
+        _selectedGesture = wakeGestureName(
+          serverSettings['selectedGesture']?.toString() ?? 'Open Palm',
+        );
         _holdDurationSeconds = _clampValue(
           (serverSettings['holdDurationSeconds'] ?? 2).toDouble(),
           0,
@@ -71,20 +88,39 @@ class _GesturesettingsState extends State<Gesturesettings> {
   }
 
   Future<void> _saveSettings() async {
+    if (_saving) return;
+    final revision = _draft.revision;
+    final wakeEnabled = _wakeEnabled;
+    final holdDurationSeconds = _holdDurationSeconds;
+    final activeWindowSeconds = _activeWindowSeconds;
+    final selectedGesture = _selectedGesture;
+    setState(() => _saving = true);
     await saveGestureSettingsLocal(
-      wakeEnabled: _wakeEnabled,
-      holdDurationSeconds: _holdDurationSeconds,
-      activeWindowSeconds: _activeWindowSeconds,
-      selectedGesture: _selectedGesture,
+      wakeEnabled: wakeEnabled,
+      holdDurationSeconds: holdDurationSeconds,
+      activeWindowSeconds: activeWindowSeconds,
+      selectedGesture: selectedGesture,
     );
-    await sendGestureSettings(
-      wakeEnabled: _wakeEnabled,
-      holdDurationSeconds: _holdDurationSeconds,
-      activeWindowSeconds: _activeWindowSeconds,
-      selectedGesture: _selectedGesture,
+    final success = await sendGestureSettings(
+      wakeEnabled: wakeEnabled,
+      holdDurationSeconds: holdDurationSeconds,
+      activeWindowSeconds: activeWindowSeconds,
+      selectedGesture: selectedGesture,
     );
     if (mounted) {
-      Navigator.pop(context);
+      setState(() => _saving = false);
+      if (success && _draft.isCurrent(revision)) {
+        Navigator.pop(context);
+      } else if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              auth.settingsWriteError.value ??
+                  'Could not save settings. Your edits are kept.',
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -221,6 +257,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
                             value: _wakeEnabled,
                             activeTrackColor: Colors.blue,
                             onChanged: (val) {
+                              _draft.edited();
                               setState(() {
                                 _wakeEnabled = val;
                               });
@@ -238,6 +275,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
                         max: 5,
                         divisions: 5,
                         onChanged: (value) {
+                          _draft.edited();
                           setState(() {
                             _holdDurationSeconds = value;
                           });
@@ -251,6 +289,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
                         max: 20,
                         divisions: 4,
                         onChanged: (value) {
+                          _draft.edited();
                           setState(() {
                             _activeWindowSeconds = value;
                           });
@@ -271,7 +310,7 @@ class _GesturesettingsState extends State<Gesturesettings> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                onPressed: _saveSettings,
+                onPressed: _saving ? null : _saveSettings,
                 child: Text(
                   t('gesture_save'),
                   style: const TextStyle(color: Colors.white),
@@ -315,40 +354,19 @@ class _GesturesettingsState extends State<Gesturesettings> {
                 borderRadius: BorderRadius.circular(12),
                 icon: const Icon(Icons.keyboard_arrow_down_rounded),
                 onChanged: (value) {
+                  _draft.edited();
                   if (value == null) return;
                   setState(() {
                     _selectedGesture = value;
                   });
                 },
                 value: _selectedGesture,
-                items: [
-                  ...[
-                    'Thumb+Ring',
-                    'Thumb+Pinky',
-                    'Victory',
-                    'Thumb Up',
-                    'Thumb Down',
-                    'Pointing Up',
-                  ].map(
-                    (name) => DropdownMenuItem(value: name, child: Text(name)),
-                  ),
-                  DropdownMenuItem(
-                    value: "Open Hand",
-                    child: Text(t('gesture_dropdown_open_hand')),
-                  ),
-                  DropdownMenuItem(
-                    value: "Closed Fist",
-                    child: Text(t('gesture_dropdown_closed_fist')),
-                  ),
-                  DropdownMenuItem(
-                    value: "Thumbs+Index",
-                    child: Text(t('gesture_dropdown_thumbs_index')),
-                  ),
-                  DropdownMenuItem(
-                    value: "Middle+Thumb",
-                    child: Text(t('gesture_dropdown_middle_thumb')),
-                  ),
-                ],
+                items: supportedGestures
+                    .map(
+                      (name) =>
+                          DropdownMenuItem(value: name, child: Text(name)),
+                    )
+                    .toList(),
               ),
             ),
           ),

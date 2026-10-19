@@ -1,39 +1,28 @@
+import '../../server/auth_http.dart' as auth;
+import '../../globals/gestures.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/locale.dart';
 import 'package:surface_controller/server/config_service.dart';
 
-const _kGestures = [
-  '',
-  'Open Palm',
-  'Closed Fist',
-  'Thumb Up',
-  'Thumb Down',
-  'Victory',
-  'ILoveYou',
-  'Pointing Up',
-  'Thumb+Index',
-  'Thumb+Middle',
-  'Thumb+Ring',
-  'Thumb+Pinky',
-];
+const _kGestures = ['', ...supportedGestures];
 
 const _kActions = [
-  ('move_cursor',     'Move Cursor'),
-  ('scroll_up',       'Scroll Up'),
-  ('scroll_down',     'Scroll Down'),
-  ('left_click',      'Left Click'),
-  ('right_click',     'Right Click'),
-  ('tab_forward',     'Tab Forward'),
-  ('tab_backward',    'Tab Backward'),
-  ('new_tab',         'New Tab'),
-  ('close_tab',       'Close Tab'),
-  ('task_view',       'Task View'),
+  ('move_cursor', 'Move Cursor'),
+  ('scroll_up', 'Scroll Up'),
+  ('scroll_down', 'Scroll Down'),
+  ('left_click', 'Left Click'),
+  ('right_click', 'Right Click'),
+  ('tab_forward', 'Tab Forward'),
+  ('tab_backward', 'Tab Backward'),
+  ('new_tab', 'New Tab'),
+  ('close_tab', 'Close Tab'),
+  ('task_view', 'Task View'),
   ('browser_forward', 'Browser Forward'),
-  ('browser_back',    'Browser Back'),
-  ('browser_search',  'Browser Search'),
-  ('screenshot',      'Screenshot'),
+  ('browser_back', 'Browser Back'),
+  ('browser_search', 'Browser Search'),
+  ('screenshot', 'Screenshot'),
 ];
 
 class IronmanModeScreen extends StatefulWidget {
@@ -53,6 +42,8 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
   bool _alwaysTrack = false;
   Map<String, String> _gestureMap = {};
 
+  Map<String, dynamic> _loadedParams = {};
+  bool _saveAgain = false;
   bool _loading = true;
   bool _saving = false;
   Timer? _debounce;
@@ -75,18 +66,25 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
     setState(() {
       _loading = false;
       if (data != null) {
-        _gain        = (data['gain'] as num?)?.toDouble() ?? 5000;
-        _damp        = (data['damp'] as num?)?.toDouble() ?? 50;
+        _loadedParams = {...data};
+        _gain = (data['gain'] as num?)?.toDouble() ?? 5000;
+        _damp = (data['damp'] as num?)?.toDouble() ?? 50;
         _sensitivity = (data['sensitivity'] as num?)?.toDouble() ?? 3;
-        _steps       = (data['steps'] as num?)?.toDouble() ?? 10;
-        _delayMs     = ((data['delay'] as num?)?.toDouble() ?? 0.001) * 1000;
-        _scroll      = (data['scroll'] as num?)?.toDouble() ?? 10;
+        _steps = (data['steps'] as num?)?.toDouble() ?? 10;
+        _delayMs = ((data['delay'] as num?)?.toDouble() ?? 0.001) * 1000;
+        _scroll = (data['scroll'] as num?)?.toDouble() ?? 10;
         _alwaysTrack = (data['always_track'] as bool?) ?? false;
         final raw = data['gesture_map'];
         if (raw is Map) {
-          _gestureMap = raw.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+          _gestureMap = raw.map(
+            (k, v) => MapEntry(
+              k.toString(),
+              normalizeGestureName(v?.toString() ?? ''),
+            ),
+          );
           final legacyScroll = _gestureMap.remove('scroll');
-          if ((_gestureMap['scroll_up'] ?? '').isEmpty && (legacyScroll ?? '').isNotEmpty) {
+          if ((_gestureMap['scroll_up'] ?? '').isEmpty &&
+              (legacyScroll ?? '').isNotEmpty) {
             _gestureMap['scroll_up'] = legacyScroll!;
           }
           _gestureMap.putIfAbsent('scroll_down', () => '');
@@ -96,6 +94,7 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
   }
 
   void _scheduleSave() {
+    if (_saving) _saveAgain = true;
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), _save);
   }
@@ -103,19 +102,35 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
   Future<void> _save() async {
     if (_saving) return;
     setState(() => _saving = true);
-    final current = await loadIronmanParams() ?? {};
-    await saveIronmanParams({
-      ...current,
-      'gain':        _gain.round(),
-      'damp':        _damp.round(),
+    _saveAgain = false;
+    final payload = {
+      ..._loadedParams,
+      'gain': _gain.round(),
+      'damp': _damp.round(),
       'sensitivity': _sensitivity.round(),
-      'steps':       _steps.round(),
-      'delay':       double.parse((_delayMs / 1000).toStringAsFixed(4)),
-      'scroll':      _scroll.round(),
+      'steps': _steps.round(),
+      'delay': double.parse((_delayMs / 1000).toStringAsFixed(4)),
+      'scroll': _scroll.round(),
       'always_track': _alwaysTrack,
-      'gesture_map': _gestureMap,
-    });
-    if (mounted) setState(() => _saving = false);
+      'gesture_map': Map<String, String>.from(_gestureMap),
+    };
+    final success = await saveIronmanParams(payload);
+    if (success) _loadedParams = payload;
+    if (mounted) {
+      setState(() => _saving = false);
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              auth.settingsWriteError.value ??
+                  'Could not save settings. Your edits are kept.',
+            ),
+          ),
+        );
+      } else if (_saveAgain) {
+        _scheduleSave();
+      }
+    }
   }
 
   @override
@@ -129,8 +144,10 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
               children: [
                 const Icon(Icons.bolt, color: Colors.blue, size: 22),
                 const SizedBox(width: 8),
-                Text(t('ironman_title'),
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  t('ironman_title'),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ],
             ),
             actions: [
@@ -138,7 +155,8 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
                 const Padding(
                   padding: EdgeInsets.all(14),
                   child: SizedBox(
-                    width: 18, height: 18,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
@@ -147,7 +165,10 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
           body: _loading
               ? const Center(child: CircularProgressIndicator())
               : ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   children: [
                     _sectionHeader(t('ironman_section_motion')),
                     const SizedBox(height: 12),
@@ -164,44 +185,80 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
                     _ParamSlider(
                       label: t('ironman_gain_label'),
                       hint: t('ironman_gain_hint'),
-                      value: _gain, min: 100, max: 10000, divisions: 99,
+                      value: _gain,
+                      min: 100,
+                      max: 10000,
+                      divisions: 99,
                       displayValue: _gain.round().toString(),
-                      onChanged: (v) { setState(() => _gain = v); _scheduleSave(); },
+                      onChanged: (v) {
+                        setState(() => _gain = v);
+                        _scheduleSave();
+                      },
                     ),
                     _ParamSlider(
                       label: t('ironman_damp_label'),
                       hint: t('ironman_damp_hint'),
-                      value: _damp, min: 1, max: 200, divisions: 199,
+                      value: _damp,
+                      min: 1,
+                      max: 200,
+                      divisions: 199,
                       displayValue: _damp.round().toString(),
-                      onChanged: (v) { setState(() => _damp = v); _scheduleSave(); },
+                      onChanged: (v) {
+                        setState(() => _damp = v);
+                        _scheduleSave();
+                      },
                     ),
                     _ParamSlider(
                       label: t('ironman_sensitivity_label'),
                       hint: t('ironman_sensitivity_hint'),
-                      value: _sensitivity, min: 1, max: 20, divisions: 19,
+                      value: _sensitivity,
+                      min: 1,
+                      max: 20,
+                      divisions: 19,
                       displayValue: _sensitivity.round().toString(),
-                      onChanged: (v) { setState(() => _sensitivity = v); _scheduleSave(); },
+                      onChanged: (v) {
+                        setState(() => _sensitivity = v);
+                        _scheduleSave();
+                      },
                     ),
                     _ParamSlider(
                       label: t('ironman_steps_label'),
                       hint: t('ironman_steps_hint'),
-                      value: _steps, min: 1, max: 100, divisions: 99,
+                      value: _steps,
+                      min: 1,
+                      max: 100,
+                      divisions: 99,
                       displayValue: _steps.round().toString(),
-                      onChanged: (v) { setState(() => _steps = v); _scheduleSave(); },
+                      onChanged: (v) {
+                        setState(() => _steps = v);
+                        _scheduleSave();
+                      },
                     ),
                     _ParamSlider(
                       label: t('ironman_delay_label'),
                       hint: t('ironman_delay_hint'),
-                      value: _delayMs, min: 0.1, max: 10, divisions: 99,
+                      value: _delayMs,
+                      min: 0.1,
+                      max: 10,
+                      divisions: 99,
                       displayValue: '${_delayMs.toStringAsFixed(1)} ms',
-                      onChanged: (v) { setState(() => _delayMs = v); _scheduleSave(); },
+                      onChanged: (v) {
+                        setState(() => _delayMs = v);
+                        _scheduleSave();
+                      },
                     ),
                     _ParamSlider(
                       label: t('ironman_scroll_label'),
                       hint: t('ironman_scroll_hint'),
-                      value: _scroll, min: 1, max: 50, divisions: 49,
+                      value: _scroll,
+                      min: 1,
+                      max: 50,
+                      divisions: 49,
                       displayValue: _scroll.round().toString(),
-                      onChanged: (v) { setState(() => _scroll = v); _scheduleSave(); },
+                      onChanged: (v) {
+                        setState(() => _scroll = v);
+                        _scheduleSave();
+                      },
                     ),
                     const SizedBox(height: 24),
                     _sectionHeader(t('ironman_section_gestures')),
@@ -213,7 +270,9 @@ class _IronmanModeScreenState extends State<IronmanModeScreen> {
                         label: label,
                         value: current,
                         onChanged: (v) {
-                          setState(() => _gestureMap = {..._gestureMap, key: v ?? ''});
+                          setState(
+                            () => _gestureMap = {..._gestureMap, key: v ?? ''},
+                          );
                           _scheduleSave();
                         },
                       );
@@ -269,18 +328,31 @@ class _ParamSlider extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(label,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(hint,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).textTheme.bodySmall?.color)),
+                child: Text(
+                  hint,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
               ),
-              Text(displayValue,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blue)),
+              Text(
+                displayValue,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue,
+                ),
+              ),
             ],
           ),
           SliderTheme(
@@ -291,7 +363,9 @@ class _ParamSlider extends StatelessWidget {
             ),
             child: Slider(
               value: value.clamp(min, max),
-              min: min, max: max, divisions: divisions,
+              min: min,
+              max: max,
+              divisions: divisions,
               activeColor: Colors.blue,
               onChanged: onChanged,
             ),
@@ -331,22 +405,25 @@ class _AlwaysTrackTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(hint,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).textTheme.bodySmall?.color)),
+                Text(
+                  hint,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
               ],
             ),
           ),
-          Switch(
-            value: value,
-            activeColor: Colors.blue,
-            onChanged: onChanged,
-          ),
+          Switch(value: value, activeColor: Colors.blue, onChanged: onChanged),
         ],
       ),
     );
@@ -358,7 +435,11 @@ class _GestureRow extends StatelessWidget {
   final String value;
   final ValueChanged<String?> onChanged;
 
-  const _GestureRow({required this.label, required this.value, required this.onChanged});
+  const _GestureRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -370,8 +451,10 @@ class _GestureRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -391,18 +474,22 @@ class _GestureRow extends StatelessWidget {
                       : Colors.blue,
                 ),
                 dropdownColor: Theme.of(context).cardColor,
-                items: _kGestures.map((g) => DropdownMenuItem(
-                  value: g,
-                  child: Text(
-                    g.isEmpty ? '— None —' : g,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: g.isEmpty
-                          ? Theme.of(context).textTheme.bodySmall?.color
-                          : Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                  ),
-                )).toList(),
+                items: _kGestures
+                    .map(
+                      (g) => DropdownMenuItem(
+                        value: g,
+                        child: Text(
+                          g.isEmpty ? '— None —' : g,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: g.isEmpty
+                                ? Theme.of(context).textTheme.bodySmall?.color
+                                : Theme.of(context).textTheme.bodyMedium?.color,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
                 onChanged: onChanged,
               ),
             ),

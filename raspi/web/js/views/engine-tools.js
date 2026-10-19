@@ -1,3 +1,4 @@
+import { settingsLoadGuard } from '../settings-load.js';
 import { api } from '../api.js';
 import { escHtml, escAttr } from '../utils.js';
 import { navigate } from '../navigate.js';
@@ -8,12 +9,13 @@ import { pushConfigs, pullConfigs } from '../config-sync.js';
 export async function renderEngineTools() {
   const main = document.getElementById('main-content');
   main.innerHTML = '<div class="view">Loading Engine tools…</div>';
+  const loadCurrent = settingsLoadGuard(main);
   try {
     const [settings, tools, profiles] = await Promise.all([
-      api.get('/engine-settings'), api.get('/engine-tools'), api.get('/profiles'),
+      api.get('/engine-settings', loadCurrent), api.get('/engine-tools'), api.get('/profiles', loadCurrent),
     ]);
     await api.get('/configuration', ()=>!state.configs.some(c=>!c.isSynced) && !pendingDeletedIds.size);
-    if (!main.textContent.includes('Loading Engine tools')) return;
+    if (!loadCurrent()) return;
     main.innerHTML = `<div class="view"><button id="engine-back" class="back-btn">‹ Settings</button>
       <h1>Engine tools</h1><div class="settings-form">
       <h2>Performance</h2>${Object.entries(settings).filter(([,v]) => typeof v === 'number').map(([key,value]) =>
@@ -78,5 +80,5 @@ export async function renderEngineTools() {
       if (op === 'load') { await api.get('/configuration'); await pullConfigs(); }
       toast('Profile '+op+' completed', 'success');
     }));
-  } catch(e) { main.textContent = e.message; }
+  } catch(e) { if (loadCurrent()) main.textContent = e.message; }
 }

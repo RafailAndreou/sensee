@@ -28,10 +28,11 @@ def open_camera_capture(camera_cfg):
                                                    cv2.CAP_PROP_READ_TIMEOUT_MSEC, 1000])
     else:
         cap = cv2.VideoCapture(0)
-    settings = file.load_engine_settings()
-    for key, prop in [('captureWidth', cv2.CAP_PROP_FRAME_WIDTH),
-                      ('captureHeight', cv2.CAP_PROP_FRAME_HEIGHT), ('captureFps', cv2.CAP_PROP_FPS)]:
-        cap.set(prop, settings[key])
+    # The worker binds these properties to the same snapshot as the source URL.
+    for key, prop, default in [('captureWidth', cv2.CAP_PROP_FRAME_WIDTH, 640),
+                               ('captureHeight', cv2.CAP_PROP_FRAME_HEIGHT, 480),
+                               ('captureFps', cv2.CAP_PROP_FPS, 30)]:
+        cap.set(prop, camera_cfg.get(key, default))
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     return cap, label
 
@@ -62,53 +63,76 @@ class CaptureWorker:
             return None
         return item
 
+    @staticmethod
+    def _revisions():
+        return (file.settings_revision(file.CAMERA_SETTINGS_PATH),
+                file.settings_revision(file.ENGINE_SETTINGS_PATH))
+
     def _run(self):
         cap = None
         revision = None
-        last_published = float("-inf")
+        last_published = float('-inf')
         try:
             while not self.stop_event.is_set():
-                current = (file.settings_revision(file.CAMERA_SETTINGS_PATH),
-                           file.settings_revision(file.ENGINE_SETTINGS_PATH))
+                with control.lock:
+                    current = self._revisions()
                 if cap is None or current != revision:
                     if cap is not None:
                         cap.release()
-                    revision = current
-                    last_published = float("-inf")
-                    settings = file.load_engine_settings()
+                    cap = None
+                    with control.lock:
+                        revision = self._revisions()
+                        opening_epoch = control.epoch
+                        settings = file.load_engine_settings()
+                        camera_cfg = {**file.load_camera_settings(), **settings}
+                    last_published = float('-inf')
                     try:
-                        cap, _ = self.opener(file.load_camera_settings())
+                        cap, _ = self.opener(camera_cfg)
                     except (cv2.error, OSError) as error:
-                        # Native errors may embed the original URL; never log their text.
                         logger.warning('Camera open failed (%s); retrying.', type(error).__name__)
-                        cap = None
-                        control.invalidate('camera_disconnect')
+                        with control.lock:
+                            if opening_epoch == control.epoch:
+                                control.invalidate('camera_disconnect')
                         control.metric(cameraConnected=False)
                         self.stop_event.wait(0.5)
                         continue
-                epoch = control.epoch
-                started = time.monotonic()
+                    with control.lock:
+                        valid_open = opening_epoch == control.epoch and revision == self._revisions()
+                    if not valid_open:
+                        # Never attach a new epoch to a camera opened using an old snapshot.
+                        cap.release()
+                        cap = None
+                        control.record('rejected', reason='capture_configuration_changed')
+                        continue
+                with control.lock:
+                    if revision != self._revisions():
+                        continue
+                    epoch = control.epoch
+                    started = time.monotonic()
                 try:
                     ok, frame = cap.read() if cap.isOpened() else (False, None)
                 except (cv2.error, OSError):
                     ok, frame = False, None
+                with control.lock:
+                    if epoch != control.epoch or revision != self._revisions():
+                        control.record('rejected', reason='capture_configuration_changed')
+                        continue
+                    if not ok:
+                        control.invalidate('camera_disconnect')
+                        with self.condition:
+                            self.latest = None
+                        control.metric(cameraConnected=False)
+                    elif started - last_published >= 1 / settings['captureFps']:
+                        # Drain the decoder continuously; throttle publication, not reads.
+                        last_published = started
+                        control.metric(cameraConnected=True,
+                                       captureLatencyMs=round((time.monotonic()-started)*1000, 2),
+                                       actualCaptureWidth=frame.shape[1], actualCaptureHeight=frame.shape[0])
+                        self.publish(frame, int(started*1000), epoch)
                 if not ok:
-                    control.invalidate('camera_disconnect')
-                    with self.condition:
-                        self.latest = None
                     cap.release()
                     cap = None
-                    control.metric(cameraConnected=False)
                     self.stop_event.wait(0.5)
-                    continue
-                timestamp = int(started * 1000)
-                # Always drain the device/decoder. Sleeping here accumulates buffered
-                # RTSP frames when the source ignores a requested lower capture FPS.
-                if started - last_published >= 1 / settings['captureFps']:
-                    last_published = started
-                    control.metric(cameraConnected=True, captureLatencyMs=round((time.monotonic()-started)*1000, 2),
-                                   actualCaptureWidth=frame.shape[1], actualCaptureHeight=frame.shape[0])
-                    self.publish(frame, timestamp, epoch)
         finally:
             if cap is not None:
                 cap.release()

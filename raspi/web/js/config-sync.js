@@ -1,3 +1,4 @@
+import { normalizeGestureName } from './gestures.js';
 import { api } from './api.js';
 import { state, pendingDeletedIds, normalizeId, sanitizeConfigForSync,
          invalidateDashboardCache, triggerDashboardRefresh } from './state.js';
@@ -111,7 +112,7 @@ export function hasConflict(gesture, hand, excludeId = null) {
   const normalizedExcludeId = normalizeId(excludeId);
   return state.configs.some(c => {
     if (normalizeId(c.id) === normalizedExcludeId) return false;
-    if (c.gesture !== gesture) return false;
+    if (normalizeGestureName(c.gesture) !== normalizeGestureName(gesture)) return false;
     if (c.hand === hand) return true;
     if (hand === 'Both Hands' && (c.hand === 'Left Hand' || c.hand === 'Right Hand')) return true;
     if ((hand === 'Left Hand' || hand === 'Right Hand') && c.hand === 'Both Hands') return true;

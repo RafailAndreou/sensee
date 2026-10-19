@@ -1,3 +1,4 @@
+import '../../../globals/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/locale.dart';
 
@@ -39,18 +40,7 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
   late String selectedAction;
   late String selectedGesture;
   late String selectedHand;
-  final List<String> gestures = [
-    'Index+Thumb',
-    'Middle+Thumb',
-    'Open Palm',
-    'Fist',
-    'Thumb+Ring',
-    'Thumb+Pinky',
-    'Victory',
-    'Thumb Up',
-    'Thumb Down',
-    'Pointing Up',
-  ];
+  final List<String> gestures = supportedGestures;
   final List<String> hands = ['Left Hand', 'Right Hand', 'Both Hands'];
 
   @override
@@ -62,7 +52,8 @@ class _ActionSelectorCardState extends State<ActionSelectorCard> {
     selectedAction = actions.contains(widget.initialAction)
         ? widget.initialAction
         : actions.first;
-    selectedGesture = widget.initialGesture;
+    selectedGesture = normalizeGestureName(widget.initialGesture);
+    if (!gestures.contains(selectedGesture)) selectedGesture = gestures.first;
     selectedHand = widget.initialHand;
   }
 

@@ -2,6 +2,11 @@ import time
 import threading
 
 import requests
+from gesture_engine import control
+
+
+class DispatchCancelled(requests.RequestException):
+    """The original command expired or was invalidated before HTTP handoff."""
 
 
 class HAClient:
@@ -45,12 +50,28 @@ class HAClient:
             headers["Content-Type"] = "application/json"
         return headers
 
-    def post_service(self, url_base: str, token: str, domain: str, service: str, data: dict):
+    def post_service(self, url_base: str, token: str, domain: str, service: str, data: dict, *, is_current=None):
         url = f"{url_base}/api/services/{domain}/{service}"
+        # Resolve connection pools/headers before the final authorization check.
+        session = self.session
+        headers = self._headers(token, include_json=True)
+        with control.lock:
+            if is_current is not None and not is_current():
+                control.record('rejected', reason='dispatch_cancelled')
+                raise DispatchCancelled('Command no longer current')
+            if control.test_mode:
+                control.record('test_action', entity=data.get('entity_id', ''), action=f'{domain}.{service}')
+                response = requests.Response()
+                response.status_code = 200
+                response._content = b'[]'
+                return response, 0.0
+            control.record('dispatch_handoff', entity=data.get('entity_id', ''), action=f'{domain}.{service}')
+        # Commit boundary: no shared session lock spans HTTP I/O. Once handed to
+        # requests, bytes may be sent; an epoch change cannot retract this call.
         started = time.perf_counter()
-        response = self.session.post(
+        response = session.post(
             url,
-            headers=self._headers(token, include_json=True),
+            headers=headers,
             json=data,
             timeout=self.timeout,
         )

@@ -8,6 +8,7 @@ from .handlers.ha_handler import handle_smart_device_action
 from .handlers.ir_handler import handle_ir_device_action
 from .handlers.pc_handler import execute_pc_action
 from .matching import normalize_name, normalized_parts, find_matched_config
+from .touch_gestures import action_requires_confirmation
 
 if TYPE_CHECKING:
     from gesture_engine.runtime import GestureRuntime
@@ -79,6 +80,9 @@ def action_cooldown_seconds(
     device_family = get_device_family(device_name)
     if device_family == "pc":
         return runtime.policy.action_cooldowns["pc"]
+
+    if action_requires_confirmation(action_name):
+        return CONTROL_ACTION_COOLDOWN_SECONDS
 
     for keyword in runtime.policy.control_action_keywords:
         if keyword in action_normalized:
@@ -157,6 +161,7 @@ def _execute_configured_action(
     if event_ts_ms is not None and not runtime.command_is_fresh(event_ts_ms, source):
         return
     if not should_execute_action(runtime, action, device_name, target_id):
+        control.record("rejected", reason="cooldown")
         return
 
     try:
@@ -174,8 +179,10 @@ def _execute_configured_action(
             accepted = handle_ir_device_action(runtime, entity_id, action, event_ts_ms=event_ts_ms, source=source)
     except Exception as e:
         logger.error("Error dispatching action: %s", e)
+        control.record("rejected", reason="dispatch_error")
         return
     if not accepted:
+        control.record("rejected", reason="action_not_accepted")
         return
 
     now = time.monotonic()
@@ -225,6 +232,7 @@ def take_action(
         matched_config = find_matched_config(runtime.get_active_configs(), gesture_name, detected_hand)
 
     if matched_config is None:
+        control.record("rejected", reason="no_mapping")
         return
 
     execute_configured_action(runtime, matched_config, gesture_name, event_ts_ms=event_ts_ms, source=source)

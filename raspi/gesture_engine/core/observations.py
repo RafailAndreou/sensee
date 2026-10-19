@@ -2,6 +2,7 @@
 
 import threading
 import time
+from gesture_engine import control
 
 
 class ObservationMailbox:
@@ -15,11 +16,16 @@ class ObservationMailbox:
             if timestamp_ms > self._latest_timestamp:
                 self._latest_timestamp = timestamp_ms
                 self._pending = (result, timestamp_ms)
+            else:
+                control.record("rejected", reason="late_observation")
 
     def take(self, now_ms, max_age_ms):
         with self._lock:
             pending, self._pending = self._pending, None
-        if pending is None or now_ms - pending[1] > max_age_ms:
+        if pending is None:
+            return None
+        if now_ms - pending[1] > max_age_ms:
+            control.record("rejected", reason="stale_observation")
             return None
         return pending
 
