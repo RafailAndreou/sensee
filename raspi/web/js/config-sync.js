@@ -20,6 +20,13 @@ export async function pullConfigs() {
         .map(sc => ({ ...sc, id: normalizeId(sc.id) }))
         .filter(sc => sc.id);
       const serverIds = new Set(serverConfigs.map(c => c.id));
+      const hasLocalEdits = state.configs.some(c => !c.isSynced) || pendingDeletedIds.size;
+      if (!hasLocalEdits) {
+        // Adopt the server's saved order, including swaps made on another client.
+        state.configs = serverConfigs.map(c => ({...c, isSynced:true}));
+        if (state.view === 'dashboard') triggerDashboardRefresh();
+        return;
+      }
       // Remove synced configs no longer on server
       state.configs = state.configs.filter(c => !c.isSynced || serverIds.has(normalizeId(c.id)));
       // Merge server configs, skipping any IDs we just deleted
@@ -53,9 +60,11 @@ async function performPush(silent) {
       .filter(c => c.id);
     const deleted = new Set(pendingDeletedIds);
     await api.post('/configuration', payload);
+    const sameOrder = payload.length === state.configs.length &&
+      payload.every((c, index) => c.id === normalizeId(state.configs[index].id));
     state.configs.forEach(c => {
       const sent = payload.find(p => p.id === normalizeId(c.id));
-      if (sent && JSON.stringify(sanitizeConfigForSync(c)) === JSON.stringify(sent)) c.isSynced = true;
+      if (sameOrder && sent && JSON.stringify(sanitizeConfigForSync(c)) === JSON.stringify(sent)) c.isSynced = true;
     });
     deleted.forEach(id => pendingDeletedIds.delete(id));
     if (state.view === 'dashboard') triggerDashboardRefresh();
@@ -105,7 +114,7 @@ export function swapConfigs(idA, idB) {
   state.configs[j].isSynced = false;
   invalidateDashboardCache();
   if (state.view === 'dashboard') triggerDashboardRefresh();
-  pushConfigs(true);
+  return pushConfigs(true);
 }
 
 export function hasConflict(gesture, hand, excludeId = null) {

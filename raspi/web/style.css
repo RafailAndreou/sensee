@@ -45,7 +45,9 @@ body {
 }
 
 /* ─── Layout ─────────────────────────────────────────────────────────────── */
-#app { display: flex; height: 100vh; overflow: hidden; }
+#app { display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
+.sidebar-backdrop[hidden] { display: none; }
+.sidebar-backdrop { display: none; }
 
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */
 .sidebar {
@@ -117,6 +119,7 @@ body {
   border-color: var(--accent);
 }
 #app.sidebar-collapsed .sidebar-open-btn { display: flex; }
+#app.sidebar-collapsed .view { padding-top: 64px; }
 
 .sidebar-logo {
   display: flex;
@@ -895,9 +898,56 @@ input[type=range]::-webkit-slider-thumb {
   padding: 8px 12px;
 }
 
-/* ─── Responsive: hide sidebar on small screens ──────────────────────────── */
+/* ─── Responsive: mobile navigation drawer ──────────────────────────── */
 @media (max-width: 640px) {
-  .sidebar { display: none; }
-  .view { padding: 16px; }
+  .sidebar, #app.sidebar-collapsed .sidebar {
+    display: flex;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(var(--sidebar), calc(100vw - 48px));
+    height: 100vh;
+    height: 100dvh;
+    padding: 20px 12px;
+    border-right: 1px solid var(--border);
+    transform: translateX(-100%);
+    visibility: hidden;
+    overflow-y: auto;
+    transition: transform var(--transition), visibility var(--transition);
+    z-index: 40;
+  }
+  #app.sidebar-drawer-open .sidebar { transform: translateX(0); visibility: visible; }
+  .sidebar-open-btn, #app.sidebar-collapsed .sidebar-open-btn { display: flex; }
+  #app.sidebar-drawer-open .sidebar-open-btn { visibility: hidden; }
+  .sidebar-backdrop:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    border: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 30;
+  }
+  .main { min-width: 0; }
+  .page-header { gap: 8px; }
+  .view { padding: 64px 16px 16px; }
   .fab { bottom: 20px; right: 16px; }
 }
+
+/* Native buttons keep navigation keyboard accessible. */
+button.nav-item { background: transparent; width: 100%; text-align: left; font-family: inherit; }
+.sidebar-open-btn:focus-visible, .sidebar-toggle:focus-visible, .nav-item:focus-visible,
+.card-drag-handle:focus-visible, .card-move-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar { transition: none !important; }
+}
+
+.card-controls { display: flex; align-items: center; gap: 4px; }
+.card-controls .card-menu-btn { min-width: 44px; min-height: 44px; }
+.card-drag-handle, .card-move-btn {
+  min-width: 44px; min-height: 44px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--glass); color: var(--t2); font: inherit; cursor: pointer;
+}
+.card-drag-handle { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; font-size: 22px; }
+.card-drag-handle:active { cursor: grabbing; }
+.card-order-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.card-move-btn { padding: 6px 10px; font-size: 12px; }
+.card-drag-handle:disabled, .card-move-btn:disabled { opacity: 0.35; cursor: default; }

@@ -2,5 +2,10 @@
   "name": "sensee-dashboard",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test tests/*.test.mjs" }
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
 }

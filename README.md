@@ -232,6 +232,32 @@ flutter test
 
 **AI-assisted contributions:** Upload `guidelines.md` to your AI assistant before generating changes.
 
+## Dashboard navigation and card order
+
+On a phone, tap **☰** to open the navigation drawer. Select Dashboard, Camera or
+Settings, tap outside the drawer, or press Escape to close it. Keyboard focus
+stays within the open drawer and returns to the menu button on dismissal. Mobile
+navigation does not change the saved desktop sidebar preference.
+
+To change configuration positions, drag a card on desktop or drag its **⠿**
+handle on a touchscreen. Dropping on another card swaps their positions; dragging
+near the top or bottom scrolls a longer list. The card body remains available for
+normal page scrolling. **Move up / Move down** buttons provide touch and keyboard
+alternatives; they swap with the previous/next card in the list. The order saves
+through the usual revision-checked configuration sync. A failed save keeps the
+local order pending, and clean clients adopt saved order changes when polling.
+
+Dashboard tests include DOM interactions and synthetic touch/pen pointer events.
+They do not replace checks on physical Android/iOS browsers. For local checks:
+
+```bash
+cd raspi/web
+npm ci
+npm test
+```
+
+The dashboard itself remains buildless; Node dependencies are only for tests.
+
 ## Engine tools (browser and Flutter)
 
 Open **Settings → Engine tools** on either client. The controls are shared with

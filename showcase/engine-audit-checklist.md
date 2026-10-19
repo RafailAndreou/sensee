@@ -35,6 +35,11 @@ This follow-up applies to `alt`, starting at
   mixing, missing confirmation/held limiting, rejection diagnostics, legacy
   aliases, late settings loads, conflicts and pending saves.
 
+- [x] Add a mobile navigation drawer with backdrop/Escape dismissal, keyboard
+  focus handling and a separate desktop collapse preference. Add touch drag
+  handles, edge scrolling and Move up/down buttons for configuration cards;
+  preserve pending reorder edits and synchronize saved order between clients.
+
 ## Validation and remaining limits
 
 The Python suite includes the actual pinned MediaPipe library and repository

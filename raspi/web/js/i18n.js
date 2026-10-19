@@ -10,6 +10,10 @@ export const TRANSLATIONS_EL = {
   'Connected': 'Συνδεδεμένο',
   'Disconnected': 'Αποσυνδεδεμένο',
 
+  'Open navigation': 'Άνοιγμα πλοήγησης',
+  'Close navigation': 'Κλείσιμο πλοήγησης',
+  'Collapse sidebar': 'Σύμπτυξη πλευρικής στήλης',
+
   // Dashboard
   'Gesture Mappings': 'Αντιστοιχίσεις Χειρονομιών',
   '↻ Sync': '↻ Συγχρονισμός',
@@ -20,6 +24,9 @@ export const TRANSLATIONS_EL = {
   'Synced': 'Συγχρονισμένο',
   'Pending sync': 'Εκκρεμεί συγχρονισμός',
   'Local PC': 'Τοπικός Υπολογιστής',
+  'Move up': 'Μετακίνηση πάνω',
+  'Move down': 'Μετακίνηση κάτω',
+  'Drag to swap positions': 'Σύρετε για εναλλαγή θέσεων',
 
   // Card menu / toasts
   'Edit': 'Επεξεργασία',

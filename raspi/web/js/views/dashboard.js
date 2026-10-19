@@ -1,3 +1,4 @@
+import { bindCardReorder } from '../card-reorder.js';
 import { state, normalizeId, setDashboardRefreshFn } from '../state.js';
 import { t } from '../i18n.js';
 import { DEVICE_META, GESTURES, HANDS } from '../constants.js';
@@ -5,6 +6,8 @@ import { escHtml, escAttr } from '../utils.js';
 import { showCtxMenu, toast } from '../ui.js';
 import { pushConfigs, deleteConfig, swapConfigs } from '../config-sync.js';
 import { openAddWizard, openEditWizard } from '../wizard.js';
+
+let disposeReorder = () => {};
 
 export function renderDashboardIfChanged() {
   const hash = JSON.stringify({ lang: state.lang, configs: state.configs.map(c => ({ ...c, isSynced: c.isSynced })) });
@@ -17,6 +20,10 @@ export function renderDashboard() {
   state.dashboardHash = JSON.stringify({ lang: state.lang, configs: state.configs.map(c => ({ ...c, isSynced: c.isSynced })) });
 
   const main = document.getElementById('main-content');
+  const focused = main.contains(document.activeElement) ? document.activeElement : null;
+  const focusedId = focused?.closest('.gesture-card')?.dataset.id;
+  const focusSelector = focused?.matches('.card-move-btn') ? `[data-direction="${focused.dataset.direction}"]`
+    : focused?.matches('.card-drag-handle') ? '.card-drag-handle' : '.card-menu-btn';
   const configs = state.configs;
   const countLabel = configs.length === 1 ? t('mapping configured') : t('mappings configured');
 
@@ -28,6 +35,7 @@ export function renderDashboard() {
        </div>`
     : `<div class="gesture-grid">${configs.map(renderGestureCard).join('')}</div>`;
 
+  disposeReorder();
   main.innerHTML = `
     <div class="view">
       <div class="page-header">
@@ -45,6 +53,8 @@ export function renderDashboard() {
   document.getElementById('add-fab').addEventListener('click', openAddWizard);
   document.getElementById('sync-btn')?.addEventListener('click', () => pushConfigs(false));
 
+  disposeReorder = bindCardReorder(main, swapConfigs);
+
   // Card menus
   main.querySelectorAll('.card-menu-btn').forEach(btn => {
     btn.addEventListener('click', e => {
@@ -61,72 +71,34 @@ export function renderDashboard() {
     });
   });
 
-  // Card click = edit (suppressed if a drag just happened)
-  let dragSourceId = null;
-  let currentDropTargetEl = null;
-  let suppressClickUntil = 0;
-
-  main.querySelectorAll('.gesture-card').forEach(card => {
-    card.addEventListener('click', () => {
-      if (Date.now() < suppressClickUntil) return;
-      openEditWizard(normalizeId(card.dataset.id));
-    });
-
-    card.draggable = true;
-
-    card.addEventListener('dragstart', e => {
-      if (e.target.closest('.card-menu-btn')) { e.preventDefault(); return; }
-      dragSourceId = normalizeId(card.dataset.id);
-      try {
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', dragSourceId);
-      } catch {}
-      card.classList.add('dragging');
-    });
-
-    card.addEventListener('dragend', () => {
-      card.classList.remove('dragging');
-      if (currentDropTargetEl) currentDropTargetEl.classList.remove('drop-target');
-      currentDropTargetEl = null;
-      dragSourceId = null;
-      suppressClickUntil = Date.now() + 250;
-    });
-
-    card.addEventListener('dragover', e => {
-      if (!dragSourceId) return;
-      const targetId = normalizeId(card.dataset.id);
-      if (targetId === dragSourceId) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      if (currentDropTargetEl !== card) {
-        if (currentDropTargetEl) currentDropTargetEl.classList.remove('drop-target');
-        currentDropTargetEl = card;
-        card.classList.add('drop-target');
-      }
-    });
-
-    card.addEventListener('dragleave', e => {
-      if (currentDropTargetEl === card && !card.contains(e.relatedTarget)) {
-        card.classList.remove('drop-target');
-        currentDropTargetEl = null;
-      }
-    });
-
-    card.addEventListener('drop', e => {
-      e.preventDefault();
-      const targetId = normalizeId(card.dataset.id);
-      card.classList.remove('drop-target');
-      currentDropTargetEl = null;
-      if (!dragSourceId || targetId === dragSourceId) return;
-      const sourceId = dragSourceId;
-      dragSourceId = null;
-      suppressClickUntil = Date.now() + 250;
-      swapConfigs(sourceId, targetId);
+  main.querySelectorAll('.card-move-btn').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      const id = normalizeId(button.closest('.gesture-card').dataset.id);
+      const index = state.configs.findIndex(config => normalizeId(config.id) === id);
+      const other = state.configs[index + Number(button.dataset.direction)];
+      if (!other) return;
+      const direction = button.dataset.direction;
+      swapConfigs(id, other.id);
+      // The swap rerenders the grid. Keep keyboard focus on the moved card.
+      const moved = [...main.querySelectorAll('.gesture-card')].find(card => card.dataset.id === id);
+      const control = moved?.querySelector(`[data-direction="${direction}"]:not(:disabled)`)
+        || moved?.querySelector('.card-move-btn:not(:disabled)') || moved?.querySelector('.card-menu-btn');
+      control?.focus();
     });
   });
+  main.querySelectorAll('.gesture-card').forEach(card => {
+    card.addEventListener('click', () => openEditWizard(normalizeId(card.dataset.id)));
+  });
+  if (focusedId) {
+    const card = [...main.querySelectorAll('.gesture-card')].find(card => card.dataset.id === focusedId);
+    const control = card?.querySelector(`${focusSelector}:not(:disabled)`)
+      || card?.querySelector('.card-move-btn:not(:disabled)') || card?.querySelector('.card-menu-btn');
+    control?.focus();
+  }
 }
 
-function renderGestureCard(cfg) {
+function renderGestureCard(cfg, index, configs) {
   const dtype = cfg.sound || 'TV';
   const meta = DEVICE_META[dtype] || DEVICE_META.TV;
   const g = GESTURES.find(g => g.id === cfg.gesture) || GESTURES[0];
@@ -143,7 +115,10 @@ function renderGestureCard(cfg) {
       style="--card-accent:${meta.accent}">
       <div class="card-header">
         <div class="card-device-icon" style="background:${meta.bg}">${meta.emoji}</div>
-        <button class="card-menu-btn" title="${escAttr(t('Edit'))}">⋯</button>
+        <div class="card-controls">
+          <button class="card-drag-handle" type="button" aria-label="${escAttr(t('Drag to swap positions'))}" title="${escAttr(t('Drag to swap positions'))}" ${configs.length < 2 ? 'disabled' : ''}>⠿</button>
+          <button class="card-menu-btn" type="button" aria-label="${escAttr(t('Edit'))}" title="${escAttr(t('Edit'))}">⋯</button>
+        </div>
       </div>
       <div class="card-body">
         <div class="card-action-label">${escHtml(t(cfg.action))}</div>
@@ -152,6 +127,10 @@ function renderGestureCard(cfg) {
           <span class="badge badge-gesture">${g.icon} ${escHtml(t(g.label))}</span>
           <span class="badge badge-hand">${h.icon} ${escHtml(t(h.label))}</span>
         </div>
+      </div>
+      <div class="card-order-controls">
+        <button class="card-move-btn" type="button" data-direction="-1" ${index === 0 ? 'disabled' : ''}>↑ ${escHtml(t('Move up'))}</button>
+        <button class="card-move-btn" type="button" data-direction="1" ${index === configs.length - 1 ? 'disabled' : ''}>↓ ${escHtml(t('Move down'))}</button>
       </div>
       <div class="sync-indicator">
         <div class="sync-dot ${synced ? '' : 'unsynced'}"></div>
