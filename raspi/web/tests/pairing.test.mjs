@@ -73,7 +73,7 @@ test('a discovered TV resumes its existing flow and confirms without creating a 
   const ui = await wizard([{ flow_id: 'discovered-tv', handler: 'androidtv_remote', context: {} }],
     [form('confirm', []), form('pair', ['pin'])]);
   await ui.body.querySelector('#pair-list').children[0].fire('click');
-  assert.equal(ui.calls[1].path, '/ha/pair/discovered-tv');
+  assert.equal(ui.calls[1].path, '/ha/pair/discovered-tv/resume');
   await ui.body.querySelector('#pair-form').fire('submit');
   assert.equal(Object.keys(ui.calls[2].body.user_input).length, 0);
   assert.equal(ui.calls.some(call => call.path === '/ha/pair/start'), false);
@@ -93,4 +93,12 @@ test('a TV discovered by Sensee supplies its address automatically', async () =>
   assert.equal(ui.calls[1].path, '/ha/pair/start');
   assert.equal(ui.calls[1].body.host, '192.168.1.22');
   assert.match(ui.body.innerHTML, /PIN shown on TV/);
+});
+
+
+test('searching does not request a PIN until a TV is selected', async () => {
+  const ui = await wizard([{ handler: 'androidtv_remote', host: '192.168.1.22', context: { title: 'Bedroom TV' } }], []);
+  assert.equal(ui.calls.length, 1);
+  assert.match(ui.body.innerHTML, /Searching alone does not display a code/);
+  assert.match(ui.body.querySelector('#pair-list').children[0].textContent, /Bedroom TV.*192.168.1.22/);
 });

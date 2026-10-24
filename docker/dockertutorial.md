@@ -10,6 +10,26 @@ cd to docker(current folder)
 
 # Step 3
 
+Running `python gesture.py` from `raspi/` now starts the Home Assistant Compose
+service automatically in the background. Docker Desktop (Windows) or Docker
+Engine (Linux) must already be installed and running. First startup may take
+longer while Docker downloads the image and Home Assistant initializes.
+Startup errors are printed in the Sensee console; gesture control remains usable.
+
+The startup command uses `up -d --no-recreate homeassistant`, so it starts an
+existing container without recreating it. Closing Sensee leaves Home Assistant
+running. Remote Home Assistant configurations skip local Docker startup.
+
+Optional environment settings:
+
+- `SENSEE_HA_AUTOSTART=0`: disable automatic startup.
+- `SENSEE_HA_AUTOSTART=1`: force local startup even when the configured HA URL is remote.
+- `SENSEE_HA_COMPOSE_FILE`: use a different Compose file (for example the existing
+  `dockerpi/docker-compose.yml` if that is where your HA data is configured).
+
+By default, Windows uses `docker/docker-compose.yml`; Linux/Raspberry Pi uses
+`docker/docker-compose.linux.yml`. Both default files use `docker/config`.
+
 build Docker using:
 
 ```bash
@@ -41,6 +61,12 @@ Install/update Sensee's Python dependencies (`pip install -r requirements.txt`
 from `raspi/`), restart the engine, and open Pair New Device in the web or
 Flutter app. Select a discovered device and follow its setup steps. Android TV
 Remote asks for the PIN shown on the TV; it may include letters.
+
+Searching only lists devices. Select your TV to start pairing and request its
+code. Sensee automatically confirms the Android TV discovery step. Other setup
+flows may show a **Start pairing** button before requesting the code. Keep the
+TV awake and on its main screen. No new code is needed for an already configured
+TV; select it from the existing smart-device list instead.
 
 Sensee also scans for Android TV Remote announcements on its own LAN, outside
 Home Assistant's container. Selecting a TV found this way supplies its address

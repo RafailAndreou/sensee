@@ -141,9 +141,12 @@ class _PairingWizardState extends State<PairingWizard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (fields.isEmpty) const Text('Start pairing to request a code on this TV.'),
+          if (fields.isEmpty)
+            const Text('Start pairing to request a code on this TV.'),
           if (fields.any((field) => field['name'] == 'pin'))
-            const Text('Pairing requested. Keep the TV awake and enter the code displayed on that TV.'),
+            const Text(
+              'Pairing requested. Keep the TV awake and enter the code displayed on that TV.',
+            ),
           Text(
             (step['description_placeholders']?['name'] ?? step['step_id'] ?? '')
                 .toString(),
@@ -198,7 +201,10 @@ class _PairingWizardState extends State<PairingWizard> {
                   },
                 ),
               ),
-          ElevatedButton(onPressed: _submit, child: Text(fields.isEmpty ? 'Start pairing' : 'Continue')),
+          ElevatedButton(
+            onPressed: _submit,
+            child: Text(fields.isEmpty ? 'Start pairing' : 'Continue'),
+          ),
         ],
       ),
     );
@@ -220,7 +226,9 @@ class _PairingWizardState extends State<PairingWizard> {
                   if (_step != null)
                     _stepForm()
                   else ...[
-                    const Text('Select your TV to request its pairing code. Searching alone does not display a code.'),
+                    const Text(
+                      'Select your TV to request its pairing code. Searching alone does not display a code.',
+                    ),
                     if (_flows.isEmpty)
                       Text(tFormat('pairing_none_found', widget.deviceType)),
                     for (final flow in _flows)
@@ -234,7 +242,11 @@ class _PairingWizardState extends State<PairingWizard> {
                                     'Device')
                                 .toString(),
                           ),
-                          subtitle: Text(flow['host'] == null ? (flow['handler'] ?? '').toString() : '${flow['handler']} ? ${flow['host']}'),
+                          subtitle: Text(
+                            flow['host'] == null
+                                ? (flow['handler'] ?? '').toString()
+                                : '${flow['handler']} ? ${flow['host']}',
+                          ),
                           trailing: const Icon(Icons.link),
                           onTap: () => _run(
                             () => flow['flow_id'] != null
