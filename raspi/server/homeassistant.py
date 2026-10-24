@@ -6,6 +6,7 @@ from .ha_config import get_ha_config, refresh_ha_config_cache
 from .ha_entities import get_ha_cameras, get_ha_entities
 from .ha_pairing import (
     fetch_discovered_flows,
+    get_pairing_flow_request,
     start_pairing_flow_request,
     submit_pairing_step_request,
 )
@@ -31,6 +32,12 @@ def start_pairing_flow(handler: str) -> dict[str, object]:
     client = get_http_client()
     url, token = get_ha_config()
     return start_pairing_flow_request(url, token, handler, client.session, client.timeout)
+
+
+def get_pairing_flow(flow_id: str) -> dict[str, object]:
+    client = get_http_client()
+    url, token = get_ha_config()
+    return get_pairing_flow_request(url, token, flow_id, client.session, client.timeout)
 
 
 def submit_pairing_step(flow_id: str, user_input: dict[str, object]) -> dict[str, object]:

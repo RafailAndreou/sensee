@@ -4,6 +4,7 @@ mediapipe==0.10.14
 opencv-python
 zeroconf
 requests
+websockets>=12
 numpy
 pyautogui
 openai-whisper

@@ -4,6 +4,7 @@ httpx
 uvicorn
 zeroconf
 requests
+websockets>=12
 opencv-python
 numpy
 pyautogui
