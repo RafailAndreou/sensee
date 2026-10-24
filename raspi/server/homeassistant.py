@@ -39,14 +39,42 @@ def get_discovered_flows() -> list[object]:
                 return devices
             raise
         devices = native_scan.result()
-    # Prefer an existing flow for the same named TV, keeping other local TVs.
-    known_titles = {
-        (flow.get("context", {}).get("title") or
-         flow.get("context", {}).get("title_placeholders", {}).get("name") or "").casefold()
-        for flow in flows if flow.get("handler") == "androidtv_remote"
-    }
-    return flows + [device for device in devices
-                    if device["context"]["title"].casefold() not in known_titles]
+    return _merge_tv_discoveries(flows, devices)
+
+
+def _merge_tv_discoveries(flows, devices):
+    def identity(value):
+        return str(value or "").lower().replace(":", "").replace("-", "")
+
+    def title(flow):
+        context = flow.get("context", {})
+        return (context.get("title_placeholders", {}).get("name") or context.get("title") or "").casefold()
+
+    remaining = list(devices)
+    merged = []
+    for flow in flows:
+        if flow.get("handler") == "androidtv_remote":
+            unique_id = identity(flow.get("context", {}).get("unique_id") or flow.get("unique_id"))
+            matches = [device for device in remaining if (
+                unique_id and identity(device.get("unique_id")) == unique_id
+            ) or (flow.get("host") and flow["host"] == device.get("host"))]
+            if not matches and title(flow):
+                named = [device for device in remaining if title(device) == title(flow)]
+                if len(named) == 1:
+                    matches = named
+            if matches:
+                flow = {**flow, "host": matches[0]["host"]}
+                for device in matches:
+                    remaining.remove(device)
+        merged.append(flow)
+    # One TV can announce multiple service names. Keep one entry per identity/address.
+    seen = set()
+    for device in remaining:
+        key = identity(device.get("unique_id")) or device["host"]
+        if key not in seen:
+            merged.append(device)
+            seen.add(key)
+    return merged
 
 
 def start_pairing_flow(handler: str, host: str | None = None) -> dict[str, object]:
@@ -64,6 +92,20 @@ def get_pairing_flow(flow_id: str) -> dict[str, object]:
     client = get_http_client()
     url, token = get_ha_config()
     return get_pairing_flow_request(url, token, flow_id, client.session, (3.0, 30.0))
+
+
+def resume_pairing_flow(flow_id: str) -> dict[str, object]:
+    client = get_http_client()
+    url, token = get_ha_config()
+    result = get_pairing_flow(flow_id)
+    # Selecting a discovered TV explicitly requests pairing. HA's empty
+    # zeroconf confirmation must be submitted before the TV displays a PIN.
+    if (result.get("handler") == "androidtv_remote"
+            and result.get("type") == "form"
+            and result.get("step_id") == "zeroconf_confirm"
+            and not result.get("data_schema") and not result.get("errors")):
+        return submit_pairing_step_request(url, token, flow_id, {}, client.session, (3.0, 30.0))
+    return result
 
 
 def submit_pairing_step(flow_id: str, user_input: dict[str, object]) -> dict[str, object]:

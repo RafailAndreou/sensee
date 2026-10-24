@@ -29,6 +29,7 @@ from gesture_engine.capture import open_camera_capture
 from gesture_engine.overlay import OVERLAY_DURATION_SECONDS, draw_action_overlay
 from gesture_engine.runtime import GestureRuntime
 from gesture_engine.server_runner import start_fastapi_server_in_background
+from gesture_engine.ha_startup import start_home_assistant_in_background
 from server import config_cache, file, homeassistant
 from server.discovery import get_local_ip
 from server.events import send_msg
@@ -267,5 +268,6 @@ class GestureApp:
 
 
 if __name__ == "__main__":
+    start_home_assistant_in_background()
     app = GestureApp()
     app.run()

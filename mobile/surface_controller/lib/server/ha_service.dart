@@ -105,3 +105,11 @@ Future<Map<String, dynamic>> getHAPairingFlow(String flowId) async {
   final response = await http.get(uri);
   return _pairResult(response.statusCode, response.body);
 }
+
+Future<Map<String, dynamic>> resumeHAPairingFlow(String flowId) async {
+  final client = await getServerClient();
+  if (client == null) throw Exception('Sensee is unavailable');
+  final uri = client.haPairSubmitUri.resolve('/ha/pair/${Uri.encodeComponent(flowId)}/resume');
+  final response = await http.post(uri);
+  return _pairResult(response.statusCode, response.body);
+}

@@ -196,6 +196,11 @@ def post_ha_pair_submit(req: HAPairSubmitRequest):
 def get_ha_pair_flow(flow_id: str):
     return {"status": "success", "result": homeassistant.get_pairing_flow(flow_id)}
 
+
+@app.post("/ha/pair/{flow_id}/resume")
+def resume_ha_pair_flow(flow_id: str):
+    return {"status": "success", "result": homeassistant.resume_pairing_flow(flow_id)}
+
 @app.get("/video")
 def video():
     return StreamingResponse(

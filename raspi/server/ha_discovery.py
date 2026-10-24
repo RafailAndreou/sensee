@@ -22,10 +22,14 @@ class _TVListener(ServiceListener):
         addresses = info.parsed_addresses(IPVersion.V4Only)
         if not addresses:
             return
+        identity = info.properties.get(b"bt", b"")
+        if isinstance(identity, bytes):
+            identity = identity.decode("utf-8", errors="replace")
         with self.lock:
             self.devices[name] = {
                 "handler": "androidtv_remote",
                 "host": addresses[0],
+                "unique_id": identity,
                 "context": {"title": name.removesuffix("." + service_type)},
             }
 

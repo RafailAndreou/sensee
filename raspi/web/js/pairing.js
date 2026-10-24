@@ -36,7 +36,11 @@ export async function showPairingWizard(draft, onNoPendingFlows) {
         body.innerHTML = `<div class="banner banner-warn">${escHtml(t('Complete this setup step in Home Assistant, then refresh devices in Sensee.'))}</div>`;
         return;
       }
+      const confirmation = fields.length === 0 && ['zeroconf_confirm', 'confirm'].includes(result.step_id);
+      const pinStep = fields.some(f => f.name === 'pin');
       body.innerHTML = `
+        ${confirmation ? '<p>Start pairing to request a code on this TV.</p>' : ''}
+        ${pinStep ? '<p>Pairing requested. Keep the TV awake and enter the code displayed on that TV.</p>' : ''}
         <p>${escHtml(result.description_placeholders?.name || result.step_id || '')}</p>
         ${Object.entries(result.errors || {}).map(([key, value]) => `<div class="banner banner-error">${escHtml(key)}: ${escHtml(value)}</div>`).join('')}
         <form id="pair-form">
@@ -46,7 +50,7 @@ export async function showPairingWizard(draft, onNoPendingFlows) {
             ${f.type === 'float' ? 'step="any"' : ''}
             ${f.type === 'boolean' ? (f.default ? 'checked' : '') : `value="${escAttr(f.default ?? f.description?.suggested_value ?? '')}" ${f.required ? 'required' : ''}`} />
         </div>`).join('')}
-        <button class="btn btn-primary" type="submit">${escHtml(t('Continue'))}</button>
+        <button class="btn btn-primary" type="submit">${escHtml(t(confirmation ? 'Start pairing' : 'Continue'))}</button>
         </form>`;
       body.querySelector('#pair-form').addEventListener('submit', async event => {
         event.preventDefault();
@@ -68,7 +72,7 @@ export async function showPairingWizard(draft, onNoPendingFlows) {
       busy();
       try {
         const { result } = flow?.flow_id
-          ? await api.get(`/ha/pair/${encodeURIComponent(flow.flow_id)}`)
+          ? await api.post(`/ha/pair/${encodeURIComponent(flow.flow_id)}/resume`, {})
           : await api.post('/ha/pair/start', { handler: flow?.handler || 'androidtv_remote', ...(flow?.host ? { host: flow.host } : {}) });
         await renderStep(result);
       } catch (e) { error(e); await discover(); }
@@ -83,6 +87,7 @@ export async function showPairingWizard(draft, onNoPendingFlows) {
       body.innerHTML = `
         ${failure ? `<div class="banner banner-error">${escHtml(failure)}</div>` : ''}
         ${!flows.length ? `<p>${escHtml(t('No new devices are waiting for pairing.'))}</p>` : ''}
+        <p>Select your TV to request its pairing code. Searching alone does not display a code.</p>
         <div class="item-list" id="pair-list"></div>
         <button class="btn btn-primary" id="pair-manual">${escHtml(t('Add Android TV by IP'))}</button>
         <button class="btn btn-ghost" id="pair-refresh">${escHtml(t('Refresh'))}</button>
@@ -90,7 +95,8 @@ export async function showPairingWizard(draft, onNoPendingFlows) {
       flows.forEach(flow => {
         const button = document.createElement('button');
         button.className = 'list-item';
-        button.textContent = flow.context?.title || flow.context?.title_placeholders?.name || flow.handler;
+        const name = flow.context?.title_placeholders?.name || flow.context?.title || flow.handler;
+        button.textContent = `${name}${flow.host ? ' (' + flow.host + ')' : ''} ? Pair`;
         button.addEventListener('click', () => start(flow));
         body.querySelector('#pair-list').append(button);
       });
