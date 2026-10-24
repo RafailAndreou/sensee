@@ -120,3 +120,10 @@ class LocalDiscoveryFallbackTests(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["flow_id"], "ha-flow")
         self.assertEqual(result[0]["host"], "192.168.1.22")
+
+
+    def test_two_different_tvs_with_same_name_are_not_collapsed(self):
+        existing = {"handler": "androidtv_remote", "flow_id": "ha-flow",
+                    "context": {"title": "Bedroom TV", "unique_id": "aabbccddeeff"}}
+        other = {**self.local_tv, "unique_id": "112233445566"}
+        self.assertEqual(len(self.ha._merge_tv_discoveries([existing], [other])), 2)

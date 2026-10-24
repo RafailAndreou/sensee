@@ -76,6 +76,13 @@ class ApiAccessTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             start.assert_called_once_with('androidtv_remote', '192.168.1.22')
 
+    def test_explicit_pairing_selection_uses_post_resume(self):
+        with patch.object(main.homeassistant, 'resume_pairing_flow', return_value={'type': 'form', 'step_id': 'pair'}) as resume:
+            response = self.client.post('/ha/pair/existing/resume')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()['result']['step_id'], 'pair')
+            resume.assert_called_once_with('existing')
+
     def test_discovery_returns_flows_in_the_client_envelope(self):
         flows = [{'flow_id': 'existing', 'handler': 'androidtv_remote'}]
         with patch.object(main.homeassistant, 'get_discovered_flows', return_value=flows):

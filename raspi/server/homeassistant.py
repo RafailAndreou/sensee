@@ -59,7 +59,8 @@ def _merge_tv_discoveries(flows, devices):
                 unique_id and identity(device.get("unique_id")) == unique_id
             ) or (flow.get("host") and flow["host"] == device.get("host"))]
             if not matches and title(flow):
-                named = [device for device in remaining if title(device) == title(flow)]
+                named = [device for device in remaining if title(device) == title(flow)
+                         and not (unique_id and identity(device.get("unique_id")))]
                 if len(named) == 1:
                     matches = named
             if matches:
