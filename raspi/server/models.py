@@ -19,6 +19,7 @@ class HAConfigRequest(BaseModel):
 
 class HAPairStartRequest(BaseModel):
     handler: str
+    host: str | None = None
 
 
 class HAPairSubmitRequest(BaseModel):

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:surface_controller/globals/locale.dart';
 import '../../server/server.dart';
-import 'dart:async';
 
 class PairingWizard extends StatefulWidget {
   final String deviceType;
-
   const PairingWizard({super.key, required this.deviceType});
 
   @override
@@ -13,133 +11,191 @@ class PairingWizard extends StatefulWidget {
 }
 
 class _PairingWizardState extends State<PairingWizard> {
-  bool _isScanning = true;
-  List<dynamic> _discoveredFlows = [];
-  String? _currentFlowId;
-  bool _isPairing = false;
-  final TextEditingController _pinController = TextEditingController();
+  bool _busy = false;
+  List<dynamic> _flows = [];
+  Map<String, dynamic>? _step;
+  String? _error;
+  final Map<String, TextEditingController> _controllers = {};
+  final Map<String, bool> _booleans = {};
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-    _startDiscovery();
+    _discover();
   }
 
   @override
   void dispose() {
-    _pinController.dispose();
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _startDiscovery() async {
+  Future<void> _discover() async {
     setState(() {
-      _isScanning = true;
-      _discoveredFlows = [];
+      _busy = true;
+      _error = null;
+      _step = null;
+      _flows = [];
     });
-
-    final flows = await getHADiscovered();
-
-    if (mounted) {
-      setState(() {
-        _discoveredFlows = flows;
-        _isScanning = false;
-      });
+    try {
+      final flows = await getHADiscovered();
+      if (mounted) setState(() => _flows = flows);
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _initiatePairing(String handler) async {
-    setState(() => _isPairing = true);
-
-    final result = await startHAPairing(handler);
-
-    if (mounted) {
-      if (result != null && result.containsKey('flow_id')) {
-        setState(() {
-          _currentFlowId = result['flow_id'];
-          _isPairing = false;
-        });
-        _showPinDialog();
-      } else {
-        setState(() => _isPairing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t('pairing_failed_start'))),
+  Future<void> _run(Future<Map<String, dynamic>?> Function() request) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final result = await request();
+      if (!mounted) return;
+      if (result == null)
+        throw Exception(
+          'Cannot pair. Check Home Assistant connectivity and administrator permissions.',
         );
+      if (result['type'] == 'create_entry') {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('pairing_success_content'))));
+        Navigator.pop(context);
+        return;
       }
+      for (final controller in _controllers.values) {
+        controller.dispose();
+      }
+      _controllers.clear();
+      _booleans.clear();
+      for (final field in (result['data_schema'] as List? ?? [])) {
+        final name = field['name'] as String;
+        if (field['type'] == 'boolean') {
+          _booleans[name] = field['default'] == true;
+        } else {
+          _controllers[name] = TextEditingController(
+            text:
+                (field['default'] ??
+                        field['description']?['suggested_value'] ??
+                        '')
+                    .toString(),
+          );
+        }
+      }
+      setState(() => _step = result);
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
-  void _showPinDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(t('pairing_pin_title')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(t('pairing_pin_content')),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _pinController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                labelText: t('pairing_pin_label'),
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    final input = <String, dynamic>{..._booleans};
+    for (final field in (_step!['data_schema'] as List? ?? [])) {
+      final name = field['name'] as String;
+      if (field['type'] == 'boolean') continue;
+      final value = _controllers[name]!.text.trim();
+      if (value.isEmpty && field['required'] != true) continue;
+      input[name] = field['type'] == 'integer'
+          ? int.parse(value)
+          : field['type'] == 'float'
+          ? double.parse(value)
+          : value;
+    }
+    _run(() => submitHAPairingStep(_step!['flow_id'] as String, input));
+  }
+
+  Widget _stepForm() {
+    final step = _step!;
+    if (step['type'] == 'abort') {
+      return Text('Pairing stopped: ${step['reason'] ?? 'unknown reason'}');
+    }
+    final fields = step['data_schema'] as List? ?? [];
+    final supported =
+        step['type'] == 'form' &&
+        fields.every(
+          (field) =>
+              [
+                'string',
+                'integer',
+                'float',
+                'boolean',
+              ].contains(field['type']) ||
+              (field['type'] == null && field['selector']?['text'] != null),
+        );
+    if (!supported) {
+      return const Text(
+        'Complete this setup step in Home Assistant, then refresh devices in Sensee.',
+      );
+    }
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            (step['description_placeholders']?['name'] ?? step['step_id'] ?? '')
+                .toString(),
+          ),
+          for (final entry in (step['errors'] as Map? ?? {}).entries)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                '${entry.key}: ${entry.value}',
+                style: const TextStyle(color: Colors.red),
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(t('pairing_cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () => _submitPin(),
-            child: Text(t('pairing_verify')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _submitPin() async {
-    if (_currentFlowId == null) return;
-
-    final pin = _pinController.text.trim();
-    if (pin.isEmpty) return;
-
-    Navigator.pop(context);
-    setState(() => _isPairing = true);
-
-    final result = await submitHAPairingStep(_currentFlowId!, {"code": pin});
-
-    if (mounted) {
-      setState(() => _isPairing = false);
-      if (result != null && result['type'] == 'create_entry') {
-        _showSuccess();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t('pairing_failed_pin'))),
-        );
-      }
-    }
-  }
-
-  void _showSuccess() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('pairing_success_title')),
-        content: Text(t('pairing_success_content')),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: Text(t('pairing_finish')),
-          ),
+          for (final field in fields)
+            if (field['type'] == 'boolean')
+              CheckboxListTile(
+                title: Text(field['name'] as String),
+                value: _booleans[field['name']],
+                onChanged: (value) => setState(
+                  () => _booleans[field['name'] as String] = value ?? false,
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: TextFormField(
+                  controller: _controllers[field['name']],
+                  // Android TV pairing codes may contain hexadecimal letters.
+                  keyboardType: ['integer', 'float'].contains(field['type'])
+                      ? TextInputType.number
+                      : TextInputType.text,
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    labelText: field['name'] == 'host'
+                        ? 'TV IP address or hostname'
+                        : field['name'] == 'pin'
+                        ? 'PIN shown on TV'
+                        : field['name'] as String,
+                  ),
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    if (field['required'] == true && text.isEmpty)
+                      return 'Required';
+                    if (text.isNotEmpty &&
+                        field['type'] == 'integer' &&
+                        int.tryParse(text) == null)
+                      return 'Enter a whole number';
+                    if (text.isNotEmpty &&
+                        field['type'] == 'float' &&
+                        double.tryParse(text) == null)
+                      return 'Enter a number';
+                    return null;
+                  },
+                ),
+              ),
+          ElevatedButton(onPressed: _submit, child: const Text('Continue')),
         ],
       ),
     );
@@ -149,107 +205,56 @@ class _PairingWizardState extends State<PairingWizard> {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
       valueListenable: appLocale,
-      builder: (context, _, __) {
-        return Scaffold(
-          backgroundColor: const Color(0xFFEAEDF4),
-          appBar: AppBar(
-            title: Text(t('pairing_title')),
-          ),
-          body: _isPairing
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
-                  children: [
-                    if (_isScanning)
-                      Padding(
-                        padding: const EdgeInsets.all(40.0),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              const CircularProgressIndicator(),
-                              const SizedBox(height: 20),
-                              Text(
-                                tFormat(
-                                  'pairing_scanning',
-                                  widget.deviceType,
-                                ),
-                              ),
-                            ],
+      builder: (context, _, child) => Scaffold(
+        appBar: AppBar(title: Text(t('pairing_title'))),
+        body: _busy
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  if (_error != null)
+                    Text(_error!, style: const TextStyle(color: Colors.red)),
+                  if (_step != null)
+                    _stepForm()
+                  else ...[
+                    if (_flows.isEmpty)
+                      Text(tFormat('pairing_none_found', widget.deviceType)),
+                    for (final flow in _flows)
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.devices),
+                          title: Text(
+                            (flow['context']?['title'] ??
+                                    flow['context']?['title_placeholders']?['name'] ??
+                                    flow['handler'] ??
+                                    'Device')
+                                .toString(),
                           ),
-                        ),
-                      ),
-                    if (!_isScanning && _discoveredFlows.isEmpty)
-                      Expanded(
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.search_off,
-                                size: 64,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                tFormat(
-                                  'pairing_none_found',
-                                  widget.deviceType,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              ElevatedButton(
-                                onPressed: _startDiscovery,
-                                child: Text(t('pairing_try_again')),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    if (!_isScanning && _discoveredFlows.isNotEmpty)
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _discoveredFlows.length,
-                          itemBuilder: (context, index) {
-                            final flow = _discoveredFlows[index];
-                            final name =
-                                flow['context']['title'] ?? "Unknown Device";
-                            final handler = flow['handler'];
-
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(16),
-                                leading: const Icon(
-                                  Icons.tv,
-                                  color: Colors.blue,
-                                  size: 32,
-                                ),
-                                title: Text(
-                                  name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                          subtitle: Text((flow['handler'] ?? '').toString()),
+                          onTap: () => _run(
+                            () => flow['flow_id'] != null
+                                ? getHAPairingFlow(flow['flow_id'] as String)
+                                : startHAPairing(
+                                    flow['handler'] as String,
+                                    host: flow['host'] as String?,
                                   ),
-                                ),
-                                subtitle: Text(
-                                  "Type: ${handler.replaceAll('_', ' ')}",
-                                ),
-                                trailing: const Icon(
-                                  Icons.add_circle,
-                                  color: Colors.blue,
-                                ),
-                                onTap: () => _initiatePairing(handler),
-                              ),
-                            );
-                          },
+                          ),
                         ),
                       ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () =>
+                          _run(() => startHAPairing('androidtv_remote')),
+                      child: const Text('Add Android TV by IP'),
+                    ),
                   ],
-                ),
-        );
-      },
+                  TextButton(
+                    onPressed: _discover,
+                    child: Text(t('pairing_try_again')),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }

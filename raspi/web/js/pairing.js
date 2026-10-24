@@ -10,71 +10,95 @@ export async function showPairingWizard(draft, onNoPendingFlows) {
     modal.innerHTML = `
       <div class="modal-header">
         <div class="modal-title">${escHtml(t('Pair New Device'))}</div>
-        <button class="modal-close" id="pair-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="loading-row"><div class="spinner"></div> ${escHtml(t('Discovering devices…'))}</div>
-      </div>`;
+        <button class="modal-close" id="pair-close">×</button>
+      </div><div class="modal-body"></div>`;
     modal.querySelector('#pair-close').addEventListener('click', close);
+    const body = modal.querySelector('.modal-body');
+    const busy = () => { body.innerHTML = `<div class="loading-row"><div class="spinner"></div> ${escHtml(t('Starting pairing…'))}</div>`; };
+    const error = e => { toast(e.message, 'error'); };
 
-    api.get('/ha/discovered').then(({ flows }) => {
-      const body = modal.querySelector('.modal-body');
-      if (!flows || flows.length === 0) {
-        body.innerHTML = `
-          <div class="banner banner-warn">${escHtml(t('No new devices are waiting for pairing.'))}</div>
-          <button class="btn btn-primary" id="use-existing-device">${escHtml(t('Use Existing HA Device'))}</button>`;
-        body.querySelector('#use-existing-device').addEventListener('click', () => {
-          close();
-          onNoPendingFlows?.();
-        });
+    async function renderStep(result) {
+      if (result.type === 'create_entry') {
+        toast(t('Device paired successfully!'), 'success');
+        close();
+        onNoPendingFlows?.();
+        return;
+      }
+      if (result.type === 'abort') {
+        body.innerHTML = `<div class="banner banner-warn">${escHtml(result.reason || 'Pairing stopped')}</div>`;
+        return;
+      }
+      const fields = result.data_schema || [];
+      const supported = result.type === 'form' && fields.every(f =>
+        ['string', 'integer', 'float', 'boolean'].includes(f.type) ||
+        (f.selector?.text && !f.type));
+      if (!supported) {
+        body.innerHTML = `<div class="banner banner-warn">${escHtml(t('Complete this setup step in Home Assistant, then refresh devices in Sensee.'))}</div>`;
         return;
       }
       body.innerHTML = `
-        <div class="item-list" id="pair-list">
-          ${flows.map(f => `
-            <div class="list-item" data-handler="${escAttr(f.handler || f)}">
-              <div class="list-item-icon">🔗</div>
-              <div class="list-item-title">${escHtml(f.handler || f)}</div>
-            </div>`).join('')}
-        </div>`;
-
-      body.querySelectorAll('.list-item').forEach(item => {
-        item.addEventListener('click', async () => {
-          body.innerHTML = `<div class="loading-row"><div class="spinner"></div> ${escHtml(t('Starting pairing…'))}</div>`;
-          try {
-            const { result } = await api.post('/ha/pair/start', { handler: item.dataset.handler });
-            body.innerHTML = `
-              <div class="field-group">
-                <div class="field-label">${escHtml(t('Enter PIN shown on device'))}</div>
-                <input class="field-input" id="pair-pin" type="text" placeholder="e.g. 123456" />
-              </div>
-              <div class="modal-footer" style="padding:12px 0 0">
-                <button class="btn btn-ghost" id="pair-cancel">${escHtml(t('Cancel'))}</button>
-                <button class="btn btn-primary" id="pair-submit">${escHtml(t('Pair'))}</button>
-              </div>`;
-            body.querySelector('#pair-cancel').addEventListener('click', close);
-            body.querySelector('#pair-submit').addEventListener('click', async () => {
-              const pin = body.querySelector('#pair-pin').value.trim();
-              try {
-                const { result: res } = await api.post('/ha/pair/submit', {
-                  flow_id: result.flow_id, user_input: { code: pin }
-                });
-                if (res.type === 'create_entry') {
-                  toast(t('Device paired successfully!'), 'success');
-                  close();
-                } else {
-                  toast(t('Pairing failed — check PIN'), 'error');
-                }
-              } catch (e) { toast(t('Error') + ': ' + e.message, 'error'); }
-            });
-          } catch (e) { body.innerHTML = `<div class="banner banner-error">${escHtml(e.message)}</div>`; }
+        <p>${escHtml(result.description_placeholders?.name || result.step_id || '')}</p>
+        ${Object.entries(result.errors || {}).map(([key, value]) => `<div class="banner banner-error">${escHtml(key)}: ${escHtml(value)}</div>`).join('')}
+        <form id="pair-form">
+        ${fields.map((f, i) => `<div class="field-group">
+          <label class="field-label" for="pair-field-${i}">${escHtml(f.name === 'host' ? 'TV IP address or hostname' : f.name === 'pin' ? 'PIN shown on TV' : f.name)}</label>
+          <input class="field-input" id="pair-field-${i}" type="${f.type === 'boolean' ? 'checkbox' : ['integer', 'float'].includes(f.type) ? 'number' : 'text'}"
+            ${f.type === 'float' ? 'step="any"' : ''}
+            ${f.type === 'boolean' ? (f.default ? 'checked' : '') : `value="${escAttr(f.default ?? f.description?.suggested_value ?? '')}" ${f.required ? 'required' : ''}`} />
+        </div>`).join('')}
+        <button class="btn btn-primary" type="submit">${escHtml(t('Continue'))}</button>
+        </form>`;
+      body.querySelector('#pair-form').addEventListener('submit', async event => {
+        event.preventDefault();
+        const input = {};
+        fields.forEach((f, i) => {
+          const element = body.querySelector(`#pair-field-${i}`);
+          if (f.type === 'boolean') input[f.name] = element.checked;
+          else if (element.value !== '') input[f.name] = ['integer', 'float'].includes(f.type) ? Number(element.value) : element.value.trim();
         });
+        busy();
+        try {
+          const { result: next } = await api.post('/ha/pair/submit', { flow_id: result.flow_id, user_input: input });
+          await renderStep(next);
+        } catch (e) { await renderStep(result); error(e); }
       });
-    }).catch(e => {
-      modal.querySelector('.modal-body').innerHTML =
-        `<div class="banner banner-error">${escHtml(t('Failed'))}: ${escHtml(e.message)}</div>`;
-    });
+    }
 
+    async function start(flow) {
+      busy();
+      try {
+        const { result } = flow?.flow_id
+          ? await api.get(`/ha/pair/${encodeURIComponent(flow.flow_id)}`)
+          : await api.post('/ha/pair/start', { handler: flow?.handler || 'androidtv_remote', ...(flow?.host ? { host: flow.host } : {}) });
+        await renderStep(result);
+      } catch (e) { error(e); await discover(); }
+    }
+
+    async function discover() {
+      busy();
+      let flows = [];
+      let failure = '';
+      try { ({ flows } = await api.get('/ha/discovered')); }
+      catch (e) { failure = e.message; }
+      body.innerHTML = `
+        ${failure ? `<div class="banner banner-error">${escHtml(failure)}</div>` : ''}
+        ${!flows.length ? `<p>${escHtml(t('No new devices are waiting for pairing.'))}</p>` : ''}
+        <div class="item-list" id="pair-list"></div>
+        <button class="btn btn-primary" id="pair-manual">${escHtml(t('Add Android TV by IP'))}</button>
+        <button class="btn btn-ghost" id="pair-refresh">${escHtml(t('Refresh'))}</button>
+        <button class="btn btn-ghost" id="use-existing-device">${escHtml(t('Use Existing HA Device'))}</button>`;
+      flows.forEach(flow => {
+        const button = document.createElement('button');
+        button.className = 'list-item';
+        button.textContent = flow.context?.title || flow.context?.title_placeholders?.name || flow.handler;
+        button.addEventListener('click', () => start(flow));
+        body.querySelector('#pair-list').append(button);
+      });
+      body.querySelector('#pair-manual').addEventListener('click', () => start(null));
+      body.querySelector('#pair-refresh').addEventListener('click', discover);
+      body.querySelector('#use-existing-device').addEventListener('click', () => { close(); onNoPendingFlows?.(); });
+    }
+    discover();
     return modal;
   });
 }

@@ -1,0 +1,12 @@
+# Standalone Linux/Raspberry Pi configuration; keeps the same ./config data.
+# Run: docker compose -f docker-compose.linux.yml up -d
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    network_mode: host
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+    privileged: true

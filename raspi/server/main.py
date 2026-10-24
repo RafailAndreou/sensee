@@ -183,7 +183,7 @@ def get_ha_discovered():
 
 @app.post("/ha/pair/start")
 def post_ha_pair_start(req: HAPairStartRequest):
-    result = homeassistant.start_pairing_flow(req.handler)
+    result = homeassistant.start_pairing_flow(req.handler, req.host)
     return {"status": "success", "result": result}
 
 @app.post("/ha/pair/submit")

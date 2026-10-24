@@ -65,6 +65,24 @@ class ApiAccessTests(unittest.TestCase):
             self.assertEqual(self.client.post('/event/test').status_code, 200)
             send.assert_called_once_with('test')
 
+    def test_pairing_resumes_existing_discovery_and_forwards_local_tv_host(self):
+        with patch.object(main.homeassistant, 'get_pairing_flow', return_value={'type': 'form', 'flow_id': 'existing'}) as resume:
+            response = self.client.get('/ha/pair/existing')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()['result']['flow_id'], 'existing')
+            resume.assert_called_once_with('existing')
+        with patch.object(main.homeassistant, 'start_pairing_flow', return_value={'type': 'form'}) as start:
+            response = self.client.post('/ha/pair/start', json={'handler': 'androidtv_remote', 'host': '192.168.1.22'})
+            self.assertEqual(response.status_code, 200)
+            start.assert_called_once_with('androidtv_remote', '192.168.1.22')
+
+    def test_discovery_returns_flows_in_the_client_envelope(self):
+        flows = [{'flow_id': 'existing', 'handler': 'androidtv_remote'}]
+        with patch.object(main.homeassistant, 'get_discovered_flows', return_value=flows):
+            response = self.client.get('/ha/discovered')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), {'status': 'success', 'flows': flows})
+
     def test_cross_origin_writes_are_rejected(self):
         headers = {'Origin': 'http://other-site.test'}
         with patch.object(main.file, 'save_voice_settings') as save:
